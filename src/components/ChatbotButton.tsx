@@ -8,6 +8,12 @@ interface Message {
   isUser: boolean;
 }
 
+interface APIError {
+  response?: {
+    json(): Promise<{ error: string }>;
+  };
+}
+
 export default function ChatbotButton() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -50,11 +56,23 @@ export default function ChatbotButton() {
       
       // Add AI response to chat
       setMessages(prev => [...prev, { content: data.content, isUser: false }]);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Chat error:', error);
-      const errorResponse = await error.response?.json();
+      let errorMessage = "I apologize, but I'm having trouble connecting right now. Please try again later.";
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        try {
+          const errorResponse = await (error as APIError).response?.json();
+          if (errorResponse?.error) {
+            errorMessage = errorResponse.error;
+          }
+        } catch {
+          // If JSON parsing fails, use default error message
+        }
+      }
+
       setMessages(prev => [...prev, {
-        content: errorResponse?.error || "I apologize, but I'm having trouble connecting right now. Please try again later.",
+        content: errorMessage,
         isUser: false
       }]);
     } finally {
