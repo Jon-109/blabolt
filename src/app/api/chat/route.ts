@@ -81,7 +81,7 @@ export async function POST(req: Request) {
         role: msg.role,
         content: msg.content
       }))
-    ] as const;
+    ];
 
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
