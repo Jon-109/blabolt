@@ -1,17 +1,11 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
-// System message with correct type
 const SYSTEM_MESSAGE: ChatMessage = {
   role: 'system',
   content: `You are BLA (Business Lending Advocate) AI, an expert assistant specializing in business loans and financing.
@@ -36,6 +30,10 @@ const SYSTEM_MESSAGE: ChatMessage = {
 
 export async function POST(req: Request) {
   try {
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY!
+    });
+
     const body = await req.json();
 
     // Validate messages exists
