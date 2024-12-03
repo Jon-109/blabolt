@@ -1,4 +1,5 @@
-import { OpenAI, type ChatCompletionMessageParam } from 'openai';
+import OpenAI from 'openai';
+import type { ChatCompletionMessage } from 'openai/resources/chat/completions';
 import { NextResponse } from 'next/server';
 
 // Initialize OpenAI client
@@ -75,8 +76,8 @@ export async function POST(req: Request) {
     const messages: ChatMessage[] = body.messages;
 
     // Convert messages to OpenAI format
-    const formattedMessages: ChatCompletionMessageParam[] = [
-      SYSTEM_MESSAGE as ChatCompletionMessageParam,
+    const formattedMessages: ChatCompletionMessage[] = [
+      SYSTEM_MESSAGE as ChatCompletionMessage,
       ...messages.map(msg => ({
         role: msg.role,
         content: msg.content
