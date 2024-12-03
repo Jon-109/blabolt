@@ -83,7 +83,7 @@ export async function POST(req: Request) {
     // Call OpenAI API with explicit type casting
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: formattedMessages as any[], // Type assertion to bypass strict checking
+      messages: formattedMessages as any[],
       temperature: 0.7,
       max_tokens: 500,
       top_p: 1,

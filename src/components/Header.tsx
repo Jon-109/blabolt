@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
-import Logo from '../assets/images/BusLendAdv_Final_4c.jpg'; // Import your logo image
+import Image from 'next/image';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -24,10 +24,12 @@ export default function Header() {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           <Link href="/" className="text-2xl font-bold text-blue-900">
-          <img
-            src={Logo.src}
+          <Image 
+            src="/images/BusLendAdv_Final_4c.jpg"
             alt="Business Lending Advocate Logo"
-            className="h-20 w-auto" // Doubled the height from h-10 to h-20
+            width={200}
+            height={50}
+            priority
           />          
           </Link>
 
