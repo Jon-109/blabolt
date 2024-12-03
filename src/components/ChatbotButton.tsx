@@ -52,8 +52,9 @@ export default function ChatbotButton() {
       setMessages(prev => [...prev, { content: data.content, isUser: false }]);
     } catch (error) {
       console.error('Chat error:', error);
+      const errorResponse = await error.response?.json();
       setMessages(prev => [...prev, {
-        content: "I apologize, but I'm having trouble connecting right now. Please try again later.",
+        content: errorResponse?.error || "I apologize, but I'm having trouble connecting right now. Please try again later.",
         isUser: false
       }]);
     } finally {

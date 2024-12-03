@@ -80,42 +80,72 @@ export async function POST(req: Request) {
       }))
     ];
 
-    // Call OpenAI API with explicit type casting
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: formattedMessages as any[],
-      temperature: 0.7,
-      max_tokens: 500,
-      top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
-    });
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: formattedMessages as any[],
+        temperature: 0.7,
+        max_tokens: 500,
+        top_p: 1,
+        frequency_penalty: 0,
+        presence_penalty: 0,
+      });
 
-    // Validate OpenAI response
-    if (!completion.choices || completion.choices.length === 0) {
-      console.error('Empty response from OpenAI:', completion);
+      // Validate OpenAI response
+      if (!completion.choices || completion.choices.length === 0) {
+        console.error('Empty response from OpenAI:', completion);
+        return NextResponse.json(
+          { error: 'No response generated from AI' },
+          { status: 500 }
+        );
+      }
+
+      const message = completion.choices[0].message;
+
+      // Validate message content
+      if (!message || !message.content) {
+        console.error('Invalid message format from OpenAI:', message);
+        return NextResponse.json(
+          { error: 'Invalid response format from AI' },
+          { status: 500 }
+        );
+      }
+
+      // Return the response
+      return NextResponse.json({
+        content: message.content,
+        role: 'assistant'
+      });
+
+    } catch (openAIError: any) {
+      // Log detailed OpenAI error
+      console.error('OpenAI API Error Details:', {
+        error: openAIError,
+        message: openAIError.message,
+        type: openAIError.type,
+        status: openAIError.status,
+      });
+
+      // Return more specific error message
+      if (openAIError.status === 401) {
+        return NextResponse.json(
+          { error: 'Authentication error with AI service' },
+          { status: 401 }
+        );
+      }
+
+      if (openAIError.status === 429) {
+        return NextResponse.json(
+          { error: 'AI service rate limit exceeded' },
+          { status: 429 }
+        );
+      }
+
       return NextResponse.json(
-        { error: 'No response generated from AI' },
-        { status: 500 }
+        { error: `AI service error: ${openAIError.message}` },
+        { status: openAIError.status || 500 }
       );
     }
-
-    const message = completion.choices[0].message;
-
-    // Validate message content
-    if (!message || !message.content) {
-      console.error('Invalid message format from OpenAI:', message);
-      return NextResponse.json(
-        { error: 'Invalid response format from AI' },
-        { status: 500 }
-      );
-    }
-
-    // Return the response
-    return NextResponse.json({
-      content: message.content,
-      role: 'assistant'
-    });
 
   } catch (error) {
     // Existing error handling for validation errors
