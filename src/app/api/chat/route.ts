@@ -1,4 +1,4 @@
-import { OpenAI } from 'openai';
+import { OpenAI, type ChatCompletionMessageParam } from 'openai';
 import { NextResponse } from 'next/server';
 
 // Initialize OpenAI client
@@ -29,20 +29,64 @@ const SYSTEM_MESSAGE = {
   Remember: You represent Business Lending Advocate and should align with their mission of helping businesses secure the funding they deserve through expert guidance and simplified processes.`
 };
 
+// Add type for expected message format
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const body = await req.json();
 
-    // Add system message to the conversation
-    const fullMessages = [
-      SYSTEM_MESSAGE,
-      ...messages
+    // Validate messages exists
+    if (!body.messages) {
+      return NextResponse.json(
+        { error: 'Messages field is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate messages is an array
+    if (!Array.isArray(body.messages)) {
+      return NextResponse.json(
+        { error: 'Messages must be an array' },
+        { status: 400 }
+      );
+    }
+
+    // Validate each message has required fields and correct format
+    const isValidMessage = (msg: any): msg is ChatMessage => {
+      return (
+        typeof msg === 'object' &&
+        msg !== null &&
+        typeof msg.content === 'string' &&
+        ['user', 'assistant', 'system'].includes(msg.role)
+      );
+    };
+
+    if (!body.messages.every(isValidMessage)) {
+      return NextResponse.json(
+        { error: 'Invalid message format. Each message must have role and content fields' },
+        { status: 400 }
+      );
+    }
+
+    const messages: ChatMessage[] = body.messages;
+
+    // Convert messages to OpenAI format
+    const formattedMessages: ChatCompletionMessageParam[] = [
+      SYSTEM_MESSAGE as ChatCompletionMessageParam,
+      ...messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
     ];
 
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: fullMessages,
+      messages: formattedMessages,
       temperature: 0.7,
       max_tokens: 500,
       top_p: 1,
@@ -50,14 +94,45 @@ export async function POST(req: Request) {
       presence_penalty: 0,
     });
 
+    // Validate OpenAI response
+    if (!completion.choices || completion.choices.length === 0) {
+      console.error('Empty response from OpenAI:', completion);
+      return NextResponse.json(
+        { error: 'No response generated from AI' },
+        { status: 500 }
+      );
+    }
+
+    const message = completion.choices[0].message;
+
+    // Validate message content
+    if (!message || !message.content) {
+      console.error('Invalid message format from OpenAI:', message);
+      return NextResponse.json(
+        { error: 'Invalid response format from AI' },
+        { status: 500 }
+      );
+    }
+
     // Return the response
     return NextResponse.json({
-      content: completion.choices[0].message.content,
+      content: message.content,
       role: 'assistant'
     });
 
   } catch (error) {
+    // Existing error handling for validation errors
+    if (error instanceof Error && error.name === 'SyntaxError') {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
+    // Log the full error for debugging
     console.error('OpenAI API error:', error);
+    
+    // Return a user-friendly error message
     return NextResponse.json(
       { error: 'There was an error processing your request' },
       { status: 500 }
