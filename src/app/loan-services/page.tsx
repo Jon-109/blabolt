@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import {
   FileCheck,
@@ -8,10 +10,13 @@ import {
   Clock,
   Award,
   Building2,
-  Shield
+  Shield,
+  ArrowRight
 } from 'lucide-react';
 import DownloadButton from '@/components/DownloadButton';
 import Testimonials from '@/components/Testimonials';
+import Link from 'next/link'
+import LoanPaymentCalculator from '../components/LoanPaymentCalculator';
 
 const PricingTable = () => {
   const services = [
@@ -57,10 +62,16 @@ const PricingTable = () => {
 };
 
 export default function LoanServices() {
+  const scrollToCalculator = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const calculator = document.getElementById('loan-calculator');
+    calculator?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="pt-20">
+    <div className="min-h-screen pt-16">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-900 to-blue-700 text-white py-8">
+      <section className="bg-gradient-to-br from-blue-900 to-blue-700 text-white py-12">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-block bg-white/10 text-white px-6 py-2 rounded-full mb-4">
@@ -69,9 +80,22 @@ export default function LoanServices() {
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               Expert Help to Package and Secure the Right Loan for Your Business.
             </h1>
-            <p className="text-xl mb-6">
+            <p className="text-xl mb-8">
               We specialize in two services: preparing loan applications that get results and connecting you with the right lenders. Let us simplify the process so you can focus on growing your business.
             </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button className="px-8 py-4 bg-white text-blue-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                Start Your Application Now
+              </button>
+              <a
+                href="#loan-calculator"
+                onClick={scrollToCalculator}
+                className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors shadow-lg flex items-center justify-center gap-2"
+              >
+                See What Your Loan Could Cost
+                <ArrowRight className="w-5 h-5" />
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -221,9 +245,11 @@ export default function LoanServices() {
 
             <div className="text-center">
               <p className="text-xl mb-6">Want to know if an SBA 7(a) loan is right for you?</p>
-              <button className="px-8 py-4 bg-white text-blue-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                Learn More About SBA 7(a) Loans
-              </button>
+              <Link href="/sba-7a-loans">
+                <button className="px-8 py-4 bg-white text-blue-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                  Learn More About SBA 7(a) Loans
+                </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -316,6 +342,9 @@ export default function LoanServices() {
           </div>
         </div>
       </section>
+
+      {/* Add the calculator after your main content */}
+      <LoanPaymentCalculator />
     </div>
   );
 }

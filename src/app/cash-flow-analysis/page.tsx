@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { 
   CheckCircle, 
@@ -9,6 +11,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import Testimonials from '@/components/Testimonials';
+import LoanPaymentCalculator from '../components/LoanPaymentCalculator';
 
 const ComparisonTable = () => {
   const features = [
@@ -45,8 +48,14 @@ const ComparisonTable = () => {
 };
 
 export default function CashFlowAnalysis() {
+  const scrollToCalculator = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const calculator = document.getElementById('loan-calculator');
+    calculator?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="pt-16">
+    <div className="min-h-screen pt-16">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-900 to-blue-700 text-white py-12">
         <div className="container mx-auto px-6">
@@ -58,11 +67,21 @@ export default function CashFlowAnalysis() {
               We Make Understanding Your Loan Readiness Simple and Stress-Free.
             </p>
             <p className="text-lg mb-8">
-              Our Cash Flow Analysis Services provide clarity and confidence. Discover if your finances meet funding requirements with ease. From quick assessments to comprehensive, lender-ready reports, we've got you covered.
+              Our Cash Flow Analysis Services provide clarity and confidence. Discover if your finances meet funding requirements with ease.
             </p>
-            <button className="px-8 py-4 bg-white text-blue-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-              Start Your Free Cash Flow Check Now
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button className="px-8 py-4 bg-white text-blue-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                Start Your Free Cash Flow Check Now
+              </button>
+              <a
+                href="#loan-calculator"
+                onClick={scrollToCalculator}
+                className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors shadow-lg flex items-center justify-center gap-2"
+              >
+                Calculate Your Monthly Loan Payment
+                <ArrowRight className="w-5 h-5" />
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -210,6 +229,11 @@ export default function CashFlowAnalysis() {
           <Testimonials />
         </div>
       </section>
+
+      {/* Add the calculator after your main content */}
+      <div className="border-t border-gray-200">
+        <LoanPaymentCalculator />
+      </div>
     </div>
   );
 }

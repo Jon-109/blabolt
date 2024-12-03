@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Testimonials from '@/components/Testimonials';
 import FundingProcessSteps from '@/components/FundingProcessSteps'; // Add this import
+import LoanPaymentCalculator from './components/LoanPaymentCalculator';
 
 import {
   BarChart3,
@@ -18,6 +19,12 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
+  const scrollToCalculator = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const calculator = document.getElementById('loan-calculator');
+    calculator?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -51,8 +58,10 @@ export default function Home() {
               >
                 Check If You Can Afford a Loan—Free & Fast
               </a>
-              <Link href="/cash-flow-analysis" className="px-8 py-4 bg-white hover:bg-gray-100 rounded-lg font-semibold text-lg transition-colors shadow-lg text-blue-900">
-                Explore Our Services
+              <Link href="/services">
+                <button className="px-8 py-4 bg-white text-blue-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                  Explore Our Services
+                </button>
               </Link>
             </div>
           </div>
@@ -129,45 +138,45 @@ export default function Home() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-8 bg-white">
+      <section className="py-8 bg-gradient-to-br from-blue-900 to-blue-700 text-white">
         <div className="container mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-8">
             Our Benefits
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ArrowRight className="w-8 h-8 text-blue-600" />
+              <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ArrowRight className="w-8 h-8 text-blue-200" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Clear Guidance</h3>
-              <p className="text-gray-600">
+              <p className="text-blue-100">
                 Step-by-step guidance through the loan process so you always know what to expect.
               </p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-blue-600" />
+              <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-blue-200" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Tailored Support</h3>
-              <p className="text-gray-600">
+              <p className="text-blue-100">
                 Services customized to fit your unique needs, from analysis to brokering.
               </p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileCheck className="w-8 h-8 text-blue-600" />
+              <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileCheck className="w-8 h-8 text-blue-200" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Stronger Applications</h3>
-              <p className="text-gray-600">
+              <p className="text-blue-100">
                 Expert preparation to increase your chances of loan approval.
               </p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-blue-600" />
+              <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-blue-200" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Faster Results</h3>
-              <p className="text-gray-600">
+              <p className="text-blue-100">
                 Save time while we handle the details and you focus on your business.
               </p>
             </div>
@@ -176,7 +185,9 @@ export default function Home() {
       </section>
 
       {/* Testimonials Section */}
-      <Testimonials />
+      <div className="pt-8">
+        <Testimonials />
+      </div>
 
       {/* Funding Process Steps Section */}
       <FundingProcessSteps />
@@ -195,6 +206,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <LoanPaymentCalculator />
     </div>
   );
 }

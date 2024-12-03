@@ -2,30 +2,14 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import '@/styles/globals.css';
+import './globals.css';
+import ChatbotButton from '@/components/ChatbotButton';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Business Lending Advocate',
-  description: 'Expert guidance for securing small business loans with simplified processes and proven results.',
-  keywords: 'business loans, loan packaging, loan brokering, cash flow analysis, SBA loans',
-  openGraph: {
-    title: 'Business Lending Advocate',
-    description: 'Expert guidance for securing small business loans',
-    url: 'https://businesslendingadvocate.com',
-    siteName: 'Business Lending Advocate',
-    images: [
-      {
-        url: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf',
-        width: 1200,
-        height: 630,
-        alt: 'Business Lending Advocate',
-      },
-    ],
-    locale: 'en_US',
-    type: 'website',
-  },
+  description: 'Expert guidance for small business loans',
 };
 
 export default function RootLayout({
@@ -34,11 +18,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.className}>
-      <body>
+    <html lang="en">
+      <body className={inter.className}>
         <Header />
         <main>{children}</main>
         <Footer />
+        <ChatbotButton />
       </body>
     </html>
   );
