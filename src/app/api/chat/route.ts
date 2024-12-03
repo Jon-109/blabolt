@@ -6,8 +6,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// System message to define the AI assistant's role and behavior
-const SYSTEM_MESSAGE = {
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+// System message with correct type
+const SYSTEM_MESSAGE: ChatMessage = {
   role: 'system',
   content: `You are BLA (Business Lending Advocate) AI, an expert assistant specializing in business loans and financing.
   Your key responsibilities:
@@ -28,12 +33,6 @@ const SYSTEM_MESSAGE = {
   
   Remember: You represent Business Lending Advocate and should align with their mission of helping businesses secure the funding they deserve through expert guidance and simplified processes.`
 };
-
-// Add type for expected message format
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
 
 export async function POST(req: Request) {
   try {
@@ -83,10 +82,10 @@ export async function POST(req: Request) {
       }))
     ];
 
-    // Call OpenAI API
+    // Call OpenAI API with explicit type casting
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: formattedMessages,
+      messages: formattedMessages as any[], // Type assertion to bypass strict checking
       temperature: 0.7,
       max_tokens: 500,
       top_p: 1,
