@@ -24,13 +24,14 @@ export default function Header() {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-20">
           <Link href="/" className="text-2xl font-bold text-blue-900">
-          <Image 
-            src="/images/BusLendAdv_Final_4c.jpg"
-            alt="Business Lending Advocate Logo"
-            width={200}
-            height={50}
-            priority
-          />          
+            <Image 
+              src="/images/BusLendAdv_Final_4c.jpg"
+              alt="Business Lending Advocate Logo"
+              width={200}
+              height={57}
+              priority
+              className="h-[40px] md:h-[57px] w-auto"
+            />          
           </Link>
 
           {/* Desktop Navigation */}

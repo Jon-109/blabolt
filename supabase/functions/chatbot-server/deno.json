@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "strict": true
+  },
+  "tasks": {
+    "start": "deno run --allow-net --allow-env index.ts"
+  }
+} 
