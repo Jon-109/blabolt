@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@1.0.11/http/server.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 if (!OPENAI_API_KEY) {

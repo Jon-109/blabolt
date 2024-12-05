@@ -158,7 +158,7 @@ export default function Chatbot() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg w-96 h-[66vh] flex flex-col overflow-hidden">
+    <div className="bg-white rounded-lg shadow-lg w-96 h-[80vh] flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-4 bg-blue-500 text-white flex items-center gap-3 flex-shrink-0">
         <div className="w-10 h-10 rounded-full bg-white p-1 flex-shrink-0">
