@@ -25,3 +25,9 @@ dist-ssr
 
 # Next.js build output
 .next
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+supabase/functions/*/.env

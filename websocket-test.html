@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        #input-area {
+            display: flex;
+            gap: 10px;
+        }
+        #message-input {
+            flex-grow: 1;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Chat Test</h1>
+    <div id="connection-status">Status: Disconnected</div>
+    <div id="messages"></div>
+    <div id="input-area">
+        <input type="text" id="message-input" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('message-input');
+        const statusDiv = document.getElementById('connection-status');
+        let socket;
+
+        function connect() {
+            // Replace with your Supabase project URL
+            const wsUrl = 'https://final-bla-website-bugvqpc1x-jon109s-projects.vercel.app'.replace('https://', 'wss://');
+            const wsEndpoint = `${wsUrl}/functions/v1/chatbot-server`;
+            
+            console.log('Attempting to connect to:', wsEndpoint);
+            socket = new WebSocket(wsEndpoint);
+
+            socket.onopen = () => {
+                console.log('WebSocket connection established!');
+                console.log('Socket state:', socket.readyState);
+                statusDiv.textContent = 'Status: Connected';
+                appendMessage('System', 'Connected to server');
+            };
+
+            socket.onmessage = (event) => {
+                console.log('Raw message received:', event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('Parsed message:', data);
+                    
+                    if (data.error) {
+                        console.error('Server reported error:', data.error);
+                        appendMessage('Error', data.error);
+                    } else if (data.content) {
+                        console.log('Content received:', data.content);
+                        appendMessage('Assistant', data.content);
+                    } else {
+                        console.warn('Unexpected message format:', data);
+                        appendMessage('System', 'Received message in unexpected format');
+                    }
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                    console.error('Raw message that failed:', event.data);
+                    appendMessage('Error', 'Failed to parse message');
+                }
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                console.error('Socket state when error occurred:', socket.readyState);
+                statusDiv.textContent = 'Status: Error';
+                appendMessage('Error', `WebSocket error occurred: ${error.type || 'Unknown error'}`);
+            };
+
+            socket.onclose = (event) => {
+                console.log('WebSocket closed with code:', event.code);
+                console.log('Close reason:', event.reason);
+                console.log('Clean closure:', event.wasClean);
+                statusDiv.textContent = 'Status: Disconnected';
+                appendMessage('System', `Disconnected from server (Code: ${event.code}${event.reason ? ', Reason: ' + event.reason : ''})`);
+                // Attempt to reconnect after 5 seconds
+                console.log('Attempting to reconnect in 5 seconds...');
+                setTimeout(connect, 5000);
+            };
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            if (!socket) {
+                console.error('No socket instance available');
+                appendMessage('Error', 'No connection available');
+                return;
+            }
+
+            console.log('Socket state before sending:', socket.readyState);
+            if (socket.readyState !== WebSocket.OPEN) {
+                console.error('Socket not open. Current state:', socket.readyState);
+                appendMessage('Error', `Not connected to server (State: ${socket.readyState})`);
+                return;
+            }
+
+            const payload = JSON.stringify({ content: message });
+            console.log('Sending message:', payload);
+            
+            try {
+                socket.send(payload);
+                appendMessage('You', message);
+                messageInput.value = '';
+            } catch (error) {
+                console.error('Error sending message:', error);
+                appendMessage('Error', 'Failed to send message');
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Handle Enter key in input
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Initial connection
+        connect();
+    </script>
+</body>
+</html> 

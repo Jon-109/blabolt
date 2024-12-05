@@ -19,6 +19,36 @@ export default function Chatbot() {
   const socketRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Add edge function warm-up
+  useEffect(() => {
+    const warmUpEdgeFunction = async () => {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        if (!supabaseUrl) {
+          console.error('Supabase URL not configured');
+          return;
+        }
+
+        const response = await fetch(`${supabaseUrl}/functions/v1/chatbot-server`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        console.log('Edge function warmed up successfully');
+      } catch (error) {
+        console.error('Failed to warm up Edge Function:', error);
+      }
+    };
+
+    warmUpEdgeFunction();
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -53,13 +83,49 @@ export default function Chatbot() {
       
       socketRef.current = new WebSocket(wsEndpoint);
 
+      // Optimized token streaming handler
+      const appendChatbotResponse = (token: string) => {
+        setMessages((prevMessages) => {
+          const lastMessage = prevMessages[prevMessages.length - 1];
+          
+          // If the last message is from the assistant, append to it
+          if (lastMessage.role === "assistant") {
+            return [
+              ...prevMessages.slice(0, -1),
+              { ...lastMessage, content: lastMessage.content + token }
+            ];
+          }
+          
+          // If it's a new response, create a new assistant message
+          return [...prevMessages, { role: "assistant", content: token }];
+        });
+      };
+
       socketRef.current.onopen = () => {
-        console.log("WebSocket connection established!");
         if (socketRef.current?.readyState === WebSocket.OPEN) {
-          socketRef.current.send(messageToSend);
+          const data = JSON.stringify({ content: messageToSend });
+          socketRef.current.send(data);
           setMessages((prev) => [...prev, { role: "user", content: messageToSend }]);
         }
         setIsConnecting(false);
+      };
+
+      // Optimized message handler
+      socketRef.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.content) {
+            appendChatbotResponse(data.content);
+          } else if (data.error) {
+            console.error("Server error:", data.error);
+            setMessages(prev => [...prev, { 
+              role: "assistant", 
+              content: `An error occurred. Please try again.` 
+            }]);
+          }
+        } catch (error) {
+          console.error("Message parsing error");
+        }
       };
 
       // Add connection timeout

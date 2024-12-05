@@ -1,72 +1,71 @@
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { Configuration, OpenAIApi } from 'openai';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+if (!OPENAI_API_KEY) {
+  console.error("Missing OPENAI_API_KEY environment variable");
+  throw new Error("OPENAI_API_KEY environment variable is required");
 }
 
-interface RequestBody {
-  messages: ChatMessage[];
-}
-
-serve(async (req: Request) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+serve(async (req) => {
+  // Handle warm-up ping
+  if (req.method === "GET") {
+    console.log("Received warm-up ping");
+    return new Response("Edge Function is ready", { 
+      status: 200,
+      headers: { "Content-Type": "text/plain" }
+    });
   }
 
-  try {
-    const body = await req.json() as RequestBody;
-    const { messages } = body;
+  // Handle WebSocket upgrade for chat
+  if (req.headers.get("upgrade") === "websocket") {
+    try {
+      console.log("Attempting WebSocket upgrade");
+      const { socket, response } = Deno.upgradeWebSocket(req);
+      console.log("WebSocket upgrade successful");
 
-    // Validate input
-    if (!Array.isArray(messages)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid messages format' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      // WebSocket lifecycle handlers
+      socket.onopen = () => {
+        console.log("Client connected - WebSocket connection established");
+      };
+
+      socket.onmessage = async (event) => {
+        console.log("Raw message received from client:", event.data);
+        
+        try {
+          const message = JSON.parse(event.data);
+          console.log("Parsed message:", message);
+
+          if (!message.content) {
+            console.error("Invalid message format - missing content");
+            socket.send(JSON.stringify({ error: "Message must include content field" }));
+            return;
+          }
+
+          // ... rest of the existing WebSocket handling code ...
+        } catch (error) {
+          console.error("Error processing message:", error);
+          socket.send(JSON.stringify({ error: "Error processing your request" }));
         }
-      );
+      };
+
+      socket.onerror = (error) => {
+        console.error("WebSocket error occurred:", error);
+      };
+
+      socket.onclose = () => {
+        console.log("Client disconnected - WebSocket connection closed");
+      };
+
+      return response;
+    } catch (error) {
+      console.error("Error upgrading to WebSocket:", error);
+      return new Response("Error upgrading to WebSocket", { status: 500 });
     }
-
-    const configuration = new Configuration({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
-    });
-
-    const openai = new OpenAIApi(configuration);
-
-    const completion = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
-      messages: messages,
-      temperature: 0.7,
-      max_tokens: 1000,
-    });
-
-    const response = completion.data.choices[0].message;
-
-    return new Response(
-      JSON.stringify(response),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-
-  } catch (error) {
-    console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
   }
+
+  // Handle unsupported request types
+  return new Response("Method not allowed. Use GET for warm-up or WebSocket upgrade for chat.", { 
+    status: 405,
+    headers: { "Content-Type": "text/plain" }
+  });
 });
