@@ -1,0 +1,41 @@
+/* Print-specific styles for PDF generation and print preview */
+@page {
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  .page-break {
+    page-break-before: always;
+  }
+  #__next, #__next > div {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .print\:mt-0, .print\:mb-0 {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Optional: Style for PDF preview in browser (not just print) */
+body {
+  background: #f9f9f9;
+  color: #222;
+}
+
+.page-break {
+  display: block;
+  height: 40px;
+}

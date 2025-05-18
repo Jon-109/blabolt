@@ -1,0 +1,56 @@
+.loanTypeContainer {
+  margin-bottom: 2rem;
+}
+
+.loanTypeOptions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.loanTypeCard {
+  position: relative;
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.loanTypeCard:hover {
+  border-color: #2b6cb0;
+}
+
+.loanTypeCard input[type="radio"] {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  margin: 0;
+}
+
+.loanTypeCard label {
+  display: block;
+  cursor: pointer;
+}
+
+.loanTypeCard h4 {
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.loanTypeCard p {
+  color: #4a5568;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.loanTypeCard input[type="radio"]:checked + label {
+  color: #2b6cb0;
+}
+
+.loanTypeCard input[type="radio"]:checked + label h4 {
+  color: #2b6cb0;
+} 

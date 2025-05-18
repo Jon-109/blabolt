@@ -1,0 +1,31 @@
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0;
+    padding: 0;
+  }
+  .print\:bg-white {
+    background: #fff !important;
+  }
+  .print\:text-black {
+    color: #000 !important;
+  }
+  .print\:w-full {
+    width: 100vw !important;
+  }
+  .print\:h-full {
+    height: 100vh !important;
+  }
+  .print\:p-0 {
+    padding: 0 !important;
+  }
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+  nav, .no-print, .navbar, .header, .footer {
+    display: none !important;
+  }
+  /* Add more selectors as needed for your layout */
+}
