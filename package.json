@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "business-lending-advocate",
   "private": true,
   "version": "0.1.0",
