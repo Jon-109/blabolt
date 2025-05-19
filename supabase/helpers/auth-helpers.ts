@@ -1,8 +1,9 @@
 import { createClient } from './server'
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation'
 
 export async function getSession() {
-  const supabase = createClient()
+  const supabase = createClient(cookies())
   try {
     const {
       data: { session },
@@ -23,7 +24,7 @@ export async function requireAuth() {
 }
 
 export async function signOut() {
-  const supabase = createClient()
+  const supabase = createClient(cookies())
   try {
     await supabase.auth.signOut()
     redirect('/login')
