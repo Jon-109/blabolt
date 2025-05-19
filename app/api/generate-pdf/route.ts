@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+import chromium from 'chrome-aws-lambda';
+// Use chromium.puppeteer for both dev and prod
+type ChromiumType = typeof import('chrome-aws-lambda');
+const puppeteer = (chromium as unknown as ChromiumType).puppeteer;
 import { getCashFlowAnalysisById } from '@/lib/getCashFlowAnalysisById';
 import { uploadPdfToSupabase } from '@/lib/uploadPdfToSupabase';
 
@@ -45,7 +48,14 @@ export async function POST(req: NextRequest) {
     console.log('[generate-pdf] Step 1: Analysis fetched successfully.');
 
     console.log('[generate-pdf] Step 2: Launching Puppeteer...');
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] }); // Added common args for serverless
+    const executablePath = await chromium.executablePath;
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath,
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
+    });
     const page = await browser.newPage();
     console.log('[generate-pdf] Step 2: Puppeteer launched, new page created.');
 
@@ -76,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     console.log('[generate-pdf] Step 3: Generating PDF...');
     const pdfBuffer = await page.pdf({
-      format: 'A4',
+      format: 'a4',
       printBackground: true,
       margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }, // Ensure units
     });

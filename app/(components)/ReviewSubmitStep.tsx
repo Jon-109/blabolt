@@ -611,7 +611,7 @@ export function ReviewSubmitStep({
       )}
       {submitStatus === 'success' && (
         <div className="mt-4 p-4 bg-green-100 border border-green-300 rounded-md text-green-800">
-          <p className="font-semibold">Submission Successful!</p>
+          <p className="font-semibold">Generating your report, please wait...</p>
           {pdfUrls && (
             <p className="mt-2">
               You can download a copy of your submission: 

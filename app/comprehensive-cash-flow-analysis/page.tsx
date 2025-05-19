@@ -1084,8 +1084,69 @@ export default function Page() {
       ) : (
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="min-h-[400px]">
-            {currentStepComponent}
-          </div>
+  {/* Wizard Header with Blue Background */}
+  <div className="rounded-xl mb-6 p-5 pb-4 shadow-lg border border-blue-900 bg-gradient-to-br from-[#002c55] to-[#02396e]">
+    <h2 className="text-3xl font-bold mb-1 text-center text-white tracking-tight drop-shadow-sm">
+      Comprehensive Cash Flow Analysis
+    </h2>
+    <p className="text-center text-blue-100 mb-3 text-base max-w-4xl mx-auto font-medium">
+    We’ll guide you step-by-step to build a funding-ready cash flow report — perfect for loan applications.    </p>
+    {/* Sleek Stepper with Progress Bar */}
+    <div className="relative mb-0">
+      {/* Progress Bar (background) */}
+      <div className="absolute left-0 right-0 top-1/2 transform -translate-y-1/2 h-1.5 bg-white rounded-full z-0" style={{height: '6px'}} />
+      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 h-1.5 bg-blue-300 rounded-full z-10 transition-all duration-500" style={{width: `${getProgressWidth()}%`, height: '6px'}} />
+      {/* Step Icons and Titles */}
+      <div className="relative flex justify-between items-center z-20 px-2">
+        {steps.map((step, idx) => {
+          // Icon selection
+          let icon = null;
+          if (step.id === 1) icon = (
+            // Identification/User Icon
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A9.004 9.004 0 0112 15c2.003 0 3.868.659 5.293 1.764M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          );
+          if (step.id === 2) icon = (
+            // Classic Dollar Sign Icon
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 7c0-2.21-2.239-4-5-4s-5 1.79-5 4c0 2.21 2.239 4 5 4s5 1.79 5 4-2.239 4-5 4-5-1.79-5-4" />
+            </svg>
+          );
+          if (step.id === 3) icon = (
+            // Credit Card Icon
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2" strokeLinejoin="round" /><path d="M2 10h20" /></svg>
+          );
+          if (step.id === 4) icon = (
+            // Clipboard Check Icon
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5h6a2 2 0 012 2v12a2 2 0 01-2 2H9a2 2 0 01-2-2V7a2 2 0 012-2zm0 0V3a2 2 0 012-2h2a2 2 0 012 2v2" /><path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2 2 4-4" /></svg>
+          );
+          // Step state
+          const isComplete = currentStep > step.id;
+          const isActive = currentStep === step.id;
+          return (
+            <div key={step.id} className="flex flex-col items-center flex-1">
+              <div className={`relative z-20 flex items-center justify-center w-16 h-16 rounded-full border-4 transition-all duration-300
+                ${isActive ? 'bg-white border-blue-500 shadow-2xl scale-110 ring-4 ring-blue-400 ring-offset-2 ring-offset-[#002c55]' : isComplete ? 'bg-green-500 border-green-300 text-white' : 'bg-blue-900 border-blue-700 text-blue-200'}`}
+              >
+                {isComplete ? (
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                ) : (
+                  <span className={isActive ? 'text-blue-700' : isComplete ? 'text-white' : 'text-blue-200'}>{icon}</span>
+                )}
+              </div>
+              <div className={`mt-2 text-xs font-semibold text-center transition-colors duration-300
+                ${isActive ? 'text-blue-100' : isComplete ? 'text-green-100' : 'text-blue-200'}`}
+              >
+                {step.title}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+  {currentStepComponent}
+</div>
           {/* Navigation Buttons */}
           <div className="mt-12 flex justify-between items-center">
             <button

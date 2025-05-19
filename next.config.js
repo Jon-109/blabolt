@@ -81,4 +81,12 @@ const nextConfig = {
   }
 }
 
+nextConfig.webpack = (config, { isServer }) => {
+  config.module.rules.push({
+    test: /\.js\.map$/,
+    use: 'ignore-loader',
+  });
+  return config;
+};
+
 module.exports = nextConfig
