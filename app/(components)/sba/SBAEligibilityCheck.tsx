@@ -87,7 +87,7 @@ const SBAEligibilityCheck = () => {
         {showResult && (
           <div aria-live="polite"> {/* Wrapper for announcement */}
             {allChecked ? (
-              <Alert variant="success" className="bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700">
+              <Alert variant="default" className="bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700">
                 <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                 <AlertTitle className="font-semibold text-green-800 dark:text-green-200">Eligibility Looks Promising!</AlertTitle>
                 <AlertDescription className="text-green-700 dark:text-green-300">
@@ -96,7 +96,7 @@ const SBAEligibilityCheck = () => {
               </Alert>
             ) : (
               // This state is currently unreachable due to button logic
-              <Alert variant="warning" className="bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700">
+              <Alert variant="destructive" className="bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700">
                  {/* Optional: Add Warning Icon if desired */}
                 <AlertTitle className="font-semibold text-yellow-800 dark:text-yellow-200">Review Needed</AlertTitle>
                 <AlertDescription className="text-yellow-700 dark:text-yellow-300">
