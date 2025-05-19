@@ -7,11 +7,17 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   { ignores: ['dist'] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    extends: [
+      'next',
+      js.configs.recommended,
+      ...tseslint.configs.recommended,
+    ],
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: Object.fromEntries(
+        Object.entries(globals.browser).map(([key, value]) => [key.trim(), value])
+      ),
     },
     plugins: {
       'react-hooks': reactHooks,
