@@ -129,7 +129,7 @@ export const DscrGauge: React.FC<{ value: number }> = ({ value }) => {
             </div>
 
             {/* Range labels */}
-            <div className="absolute -bottom-6 w-full grid grid-cols-3 text-center text-xs text-gray-600">
+            <div className="absolute -bottom-8 w-full grid grid-cols-3 text-center text-xs text-gray-600">
               <span className="text-red-600">High Risk</span>
               <span className="text-yellow-500">Needs Work</span>
               <span className="text-green-600">Strong</span>
