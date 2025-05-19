@@ -10,12 +10,7 @@ const logoPath = '/images/BusLendAdv_Final_4c.jpg';
 import Image from 'next/image';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
-interface PrintReportPageProps {
-  params: { analysisId: string; type: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}
-
-export default async function PrintReportPage({ params, searchParams }: PrintReportPageProps) {
+export default async function PrintReportPage({ params, searchParams }: any) {
   const { analysisId, type } = params;
   let supabase;
   // If a token is present in the query, use it to create the client (for SSR PDF gen)
