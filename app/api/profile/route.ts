@@ -30,15 +30,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.session.user.id)
-      .single()
-
-    if (error) throw error
-
-    return NextResponse.json(profile)
+    // Return the authenticated user's info directly
+    return NextResponse.json(session.session.user)
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
@@ -71,18 +64,8 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .update(body)
-      .eq('id', session.session.user.id)
-      .select()
-      .single()
-
-    if (error) throw error
-
-    return NextResponse.json(profile)
+    // Profile updates are not supported as there is no 'profiles' table
+    return NextResponse.json({ error: 'Profile updates are not supported.' }, { status: 501 })
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
