@@ -54,7 +54,9 @@ const ComparisonTable = () => {
   );
 };
 
-export default function CashFlowAnalysis() {
+import { Suspense } from 'react';
+
+function CashFlowAnalysisContent() {
   const [formValues, setFormValues] = useState<DscrFormValues>({
     monthlyNetIncome: 0,
     realEstateDebt: 0,
