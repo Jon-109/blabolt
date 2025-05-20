@@ -26,7 +26,7 @@ import {
   ArrowRight as ArrowRightIcon
 } from 'lucide-react';
 
-export default function Home() {
+function HomeContent() {
   // Simplify client-side functionality
   const scrollToCalculator = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -220,5 +220,14 @@ export default function Home() {
       </section>
 
     </div>
+  );
+}
+
+import { Suspense } from 'react';
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
