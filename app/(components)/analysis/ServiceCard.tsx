@@ -22,7 +22,7 @@ const ServiceCard = () => (
   <div className="flex flex-col md:flex-row gap-8">
     {/* Loan Packaging Card */}
     <Card className="flex-1 shadow-lg border-2 border-gray-100">
-      <CardContent className="py-8 px-6 md:px-8 flex flex-col h-full">
+      <CardContent className="pt-8 pb-4 px-6 md:px-8 flex flex-col h-full">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Loan Packaging</h2>
         <p className="text-gray-700 text-base mb-2 font-bold">
           For business owners who need a loan but don’t know where to start.
@@ -49,7 +49,7 @@ const ServiceCard = () => (
           <div className="flex justify-center">
             <Link
               href="#get-guidance"
-              className="inline-block bg-primary text-white font-semibold rounded px-5 py-2 shadow hover:bg-primary/90 transition"
+              className="inline-block bg-[#002c55] text-white font-semibold rounded px-5 py-2 shadow hover:bg-[#002c55]/90 transition"
             >
               Get Step-by-Step Guidance →
             </Link>
@@ -60,7 +60,7 @@ const ServiceCard = () => (
 
     {/* Loan Brokering Card */}
     <Card className="flex-1 shadow-lg border-2 border-gray-100">
-      <CardContent className="py-8 px-6 md:px-8 flex flex-col h-full">
+      <CardContent className="pt-8 pb-4 px-6 md:px-8 flex flex-col h-full">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Loan Brokering</h2>
         <p className="text-gray-700 text-base mb-2 font-bold text-center">
           Want us to find the right lender for you? We’ll handle it.
@@ -88,7 +88,7 @@ const ServiceCard = () => (
           <div className="flex justify-center">
             <Link
               href="#find-offer"
-              className="inline-block bg-primary text-white font-semibold rounded px-5 py-2 shadow hover:bg-primary/90 transition"
+              className="inline-block bg-[#002c55] text-white font-semibold rounded px-5 py-2 shadow hover:bg-[#002c55]/90 transition"
             >
               Find My Best Loan Offer →
             </Link>

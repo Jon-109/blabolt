@@ -11,15 +11,17 @@ import Image from 'next/image';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 export default async function PrintReportPage({ params, searchParams }: any) {
-  const { analysisId, type } = params;
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const { analysisId, type } = resolvedParams;
   let supabase;
   // If a token is present in the query, use it to create the client (for SSR PDF gen)
-  if (searchParams && searchParams.token) {
+  if (resolvedSearchParams && resolvedSearchParams.token) {
     const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = process.env;
     supabase = createSupabaseClient(
       NEXT_PUBLIC_SUPABASE_URL!,
       NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: `Bearer ${searchParams.token}` } } }
+      { global: { headers: { Authorization: `Bearer ${resolvedSearchParams.token}` } } }
     );
   } else {
     // Normal browser/server-side rendering

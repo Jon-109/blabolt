@@ -585,26 +585,53 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(val)=>{ setActiveTab(val); setShowErrors(false); }} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="2023">
-                2023 
-                {(skip2023 || Object.keys(fieldErrors['2023']).length === 0) && (
-                  <span className='ml-2 text-green-600'>✓</span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="2024">
-                2024 
-                {Object.keys(fieldErrors['2024']).length === 0 && (
-                  <span className='ml-2 text-green-600'>✓</span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="2025">
-                2025 YTD 
-                {(skip2025 || Object.keys(fieldErrors['2025']).length === 0) && (
-                  <span className='ml-2 text-green-600'>✓</span>
-                )}
-              </TabsTrigger>
-            </TabsList>
+            <TabsList className="flex w-full justify-center gap-6 bg-transparent p-0 mb-2">
+  <TabsTrigger
+    value="2023"
+    className={cn(
+      'relative flex items-center justify-center px-8 py-1 rounded-full font-bold text-base transition-all duration-200 border-2 focus:outline-none',
+      activeTab === '2023'
+        ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105 z-10'
+        : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-400',
+      'min-w-[120px]'
+    )}
+  >
+    2023
+    {(skip2023 || Object.keys(fieldErrors['2023']).length === 0) && (
+      <span className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full px-2 py-0.5 text-xs font-bold shadow">✓</span>
+    )}
+  </TabsTrigger>
+  <TabsTrigger
+    value="2024"
+    className={cn(
+      'relative flex items-center justify-center px-8 py-1 rounded-full font-bold text-base transition-all duration-200 border-2 focus:outline-none',
+      activeTab === '2024'
+        ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105 z-10'
+        : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-400',
+      'min-w-[120px]'
+    )}
+  >
+    2024
+    {Object.keys(fieldErrors['2024']).length === 0 && (
+      <span className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full px-2 py-0.5 text-xs font-bold shadow">✓</span>
+    )}
+  </TabsTrigger>
+  <TabsTrigger
+    value="2025YTD"
+    className={cn(
+      'relative flex items-center justify-center px-8 py-1 rounded-full font-bold text-base transition-all duration-200 border-2 focus:outline-none',
+      activeTab === '2025YTD'
+        ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105 z-10'
+        : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-400',
+      'min-w-[140px]'
+    )}
+  >
+    2025 YTD
+    {Object.keys(fieldErrors['2025']).length === 0 && (
+      <span className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full px-2 py-0.5 text-xs font-bold shadow">✓</span>
+    )}
+  </TabsTrigger>
+</TabsList>
 
             <TabsContent value="2023" className='pt-4'>
               <div className="flex items-center space-x-2 bg-blue-50 p-3 rounded-md border border-blue-200">

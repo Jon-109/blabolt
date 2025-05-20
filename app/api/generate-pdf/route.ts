@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import chromium from 'chrome-aws-lambda';
-// Use chromium.puppeteer for both dev and prod
-type ChromiumType = typeof import('chrome-aws-lambda');
-const puppeteer = (chromium as unknown as ChromiumType).puppeteer;
+import puppeteer from 'puppeteer';
+
+
+
 import { getCashFlowAnalysisById } from '@/lib/getCashFlowAnalysisById';
 import { uploadPdfToSupabase } from '@/lib/uploadPdfToSupabase';
 
@@ -47,17 +47,14 @@ export async function POST(req: NextRequest) {
     }
     console.log('[generate-pdf] Step 1: Analysis fetched successfully.');
 
-    console.log('[generate-pdf] Step 2: Launching Puppeteer...');
-    const executablePath = await chromium.executablePath;
+    // Puppeteer v22+ launch
     const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath,
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
+      headless: true, // 'new' is not in type definition; use true for compatibility
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
     const page = await browser.newPage();
     console.log('[generate-pdf] Step 2: Puppeteer launched, new page created.');
+
 
     const printUrl = getPrintUrl(req, analysisId, type, accessToken);
     console.log(`[generate-pdf] Navigating to print URL: ${printUrl}`);

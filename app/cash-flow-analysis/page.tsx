@@ -215,7 +215,12 @@ export default function CashFlowAnalysis() {
               {/* Secondary CTA */}
               <div className="flex flex-col items-center">
                 <button
-                  onClick={handleStartCheckout}
+                  onClick={() => {
+                    const el = document.getElementById('two-levels');
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                   className="px-8 py-3 bg-transparent border-2 border-white text-white rounded-lg font-semibold hover:bg-white/10 transition-colors"
                 >
                   See Comprehensive Analysis
@@ -265,7 +270,7 @@ export default function CashFlowAnalysis() {
       </section>
 
       {/* Services Section */}
-      <section className="py-8 bg-[#002c55]">
+      <section id="two-levels" className="py-8 bg-[#002c55]">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-4 text-white">
             Two Levels of Cash Flow Analysis

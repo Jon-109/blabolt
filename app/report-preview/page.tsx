@@ -426,7 +426,7 @@ return (
         </div>
 
         {/* Loan Services Section */}
-        <div className="max-w-5xl mx-auto mt-12 mb-8">
+        <div className="max-w-5xl mx-auto mt-8 mb-4">
           <h2 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">Explore Our Business Loan Services</h2>
           <div className="flex flex-col md:flex-row gap-6 items-stretch">
             <ServiceCard />
@@ -434,7 +434,7 @@ return (
         </div>
       </>
     )}
-    <div className="mt-16">
+    <div className="mt-8">
       <Testimonials />
     </div>
     <section className="bg-gray-50 py-10 px-6 rounded-2xl shadow-md text-center max-w-4xl mx-auto border border-gray-100">

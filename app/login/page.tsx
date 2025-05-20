@@ -3,6 +3,7 @@
 import { supabase } from '@/supabase/helpers/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import Cookies from 'js-cookie'
 import { Lock, Mail } from 'lucide-react'
 
 export default function LoginPage() {
@@ -54,7 +55,26 @@ export default function LoginPage() {
     };
 
     checkSession();
-    
+
+    // --- Hydrate Supabase session from cookies if needed (after SSR login) ---
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        const access_token = Cookies.get('sb-access-token');
+        const refresh_token = Cookies.get('sb-refresh-token');
+        if (access_token && refresh_token) {
+          supabase.auth.setSession({ access_token, refresh_token })
+            .then(({ data, error }) => {
+              if (error) {
+                console.error('Error hydrating session from cookies:', error);
+              } else {
+                console.log('Session hydrated from cookies:', !!data.session);
+              }
+            });
+        }
+      }
+    });
+    // --- End hydration logic ---
+
     // Clean up subscription
     return () => {
       console.log('Cleaning up auth subscription');
