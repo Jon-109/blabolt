@@ -48,7 +48,7 @@ interface CashFlowAnalysisRecord {
   annualized_loan: number | null; // Exists in DB AND LoanInfo type
 }
 
-export default function ReportPreviewPage() {
+function ReportPreviewPageContent() {
   // Fallback UI for error
   function ErrorFallback({ error }: { error: string }) {
     return (
