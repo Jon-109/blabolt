@@ -278,7 +278,7 @@ function CashFlowAnalysisInner() {
             Two Levels of Cash Flow Analysis
           </h2>
           <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-            {/* Quick Analysis */}
+            {/* Quick Free Analysis */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="bg-primary-blue/10 text-primary-blue px-4 py-1 rounded-full inline-block mb-4">
                 FREE
@@ -430,5 +430,13 @@ function CashFlowAnalysisInner() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function CashFlowAnalysisPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CashFlowAnalysisInner />
+    </Suspense>
   );
 }
