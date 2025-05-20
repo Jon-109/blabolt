@@ -63,7 +63,7 @@ export default function LoginPage() {
         const refresh_token = Cookies.get('sb-refresh-token');
         if (access_token && refresh_token) {
           supabase.auth.setSession({ access_token, refresh_token })
-            .then(({ data, error }) => {
+            .then(({ data, error }: { data: { session: any }, error: any }) => {
               if (error) {
                 console.error('Error hydrating session from cookies:', error);
               } else {
