@@ -57,7 +57,7 @@ export default function LoginPage() {
     checkSession();
 
     // --- Hydrate Supabase session from cookies if needed (after SSR login) ---
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
       if (!data.session) {
         const access_token = Cookies.get('sb-access-token');
         const refresh_token = Cookies.get('sb-refresh-token');
