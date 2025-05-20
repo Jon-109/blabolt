@@ -1,8 +1,6 @@
 "use client";
 
-"use client";
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { 
   CheckCircle, 
   Clock, 
@@ -56,7 +54,6 @@ const ComparisonTable = () => {
   );
 };
 
-import { Suspense } from 'react';
 
 
 function CashFlowAnalysisContent() {
