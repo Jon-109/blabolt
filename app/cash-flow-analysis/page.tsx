@@ -58,8 +58,6 @@ const ComparisonTable = () => {
 
 import { Suspense } from 'react';
 
-// Ensure this file is a Client Component
-"use client";
 
 function CashFlowAnalysisContent() {
   const [formValues, setFormValues] = useState<DscrFormValues>({
