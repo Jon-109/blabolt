@@ -1,134 +1,15 @@
-'use client';
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
-import DownloadButton from '@/app/(components)/shared/DownloadButton';
-// Restore correct type imports
-import CashFlowReport, { 
-  LoanInfo, 
-  Financials,
-  DscrResults,
-  DscrYearData,
-  CashFlowReportProps,
-  DebtDetail // Import DebtDetail
-} from '@/app/(components)/CashFlowReport';
-import type { Debt } from '@/app/(components)/BusinessDebtsStep'; // Debt comes from here
-import { supabase } from '@/supabase/helpers/client'; // Correct Supabase path
-import { Button } from '@/app/(components)/ui/button';
-import ServiceCard from '@/app/(components)/analysis/ServiceCard';
-import Testimonials from '@/app/(components)/shared/Testimonials';
+import { Suspense } from 'react';
+import ReportPreviewPageContent from './ReportPreviewPageContent';
 
-// Define the shape of the data fetched from Supabase
-// Reflects the actual columns in the 'cash_flow_analyses' table
-interface CashFlowAnalysisRecord {
-  id: string;
-  user_id: string | null;
-  business_name: string | null;
-  loan_purpose: string | null;
-  desired_amount: number | null;
-  estimated_payment: number | null;
-  financials: Financials | null; // Defined in CashFlowReport
-  debts: { entries?: Debt[] } | null; // Uses Debt type
-  dscr: DscrResults | null; // Defined in CashFlowReport
-  created_at: string;
-  updated_at: string;
-
-  cash_flow_pdf_url: string | null;
-  debt_summary_pdf_url: string | null;
-  status: string | null;
-  first_name: string | null; // Exists in DB, but not in LoanInfo type
-  last_name: string | null; // Exists in DB, but not in LoanInfo type
-  down_payment: number | null; // Exists in DB, but not in LoanInfo type
-  down_payment293: string | null; // Exists in DB, but not in LoanInfo type
-  proposed_loan: number | null; // Exists in DB, but not in LoanInfo type
-  term: string | null; // Exists in DB, but not in LoanInfo type
-  interest_rate: number | null; // Exists in DB, but not in LoanInfo type
-  annualized_loan: number | null; // Exists in DB AND LoanInfo type
+export default function ReportPreviewPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <ReportPreviewPageContent />
+    </Suspense>
+  );
 }
-
-function ReportPreviewPageContent() {
-  // Fallback UI for error
-  function ErrorFallback({ error }: { error: string }) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
-        <h2 className="text-2xl font-bold text-red-600 mb-2">Oops! Something went wrong</h2>
-        <p className="mb-4 text-gray-600">{error}</p>
-        <Link href="/" className="text-blue-600 underline">Go back home</Link>
-      </div>
-    );
-  }
-
-  const searchParams = useSearchParams(); 
-  const analysisId = searchParams.get('id');
-  const router = useRouter();
-
-  const [reportData, setReportData] = useState<CashFlowReportProps | null>(null);
-  const [isLoading, setIsLoading] = useState(true); 
-  const [error, setError] = useState<string | null>(null);
-  
-  // Check user authentication on load
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        
-        if (authError || !user) {
-          console.error('Authentication error:', authError);
-          router.replace('/login');
-          return;
-        }
-        
-        // If no specific analysis ID is provided, check for the most recent submitted one
-        if (!analysisId) {
-          const { data: analyses, error: analysesError } = await supabase
-            .from('cash_flow_analyses')
-            .select('id, status')
-            .eq('user_id', user.id)
-            .eq('status', 'submitted')
-            .order('updated_at', { ascending: false })
-            .limit(1);
-            
-          if (analysesError) {
-            console.error('Error fetching analyses:', analysesError);
-            return;
-          }
-          
-          if (analyses && analyses.length > 0) {
-            // Redirect to the report with the most recent submitted analysis
-            router.replace(`/report-preview?id=${analyses[0].id}`);
-          } else {
-            // No submitted analyses found, redirect to form
-            router.replace('/comprehensive-cash-flow-analysis');
-          }
-          return;
-        }
-      } catch (err) {
-        console.error('Auth check error:', err);
-        router.replace('/login');
-      }
-    };
-    
-    checkAuth();
-  }, [router, analysisId]);
-
-  useEffect(() => {
-    const fetchAnalysisData = async () => {
-      if (!analysisId) {
-        setError('No analysis ID provided in the URL.');
-        setIsLoading(false);
-        return;
-      }
-      
-      // First check if the user is authorized to view this analysis
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        setError('You must be logged in to view this analysis.');
-        setIsLoading(false);
-        return;
-      }
-
       setIsLoading(true);
       setError(null);
 
