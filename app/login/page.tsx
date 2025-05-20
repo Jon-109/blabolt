@@ -1,13 +1,14 @@
 'use client'
 export const dynamic = 'force-dynamic';
 
+import { Suspense } from 'react';
 import { supabase } from '@/supabase/helpers/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Cookies from 'js-cookie'
 import { Lock, Mail } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(true)
@@ -249,5 +250,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <LoginPageContent />
+    </Suspense>
   );
 }
