@@ -56,7 +56,7 @@ const ComparisonTable = () => {
 
 
 
-function CashFlowAnalysisContent() {
+function CashFlowAnalysisInner() {
   const [formValues, setFormValues] = useState<DscrFormValues>({
     monthlyNetIncome: 0,
     realEstateDebt: 0,
