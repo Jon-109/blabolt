@@ -405,29 +405,6 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
 
           {/* Explanation and Calculation */}
           <div className="md:w-2/3 print:w-2/3 flex flex-col">
-            {safeDscr['2024']?.dscr !== undefined && safeDscr['2024']?.dscr !== null && (
-              <div className="mb-2 text-base font-bold text-center" style={{
-                color:
-                  safeDscr['2024'].dscr >= 1.25
-                    ? '#15803d' // green-700
-                    : safeDscr['2024'].dscr >= 1.0
-                    ? '#b45309' // yellow-700
-                    : '#b91c1c', // red-700
-              }}>
-                {safeDscr['2024'].dscr >= 1.25 && (
-                  <>Great job! Your 2024 DSCR of <span className="font-bold">{safeDscr['2024'].dscr.toFixed(2)}x</span> is strong and meets or exceeds most lender requirements.</>
-                )}
-                {safeDscr['2024'].dscr >= 1.0 && safeDscr['2024'].dscr < 1.25 && (
-                  <>Your 2024 DSCR of <span className="font-bold">{safeDscr['2024'].dscr.toFixed(2)}x</span> covers debt payments, but consider improving it for better loan options.</>
-                )}
-                {safeDscr['2024'].dscr < 1.0 && (
-                  <>Caution: Your 2024 DSCR of <span className="font-bold">{safeDscr['2024'].dscr.toFixed(2)}x</span> means your business may not generate enough cash to cover debt payments.</>
-                )}
-                {safeDscr['2024'].dscr === 1.0 && (
-                  <>Your cash flow exactly matches your debt payments. Lenders may want to see a higher score for approval.</>
-                )}
-              </div>
-            )}
             <p className="mb-2 text-gray-600 text-xs md:text-sm leading-snug">
               Your Debt Service Coverage Ratio (DSCR) shows if your business brings in enough income to pay all its debt payments. <span className="font-semibold">A score of 1.0x means for every $1 you make, you pay $1 in debts.</span> Most banks want to see at least <span className="font-semibold">1.25x</span>—so you have a safety cushion.
             </p>

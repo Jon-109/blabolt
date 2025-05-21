@@ -308,12 +308,68 @@ export default function ReportPreviewPageContent() {
         </div>
         <hr className="border-t-4 border-black rounded-full mb-6" />
         <CashFlowReport {...reportData} />
-        <div className="mt-8">
-          <ServiceCard />
+        {/* Download Buttons (Bottom) */}
+        <div className="flex justify-center mt-10 mb-4 gap-4 flex-col sm:flex-row">
+          <DownloadButton
+            analysisId={analysisId as string}
+            type="full"
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700"
+          >
+            Download Cash Flow Analysis
+          </DownloadButton>
+          <DownloadButton
+            analysisId={analysisId as string}
+            type="summary"
+            className="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded font-semibold hover:bg-gray-700"
+          >
+            Download Business Debt Summary
+          </DownloadButton>
         </div>
+        
+        {/* Loan Services Section */}
+        <section className="relative max-w-5xl mx-auto mt-12 mb-8 px-6 py-10 bg-gradient-to-br from-blue-50 via-white to-green-50 border border-blue-100 dark:border-gray-700 shadow-xl rounded-3xl overflow-hidden animate-fade-in">
+          <div className="flex flex-col items-center">
+            <div className="mb-4 flex items-center gap-3">
+              <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zm0 0v12m0 0c-4.418 0-8-1.79-8-4V7c0-2.21 3.582-4 8-4s8 1.79 8 4v9c0 2.21-3.582 4-8 4z" /></svg>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-blue-900 dark:text-white tracking-tight drop-shadow-sm">Explore Our Business Loan Services</h2>
+            </div>
+            <p className="text-lg text-gray-700 dark:text-gray-200 mb-8 text-center max-w-2xl">
+              Unlock funding opportunities tailored for your business. Discover flexible loan solutions, expert guidance, and dedicated support to help you grow and succeed.
+            </p>
+            <div className="flex flex-col md:flex-row gap-6 items-stretch w-full justify-center">
+              <ServiceCard />
+            </div>
+          </div>
+        </section>
+
         <div className="mt-8">
           <Testimonials />
         </div>
+        <section className="bg-gray-50 py-10 px-6 rounded-2xl shadow-md text-center max-w-4xl mx-auto border border-gray-100">
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">
+            Ready to Turn Your Report Into Real Funding?
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto mb-6">
+            Whether you want expert guidance preparing a lender-ready package or prefer a hands-off experience where we find the right lender for you — we’re here to help.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link
+              href="/loan-packaging"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition text-lg shadow-md border border-blue-700/10"
+            >
+              Get Help With Loan Packaging ($499)
+            </Link>
+            <Link
+              href="/loan-brokering"
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold transition text-lg shadow-md border border-green-700/10"
+            >
+              Let Us Find You a Lender (Free Until Funded)
+            </Link>
+          </div>
+          <p className="text-sm text-gray-500 mt-4">
+            Need help deciding? <Link href="/contact" className="underline text-blue-600 hover:text-blue-800">Contact us</Link> for a free consultation.
+          </p>
+        </section>
       </div>
     </div>
   );
