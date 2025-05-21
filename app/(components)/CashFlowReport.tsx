@@ -375,7 +375,10 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
         <div className="bg-white rounded-xl shadow-md p-3 md:p-4 flex flex-col md:flex-row print:flex-row gap-4 items-stretch">
           {/* Gauge and Score */}
           <div className="md:w-1/3 print:w-1/3 flex flex-col items-center justify-center mb-6 md:mb-0">
-            <DscrGauge value={safeDscr['2024']?.dscr ?? 0} />
+            <DscrGauge value={
+  (financials2024?.adjustedEbitda ?? 0) /
+  ((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0))
+} />
             {safeDscr['2024']?.dscr !== undefined && safeDscr['2024']?.dscr !== null && (
               <div className="mt-2 flex flex-col items-center">
                 <div className="border-l-4 border-blue-400 bg-blue-50 p-2 w-full">
