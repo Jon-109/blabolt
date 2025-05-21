@@ -274,20 +274,40 @@ export default function ReportPreviewPageContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold mb-4">Cash Flow Analysis Report Preview</h1>
-        <CashFlowReport {...reportData} />
-        <div className="flex flex-col md:flex-row gap-4 mt-8">
-          {analysisId && (
-            <DownloadButton analysisId={analysisId} type="full">
-              Download PDF Report
-            </DownloadButton>
-          )}
-          {analysisId && (
-            <DownloadButton analysisId={analysisId} type="summary">
-              Download Debt Summary
-            </DownloadButton>
-          )}
+        {/* Enhanced Thank You Banner */}
+        <div
+          className="w-full mb-4 rounded-xl bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 shadow-lg p-8 flex flex-col items-center justify-center border border-gray-700 max-w-5xl mx-auto"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <svg width="36" height="36" fill="none" viewBox="0 0 24 24" className="text-green-400"><path fill="currentColor" d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm3.66 5.23a1 1 0 0 1 1.41 1.42l-5.01 5a1 1 0 0 1-1.41 0l-2.01-2a1 1 0 0 1 1.41-1.42l1.3 1.3 4.3-4.3Z"/></svg>
+            <h1 className="text-2xl font-bold text-white drop-shadow">Thank you for your submission!</h1>
+          </div>
+          <p className="text-white text-lg md:text-xl max-w-4xl mx-auto text-center mb-2 font-medium">
+            Your personalized business lending analysis is ready. Below you’ll find your detailed reports, including your cash flow, DSCR, and business debt summary.
+          </p>
+          <p className="text-gray-300 text-base md:text-lg max-w-4xl mx-auto text-center">
+            You can download your full PDF report using the button below. Please review the sections below for a comprehensive breakdown of your business’s financial position and lending eligibility.
+          </p>
         </div>
+        {/* Download Buttons */}
+        <div className="flex justify-center mb-2 gap-4 flex-col sm:flex-row">
+          <DownloadButton
+            analysisId={analysisId as string}
+            type="full"
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700"
+          >
+            Download Cash Flow Analysis
+          </DownloadButton>
+          <DownloadButton
+            analysisId={analysisId as string}
+            type="summary"
+            className="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded font-semibold hover:bg-gray-700"
+          >
+            Download Business Debt Summary
+          </DownloadButton>
+        </div>
+        <hr className="border-t-4 border-black rounded-full mb-6" />
+        <CashFlowReport {...reportData} />
         <div className="mt-8">
           <ServiceCard />
         </div>
