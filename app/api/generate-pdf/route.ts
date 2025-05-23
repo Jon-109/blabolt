@@ -8,7 +8,7 @@ import { uploadPdfToSupabase } from '@/lib/uploadPdfToSupabase';
 
 // Helper to get absolute URL for print route
 function getPrintUrl(req: NextRequest, analysisId: string, type: string, accessToken?: string) {
-  const origin = req.headers.get('origin') || `http://localhost:3000`;
+  const origin = process.env.SITE_URL || req.headers.get('origin') || 'http://localhost:3000';
   let url = `${origin}/report/print/${analysisId}/${type}`;
   if (accessToken) {
     url += `?token=${encodeURIComponent(accessToken)}`;
