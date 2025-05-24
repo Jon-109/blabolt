@@ -566,7 +566,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                 <h2 className="text-xl font-semibold mb-4">Understanding DSCR</h2>
                 <p className="text-sm text-gray-700 leading-relaxed">
                   The Debt Service Coverage Ratio (DSCR) is the most critical metric banks use to evaluate small business loans. 
-                  It measures your property's ability to cover its debt payments, comparing your net operating income to your total debt obligations.
+                  It measures your the ability of your business to cover its debt payments, comparing your net operating income to your total debt obligations.
                 </p>
               </div>
               {/* Why Banks Care Box */}
@@ -587,7 +587,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                     Want a Bank-Level Analysis?
                   </h2>
                   <p className="text-sm text-gray-700 max-w-2xl mx-auto">
-                    While this calculator provides a basic DSCR estimate, our comprehensive cash flow analysis matches the exacting standards banks use when evaluating your business.
+                    While this calculator provides a basic DSCR estimate, our comprehensive cash flow analysis matches the exact standards banks use when evaluating your business.
                   </p>
                 </div>
                 <div className="bg-blue-100 p-5 rounded-lg mt-3 text-center border-l-4 border-blue-500">
