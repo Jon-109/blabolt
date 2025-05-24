@@ -14,6 +14,7 @@ import { supabase } from '@/supabase/helpers/client';
 import { Button } from '@/app/(components)/ui/button';
 import ServiceCard from '@/app/(components)/analysis/ServiceCard';
 import Testimonials from '@/app/(components)/shared/Testimonials';
+import { HelpCircle, ArrowRight as ArrowRightIcon } from 'lucide-react';
 
 // --- Type Definitions for Local Use ---
 // These are not exported from shared or CashFlowReport, so define here for type safety.
@@ -345,30 +346,27 @@ export default function ReportPreviewPageContent() {
         <div className="mt-8">
           <Testimonials />
         </div>
-        <section className="bg-gray-50 py-10 px-6 rounded-2xl shadow-md text-center max-w-4xl mx-auto border border-gray-100">
-          <h2 className="text-2xl font-bold mb-4 text-gray-800">
-            Ready to Turn Your Report Into Real Funding?
-          </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto mb-6">
-            Whether you want expert guidance preparing a lender-ready package or prefer a hands-off experience where we find the right lender for you — we’re here to help.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
+
+        {/* FAQ Section - Enhanced */}
+        <section className="py-8 bg-gradient-to-br from-[#e6ecf2] to-[#c9d7e6]">
+          <div className="container mx-auto px-6 text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <HelpCircle className="w-8 h-8 text-primary-blue" />
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+                Have Questions?
+              </h2>
+            </div>
+            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+              We've compiled answers to common questions about our services and the business lending process. Find the information you need quickly and easily.
+            </p>
             <Link
-              href="/loan-packaging"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition text-lg shadow-md border border-blue-700/10"
+              href="/faq"
+              className="inline-flex items-center gap-2 px-8 py-3 bg-primary-blue hover:bg-primary-blue/90 text-white rounded-lg font-semibold text-lg transition-colors shadow-md"
             >
-              Get Help With Loan Packaging ($499)
-            </Link>
-            <Link
-              href="/loan-brokering"
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold transition text-lg shadow-md border border-green-700/10"
-            >
-              Let Us Find You a Lender (Free Until Funded)
+              Visit Our FAQ Page
+              <ArrowRightIcon className="w-5 h-5" />
             </Link>
           </div>
-          <p className="text-sm text-gray-500 mt-4">
-            Need help deciding? <Link href="/contact" className="underline text-blue-600 hover:text-blue-800">Contact us</Link> for a free consultation.
-          </p>
         </section>
       </div>
     </div>

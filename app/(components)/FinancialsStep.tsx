@@ -68,9 +68,9 @@ export type NumericFinancialData = {
 
 // --- Refactor FinancialsPayload to avoid type conflicts and ensure type safety ---
 export type FinancialsPayload = {
-  year2023: { input: FullFinancialData; summary: NumericFinancialData };
+  year2023: { input: FullFinancialData; summary: NumericFinancialData; skip?: boolean };
   year2024: { input: FullFinancialData; summary: NumericFinancialData };
-  year2025YTD: { input: FullFinancialData; summary: NumericFinancialData; ytdMonth?: string };
+  year2025YTD: { input: FullFinancialData; summary: NumericFinancialData; ytdMonth?: string; skip?: boolean };
 };
 
 interface FinancialsStepProps {
@@ -395,8 +395,8 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
         setData2024(initialData.year2024?.input ?? createEmptyFinancialData());
         setData2025(initialData.year2025YTD?.input ?? createEmptyFinancialData());
         setYtdMonth(initialData.year2025YTD?.ytdMonth ?? '');
-        setSkip2023(false);
-        setSkip2025(false);
+        setSkip2023(initialData.year2023?.skip === true);
+        setSkip2025(initialData.year2025YTD?.skip === true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -511,9 +511,9 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
   useEffect(() => {
     // console.log('[DEBUG FinancialsStep] Effect 3 (Notify Data Change) running.'); 
     const newFinancialsData: FinancialsPayload = {
-      year2023: { input: data2023, summary: convertToNumeric(data2023) },
+      year2023: { input: data2023, summary: convertToNumeric(data2023), skip: skip2023 },
       year2024: { input: data2024, summary: convertToNumeric(data2024) },
-      year2025YTD: { input: data2025, summary: convertToNumeric(data2025), ytdMonth: ytdMonth },
+      year2025YTD: { input: data2025, summary: convertToNumeric(data2025), ytdMonth: ytdMonth, skip: skip2025 },
     };
     const newFinancialsDataString = JSON.stringify(newFinancialsData);
     const changed = newFinancialsDataString !== lastSentDataRef.current;

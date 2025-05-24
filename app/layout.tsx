@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: 'Business Lending Advocate',
   description: 'Expert guidance for small business loans',
   icons: {
-    icon: '/favicon.ico'
+    icon: '/images/Logo.png'
   }
 };
 

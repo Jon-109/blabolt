@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import ServiceCard from '@/app/(components)/analysis/ServiceCard';
 import {
   FileCheck,
   HandshakeIcon,
@@ -100,70 +101,18 @@ export default function LoanServices() {
         </div>
       </section>
 
-      {/* Services Section */}
-      <section className="bg-gray-50 py-8">
-        <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-6">What We Offer</h2>
-          <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            {/* Loan Packaging */}
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <div className="w-12 h-12 bg-primary-blue/10 rounded-full flex items-center justify-center mb-6">
-                <FileCheck className="w-6 h-6 text-primary-blue" />
-              </div>
-              <h3 className="text-2xl font-bold mb-2">Loan Packaging</h3>
-              <p className="text-primary-blue mb-4">$499</p>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" />
-                  <span>Professional cover letter highlighting your strengths</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" />
-                  <span>Comprehensive document preparation and review</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" />
-                  <span>Assistance with gathering necessary paperwork</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" />
-                  <span>Lender-ready formatting and presentation</span>
-                </li>
-              </ul>
-              <Button asChild className="w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors">
-                <Link href="/get-funded">Start Your Application Now</Link>
-              </Button>
-            </div>
-
-            {/* Loan Brokering */}
-            <div className="bg-white p-8 rounded-xl shadow-lg">
-              <div className="w-12 h-12 bg-primary-blue/10 rounded-full flex items-center justify-center mb-6">
-                <HandshakeIcon className="w-6 h-6 text-primary-blue" />
-              </div>
-              <h3 className="text-2xl font-bold mb-2">Loan Brokering</h3>
-              <p className="text-primary-blue mb-4">1% of Loan Amount (paid at closing)</p>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" />
-                  <span>Access to our network of trusted lenders</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" />
-                  <span>Personalized advice and lender matching</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" />
-                  <span>Expert negotiation for best terms</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-1" />
-                  <span>Support until funding is complete</span>
-                </li>
-              </ul>
-              <Button asChild className="w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors">
-                <Link href="/get-funded">Find Your Perfect Lender</Link>
-              </Button>
-            </div>
+      {/* Loan Services Section */}
+      <section className="relative max-w-7xl mx-auto mt-4 mb-8 px-6 py-10 bg-gradient-to-br from-blue-50 via-white to-green-50 border border-blue-100 dark:border-gray-700 shadow-xl rounded-3xl overflow-hidden animate-fade-in">
+        <div className="flex flex-col items-center">
+          <div className="mb-4 flex items-center gap-3">
+            <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zm0 0v12m0 0c-4.418 0-8-1.79-8-4V7c0-2.21 3.582-4 8-4s8 1.79 8 4v9c0 2.21-3.582 4-8 4z" /></svg>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-blue-900 dark:text-white tracking-tight drop-shadow-sm">Explore Our Business Loan Services</h2>
+          </div>
+          <p className="text-lg text-gray-700 dark:text-gray-200 mb-8 text-center max-w-4xl">
+            Unlock funding opportunities tailored for your business. Discover flexible loan solutions, expert guidance, and dedicated support to help you grow and succeed.
+          </p>
+          <div className="flex flex-col md:flex-row gap-6 items-stretch w-full justify-center">
+            <ServiceCard />
           </div>
         </div>
       </section>
