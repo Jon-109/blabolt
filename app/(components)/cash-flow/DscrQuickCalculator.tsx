@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { InfoIcon } from 'lucide-react';
 import { loanPurposes } from '@/lib/loanPurposes';
-import Link from 'next/link';
 import { Button } from '@/app/(components)/ui/button';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/supabase/helpers/client';
 
 export interface DscrFormValues {
   monthlyNetIncome: number;
@@ -224,6 +225,69 @@ function calculateMonthlyLoanPayment(principal: number, annualRate: number, term
 
 const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues, onValuesChange }) => {
   const [error, setError] = React.useState<string>('');
+  const [loading, setLoading] = React.useState(false);
+  const router = useRouter();
+
+  // --- handleStartCheckout copied/adapted from cash-flow-analysis/page.tsx ---
+  const handleStartCheckout = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      // Check Supabase session first
+      const { data: { session }, error: supabaseSessionError } = await supabase.auth.getSession();
+      if (supabaseSessionError || !session) {
+        // Store in sessionStorage that we want to checkout after login
+        sessionStorage.setItem('returnToCheckout', 'true');
+        // Redirect to login with a return URL that includes checkout=true
+        const redirectTo = encodeURIComponent('/cash-flow-analysis?checkout=true');
+        router.push(`/login?redirectTo=${redirectTo}`);
+        setLoading(false);
+        return;
+      }
+      // Check if user has already purchased the comprehensive analysis
+      try {
+        const { hasUserPurchasedCashFlowAnalysis } = await import('@/app/cash-flow-analysis/purchase-check');
+        const hasPurchased = await hasUserPurchasedCashFlowAnalysis(session.user.id);
+        if (hasPurchased) {
+          router.replace('/comprehensive-cash-flow-analysis');
+          setLoading(false);
+          return;
+        }
+      } catch (purchaseCheckError) {
+        // Optionally, allow fallback to checkout if purchase check fails
+        // console.error('Error checking purchase status:', purchaseCheckError);
+      }
+      // Get the JWT token from the session
+      const token = session.access_token;
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+      // Proceed to Stripe checkout
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+      const data = await res.json();
+      if (data.url) {
+        sessionStorage.removeItem('returnToCheckout');
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   const [values, setValues] = useState<DscrFormValues>(() => ({
     monthlyNetIncome: 0,
     realEstateDebt: 0,
@@ -529,11 +593,17 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                 <div className="bg-blue-100 p-5 rounded-lg mt-3 text-center border-l-4 border-blue-500">
                   <h3 className="font-semibold text-blue-800 text-lg mb-1">Comprehensive Cash Flow Analysis - $99</h3>
                   <p className="text-sm text-blue-700">Bank-Level Analysis with a Detailed PDF Report</p>
-                  <Link href="/app/comprehensive-cash-flow-analysis" className="inline-block w-full max-w-xs mx-auto">
-                    <Button className="mt-3 w-full" size="lg">
-                      Get Started Now!
-                    </Button>
-                  </Link>
+                  <Button
+  className="mt-3 w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors shadow-lg max-w-xs mx-auto text-lg"
+  size="lg"
+  onClick={handleStartCheckout}
+  disabled={loading}
+>
+  {loading ? 'Redirecting...' : 'Get Started Now!'}
+</Button>
+{error && (
+  <div className="mt-2 text-red-600 text-sm text-center font-medium">{error}</div>
+)}
                 </div>
                 <div className="grid md:grid-cols-3 gap-4 mt-3">
                   <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -598,7 +668,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                 </div>
 
                 <p className="text-sm text-center text-gray-600 font-medium">
-                  Walk into any bank knowing exactly how lenders will view your business.
+                  Walk into any bank with confidence knowing exactly how lenders will view your business.
                 </p>
               </div>
             </div>

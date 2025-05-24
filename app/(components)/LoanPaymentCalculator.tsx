@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { loanPurposes } from '@/lib/loanPurposes';
 
 type Variant = 'default' | 'compact';
 
@@ -11,12 +12,11 @@ const variantStyles = {
   compact: 'max-w-2xl mx-auto bg-gradient-to-b from-white via-white to-blue-50 p-6 md:p-8 rounded-3xl shadow-2xl border-2 border-blue-100'
 };
 
+// Use keys from loanPurposes plus any extras
 const LOAN_PURPOSES = [
+  ...Object.keys(loanPurposes),
   'Business Expansion',
-  'Equipment Purchase',
-  'Working Capital',
   'Real Estate',
-  'Debt Refinancing',
   'Startup Costs',
   'Other'
 ] as const;
@@ -34,10 +34,10 @@ const LoanPaymentCalculator = React.forwardRef<HTMLDivElement, LoanPaymentCalcul
     const [loanPurpose, setLoanPurpose] = useState<LoanPurpose>(LOAN_PURPOSES[0]);
     const [monthlyPayment, setMonthlyPayment] = useState<number | null>(null);
 
-    // Fixed values for simplicity and consistency
-    const interestRate = 7.5; // 7.5% typical SBA loan rate
-    const loanTerm = 120; // 10 years standard term
-
+    // Dynamically get term and rate from loanPurposes
+    const selectedPurposeData = loanPurposes[loanPurpose as keyof typeof loanPurposes];
+    const loanTerm = selectedPurposeData?.defaultTerm ?? 120; // fallback 10 years
+    const interestRate = selectedPurposeData?.defaultRate ? selectedPurposeData.defaultRate * 100 : 7.5; // fallback 7.5%
     const calculateMonthlyPayment = React.useCallback(() => {
       if (!loanAmount) {
         setMonthlyPayment(null);
@@ -89,19 +89,19 @@ const LoanPaymentCalculator = React.forwardRef<HTMLDivElement, LoanPaymentCalcul
         {...props}
       >
         {/* Header */}
-        <div className="text-center mb-5">
-          <h2 className="text-3xl font-bold text-blue-900 mb-2">
+        <div className="text-center mb-2">
+          <h2 className="text-2xl font-bold text-blue-900 mb-1">
             Loan Payment Calculator
           </h2>
-          <p className="text-base md:text-lg text-blue-800 mb-1">
+          <p className="text-base text-blue-800 mb-0">
             Understand how much a loan could cost you monthly before moving forward with funding.
           </p>
-          <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-blue-600 mx-auto rounded-full"/>
+          <div className="w-16 h-0.5 bg-gradient-to-r from-blue-500 to-blue-600 mx-auto rounded-full"/>
         </div>
 
-        <div className="grid gap-8 md:gap-12">
+        <div className="grid gap-4">
           {/* Input Section */}
-          <div className="space-y-6 bg-white p-6 rounded-2xl border border-blue-100 shadow-sm">
+          <div className="space-y-4 bg-white p-4 rounded-2xl border border-blue-100 shadow-sm">
             {/* Loan Purpose Selection */}
             <div>
               <label htmlFor="loanPurpose" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -159,34 +159,39 @@ const LoanPaymentCalculator = React.forwardRef<HTMLDivElement, LoanPaymentCalcul
           {monthlyPayment !== null && loanAmount && (
             <div className="space-y-6">
               {/* Monthly Payment Box */}
-              <div className="relative bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-8 text-white shadow-xl overflow-hidden text-center">
+              <div className="relative bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-3 text-white shadow-xl overflow-hidden text-center">
                 {/* Decorative Elements */}
                 <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500 rounded-full opacity-20 transform translate-x-20 -translate-y-20" />
                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500 rounded-full opacity-20 transform -translate-x-16 translate-y-16" />
                 
                 {/* Content */}
                 <div className="relative">
-                  <h4 className="text-xl font-medium text-blue-100 mb-4">Monthly Payment</h4>
-                  <p className="text-5xl font-bold tracking-tight mb-6">
+                  <h4 className="text-lg font-medium text-blue-100 mb-2">Monthly Payment</h4>
+                  <p className="text-4xl font-bold tracking-tight mb-3">
                     ${monthlyPayment.toLocaleString()}
                   </p>
-                  <div className="grid grid-cols-2 gap-6 text-sm border-t border-blue-400/30 pt-6 max-w-md mx-auto">
+                  <div className="grid grid-cols-2 gap-2 text-xs border-t border-blue-400/30 pt-2 max-w-md mx-auto">
                     <div>
                       <p className="text-blue-200 mb-1">Interest Rate</p>
-                      <p className="font-semibold text-white text-lg">{interestRate}%</p>
+                      <p className="font-semibold text-white text-lg">{Number(interestRate.toFixed(2)).toLocaleString()}%</p>
                     </div>
                     <div>
                       <p className="text-blue-200 mb-1">Term Length</p>
-                      <p className="font-semibold text-white text-lg">10 Years</p>
+                      <p className="font-semibold text-white text-lg">
+                        {loanTerm >= 12 ? `${loanTerm / 12} Years` : `${loanTerm} Months`}
+                      </p>
                     </div>
+                  </div>
+                  <div className="mt-2 text-xs text-blue-100 opacity-80">
+                    These are estimated values for the selected loan purpose.
                   </div>
                 </div>
               </div>
 
               {/* Cash Flow Analysis CTA */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-8">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-4">
                 <div className="flex flex-col items-center text-center">
-                  <h4 className="text-xl font-semibold text-green-800 mb-3">Can Your Business Support This Payment?</h4>
+                  <h4 className="text-lg font-semibold text-green-800 mb-2">Can Your Business Support This Payment?</h4>
                   <p className="text-green-700 mb-6 max-w-lg">
                     Banks use the critical Debt Service Coverage Ratio (DSCR) to determine if your business can comfortably afford this payment. Our free cash flow analysis will calculate your DSCR and show exactly how strong your position is.
                   </p>
