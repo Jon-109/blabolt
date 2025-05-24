@@ -375,32 +375,38 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
         <div className="bg-white rounded-xl shadow-md p-3 md:p-4 flex flex-col md:flex-row print:flex-row gap-4 items-stretch">
           {/* Gauge and Score */}
           <div className="md:w-1/3 print:w-1/3 flex flex-col items-center justify-center mb-6 md:mb-0">
-            <DscrGauge value={
-  (financials2024?.adjustedEbitda ?? 0) /
-  ((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0))
-} />
-            {safeDscr['2024']?.dscr !== undefined && safeDscr['2024']?.dscr !== null && (
-              <div className="mt-2 flex flex-col items-center">
-                <div className="border-l-4 border-blue-400 bg-blue-50 p-2 w-full">
-                  <span className="block text-sm text-blue-900 font-semibold mb-1">How We Calculated Your Score:</span>
-                  {safeDscr['2024'] && (financials2024?.adjustedEbitda ?? safeDscr['2024']?.noi) && safeDscr['2024']?.totalDebtService ? (
-                    <span className="block text-blue-900 text-sm">
-                      <span className="font-bold">DSCR = Adjusted EBITDA ÷ Total Debt Service</span><br/>
-                      <span className="text-xs text-blue-700">(Business cash flow divided by all debt payments for the year)</span><br/>
-                      <span className="block mt-1">
-                        {formatCurrency(financials2024?.adjustedEbitda ?? safeDscr['2024']?.noi ?? 0)}
-                        <span className="mx-2 text-blue-700 font-bold">÷</span>
-                        {formatCurrency(safeDscr['2024'].totalDebtService)}
-                        <span className="mx-2 text-blue-700 font-bold">=</span>
-                        <span className="font-bold text-blue-900">{(safeDscr['2024'].dscr ?? 0).toFixed(2)}</span>
-                      </span>
-                    </span>
+            {/* Calculate DSCR for 2024 once and reuse */}
+            {(() => {
+              const dscr2024Calc = (financials2024?.adjustedEbitda ?? 0) /
+                ((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0));
+              const numerator = financials2024?.adjustedEbitda ?? 0;
+              const denominator = (annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0);
+              return (
+                <>
+                  <DscrGauge value={dscr2024Calc} />
+                  {Number.isFinite(dscr2024Calc) && denominator > 0 ? (
+                    <div className="mt-2 flex flex-col items-center">
+                      <div className="border-l-4 border-blue-400 bg-blue-50 p-2 w-full">
+                        <span className="block text-sm text-blue-900 font-semibold mb-1">How We Calculated Your Score:</span>
+                        <span className="block text-blue-900 text-sm">
+                          <span className="font-bold">DSCR = Adjusted EBITDA ÷ Total Debt Service</span><br/>
+                          <span className="text-xs text-blue-700">(Business cash flow divided by all debt payments for the year)</span><br/>
+                          <span className="block mt-1">
+                            {formatCurrency(numerator)}
+                            <span className="mx-2 text-blue-700 font-bold">÷</span>
+                            {formatCurrency(denominator)}
+                            <span className="mx-2 text-blue-700 font-bold">=</span>
+                            <span className="font-bold text-blue-900">{dscr2024Calc.toFixed(2)}</span>
+                          </span>
+                        </span>
+                      </div>
+                    </div>
                   ) : (
                     <span className="block text-blue-900 text-sm">Calculation data not available.</span>
                   )}
-                </div>
-              </div>
-            )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Explanation and Calculation */}
@@ -408,9 +414,13 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
             <p className="mb-2 text-gray-600 text-xs md:text-sm leading-snug">
               Your Debt Service Coverage Ratio (DSCR) shows if your business brings in enough income to pay all its debt payments. <span className="font-semibold">A score of 1.0x means for every $1 you make, you pay $1 in debts.</span> Most banks want to see at least <span className="font-semibold">1.25x</span>—so you have a safety cushion.
             </p>
-            {safeDscr['2024']?.dscr !== undefined && safeDscr['2024']?.dscr !== null && (
-              <>
-                {safeDscr['2024'].dscr >= 1.25 && (
+            {/* Use calculated DSCR for conditional rendering */}
+            {(() => {
+              const dscr2024Calc = (financials2024?.adjustedEbitda ?? 0) /
+                ((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0));
+              if (!Number.isFinite(dscr2024Calc)) return null;
+              if (dscr2024Calc >= 1.25) {
+                return (
                   <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-4 text-gray-800 text-sm">
                     <div className="flex items-center mb-1">
                       <span className="text-lg mr-2">🔵</span>
@@ -425,8 +435,9 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                     </ul>
                     <div className="text-green-800 font-semibold">✅ Bottom line: You’re in a great position to borrow — and possibly even refinance existing debt on better terms.</div>
                   </div>
-                )}
-                {safeDscr['2024'].dscr >= 1.0 && safeDscr['2024'].dscr < 1.25 && (
+                );
+              } else if (dscr2024Calc >= 1.0) {
+                return (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-4 text-gray-800 text-sm">
                     <div className="flex items-center mb-1">
                       <span className="text-lg mr-2">🟡</span>
@@ -442,8 +453,9 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                     </ul>
                     <div className="text-yellow-800 font-semibold">⚠️ Recommendation: Focus on boosting cash flow and reducing non-essential debt to strengthen your future borrowing power.</div>
                   </div>
-                )}
-                {safeDscr['2024'].dscr < 1.0 && (
+                );
+              } else if (dscr2024Calc < 1.0) {
+                return (
                   <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded mb-4 text-gray-800 text-sm">
                     <div className="flex items-center mb-1">
                       <span className="text-lg mr-2">🔴</span>
@@ -464,9 +476,10 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                     </ul>
                     <div className="text-red-800 font-semibold">💬 Once your DSCR improves, we can revisit your application.</div>
                   </div>
-                )}
-              </>
-            )}
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       </section>
@@ -474,23 +487,23 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
       {/* --- Income Breakdown Section --- */}
       <section className="mb-8">
         <div className="max-w-3xl mx-auto">
-  <h2 className="text-3xl font-bold text-center mb-2 mt-2 border-b-2 border-gray-300 pb-2">Income Breakdown</h2>
-  <table className="w-full border-collapse border text-sm table-fixed">
-          <colgroup>
-            <col className="w-[30%]" />
-            {show2023 && <col className="w-[23.3%]" />}
-            {show2024 && <col className="w-[23.3%]" />}
-            {show2025 && <col className="w-[23.3%]" />}
-          </colgroup>
-          <thead>
-            <tr className="bg-green-100">
-              <th className="border p-2 text-left"></th>
-              {show2023 && <th className="border p-2 text-center">2023</th>}
-              {show2024 && <th className="border p-2 text-center">2024</th>}
-              {show2025 && <th className="border p-2 text-center">{ytdColumnHeader}</th>}
-            </tr>
-          </thead>
-          <tbody>
+          <h2 className="text-3xl font-bold text-center mb-2 mt-2 border-b-2 border-gray-300 pb-2">Income Breakdown</h2>
+          <table className="w-full border-collapse border text-sm table-fixed">
+            <colgroup>
+              <col className="w-[30%]" />
+              {show2023 && <col className="w-[23.3%]" />}
+              {show2024 && <col className="w-[23.3%]" />}
+              {show2025 && <col className="w-[23.3%]" />}
+            </colgroup>
+            <thead>
+              <tr className="bg-green-100">
+                <th className="border p-2 text-left"></th>
+                {show2023 && <th className="border p-2 text-center">2023</th>}
+                {show2024 && <th className="border p-2 text-center">2024</th>}
+                {show2025 && <th className="border p-2 text-center">{ytdColumnHeader}</th>}
+              </tr>
+            </thead>
+            <tbody>
             <tr>
               <td className="border p-2 text-left">Revenue (Sales)</td>
               {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.revenue ?? 0)}</td>}
