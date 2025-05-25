@@ -90,7 +90,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ analysisId, type, child
       </button>
       {loading && (
         <div className="mt-2 text-xs text-gray-600 text-center">
-          Please wait 10–15 seconds for the download to complete.
+          Please wait 3–5 seconds for the download to complete.
         </div>
       )}
     </div>

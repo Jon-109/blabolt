@@ -636,53 +636,53 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
   </section>
 
       {/* --- Net Income, EBITDA, & Adjusted EBITDA: Why They Matter for Your Loan --- */}
-      <section className="mb-4 print:mb-2">
-        <div className="bg-gradient-to-br from-blue-50 to-green-50 border-l-4 border-blue-400 rounded-xl shadow p-3 md:p-4 flex flex-col gap-2 print:p-2 print:gap-1">
-          <div className="flex items-center mb-1 print:mb-0.5">
-            <InfoIcon className="w-4 h-4 text-blue-600 mr-1" />
-            <h4 className="text-base md:text-lg font-bold text-blue-900 leading-tight">
+      <section className="mb-6 print:mb-3">
+        <div className="bg-gradient-to-br from-blue-50 to-green-50 border-l-4 border-blue-400 rounded-xl shadow p-4 md:p-6 flex flex-col gap-3 print:p-3 print:gap-2">
+          <div className="flex items-center mb-2 print:mb-1">
+            <InfoIcon className="w-5 h-5 text-blue-600 mr-2" />
+            <h4 className="text-lg md:text-xl font-bold text-blue-900 leading-tight">
               Net Income, EBITDA, & Adjusted EBITDA: Why They Matter for Your Loan
             </h4>
           </div>
-          <div className="flex flex-col md:flex-row print:flex-row gap-2 mt-1 print:gap-1">
+          <div className="flex flex-col md:flex-row print:flex-row gap-3 mt-2 print:gap-2">
             {/* Net Income Box */}
-            <div className="flex-1 bg-white border-l-4 border-blue-400 rounded-xl shadow p-2 flex flex-col items-start print:p-1 print:rounded print:shadow-none">
+            <div className="flex-1 bg-white border-l-4 border-blue-400 rounded-xl shadow p-3 flex flex-col items-start print:p-2 print:rounded print:shadow-none">
               <div className="flex items-center mb-1 print:mb-0.5">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 mr-1">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" d="M4 12h16M4 12l4-4m-4 4l4 4"/></svg>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 mr-2">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" d="M4 12h16M4 12l4-4m-4 4l4 4"/></svg>
                 </span>
-                <span className="text-xs font-bold text-blue-900 leading-tight">Net Income</span>
+                <span className="text-sm font-bold text-blue-900 leading-tight">Net Income</span>
               </div>
-              <div className="text-gray-700 text-xs md:text-sm leading-snug">
+              <div className="text-gray-700 text-sm md:text-base leading-snug">
                 Money left after all regular costs—COGS, expenses, interest, and taxes. Shows what you truly earn from your business after everything is paid.
               </div>
             </div>
             {/* EBITDA Box */}
-            <div className="flex-1 bg-white border-l-4 border-green-400 rounded-xl shadow p-2 flex flex-col items-start print:p-1 print:rounded print:shadow-none">
+            <div className="flex-1 bg-white border-l-4 border-green-400 rounded-xl shadow p-3 flex flex-col items-start print:p-2 print:rounded print:shadow-none">
               <div className="flex items-center mb-1 print:mb-0.5">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600 mr-1">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/><path stroke="currentColor" strokeWidth="2" d="M8 12h8"/></svg>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-600 mr-2">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/><path stroke="currentColor" strokeWidth="2" d="M8 12h8"/></svg>
                 </span>
-                <span className="text-xs font-bold text-green-900 leading-tight">EBITDA</span>
+                <span className="text-sm font-bold text-green-900 leading-tight">EBITDA</span>
               </div>
-              <div className="text-gray-700 text-xs md:text-sm leading-snug">
+              <div className="text-gray-700 text-sm md:text-base leading-snug">
                 Earnings before interest, taxes, depreciation, and amortization. Shows core operating cash flow, ignoring non-cash and non-operating items.
               </div>
             </div>
             {/* Adjusted EBITDA Box */}
-            <div className="flex-1 bg-white border-l-4 border-yellow-400 rounded-xl shadow p-2 flex flex-col items-start print:p-1 print:rounded print:shadow-none">
+            <div className="flex-1 bg-white border-l-4 border-yellow-400 rounded-xl shadow p-3 flex flex-col items-start print:p-2 print:rounded print:shadow-none">
               <div className="flex items-center mb-1 print:mb-0.5">
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-600 mr-1">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" d="M12 6v6l4 2"/></svg>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-yellow-100 text-yellow-600 mr-2">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeWidth="2" d="M12 6v6l4 2"/></svg>
                 </span>
-                <span className="text-xs font-bold text-yellow-900 leading-tight">Adjusted EBITDA</span>
+                <span className="text-sm font-bold text-yellow-900 leading-tight">Adjusted EBITDA</span>
               </div>
-              <div className="text-gray-700 text-xs md:text-sm leading-snug">
+              <div className="text-gray-700 text-sm md:text-base leading-snug">
                 Starts with EBITDA, then adjusts for unusual, one-time income/expenses. Lenders use this to judge your true, recurring earning power for loans.
               </div>
             </div>
           </div>
-          <p className="text-xs md:text-sm text-blue-900 font-semibold leading-snug mt-1 print:mt-0">
+          <p className="text-sm md:text-base text-blue-900 font-semibold leading-snug mt-2 print:mt-0">
             <span className="font-bold">Why do lenders care about these metrics?</span> They want to know your business's ability to generate cash and repay loans. Net income shows your profitability, EBITDA highlights your core cash flow, and Adjusted EBITDA gives a clearer picture of your sustainable earning power.
           </p>
         </div>
