@@ -1,8 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
-
-
-
 import { getCashFlowAnalysisById } from '@/lib/getCashFlowAnalysisById';
 import { uploadPdfToSupabase } from '@/lib/uploadPdfToSupabase';
 
@@ -47,49 +43,36 @@ export async function POST(req: NextRequest) {
     }
     console.log('[generate-pdf] Step 1: Analysis fetched successfully.');
 
-    // Puppeteer v22+ launch
-    const browser = await puppeteer.launch({
-      headless: true, // 'new' is not in type definition; use true for compatibility
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-    const page = await browser.newPage();
-    console.log('[generate-pdf] Step 2: Puppeteer launched, new page created.');
-
-
+    console.log('[generate-pdf] Step 2: Preparing Browserless.io request...');
     const printUrl = getPrintUrl(req, analysisId, type, accessToken);
-    console.log(`[generate-pdf] Navigating to print URL: ${printUrl}`);
+    console.log(`[generate-pdf] Using print URL: ${printUrl}`);
 
-    // --- Set user's cookies in Puppeteer so print page has session ---
-    console.log('[generate-pdf] Setting cookies for Puppeteer...');
-    const cookiesArr = req.cookies.getAll().map(cookie => ({
-      name: cookie.name,
-      value: cookie.value,
-      domain: new URL(printUrl).hostname, // Use dynamic domain from origin
-      path: '/',
-      httpOnly: false, 
-      secure: new URL(printUrl).protocol === 'https:', // Secure if origin is https
-      sameSite: 'Lax' as 'Lax',
-    }));
-    if (cookiesArr.length > 0) {
-      await page.setCookie(...cookiesArr);
-      console.log('[generate-pdf] Cookies set for Puppeteer:', cookiesArr.map(c => c.name));
-    } else {
-      console.log('[generate-pdf] No cookies to set for Puppeteer.');
+    // Use Browserless.io API to generate PDF
+    console.log('[generate-pdf] Step 3: Sending request to Browserless.io...');
+    const browserlessUrl = `https://chrome.browserless.io/pdf?token=${process.env.BROWSERLESS_API_KEY}`;
+    
+    const browserlessResponse = await fetch(browserlessUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        url: printUrl,
+        options: {
+          format: 'A4',
+          printBackground: true,
+          margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }
+        }
+      })
+    });
+
+    if (!browserlessResponse.ok) {
+      const errorText = await browserlessResponse.text();
+      throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} ${errorText}`);
     }
 
-    console.log('[generate-pdf] Going to print page with networkidle0...');
-    await page.goto(printUrl, { waitUntil: 'networkidle0', timeout: 30000 }); // Increased timeout
-    console.log('[generate-pdf] Navigation to print page successful.');
-
-    console.log('[generate-pdf] Step 3: Generating PDF...');
-    const pdfBuffer = await page.pdf({
-      format: 'a4',
-      printBackground: true,
-      margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }, // Ensure units
-    });
-    console.log('[generate-pdf] Step 3: PDF generated successfully.');
-    await browser.close();
-    console.log('[generate-pdf] Puppeteer browser closed.');
+    const pdfBuffer = Buffer.from(await browserlessResponse.arrayBuffer());
+    console.log('[generate-pdf] Step 3: PDF generated successfully via Browserless.');
 
     console.log('[generate-pdf] Step 4: Uploading PDF to Supabase...');
     let pdfUrl: string | null = null;
