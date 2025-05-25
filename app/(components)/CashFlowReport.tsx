@@ -637,7 +637,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
 
       {/* --- Net Income, EBITDA, & Adjusted EBITDA: Why They Matter for Your Loan --- */}
       <section className="mb-6 print:mb-3">
-        <div className="bg-gradient-to-br from-blue-50 to-green-50 border-l-4 border-blue-400 rounded-xl shadow p-4 md:p-6 flex flex-col gap-3 print:p-3 print:gap-2">
+        <div className="bg-gradient-to-br from-blue-50 to-green-50 border-l-4 border-blue-400 rounded-xl p-4 md:p-6 flex flex-col gap-3 print:p-3 print:gap-2">
           <div className="flex items-center mb-2 print:mb-1">
             <InfoIcon className="w-5 h-5 text-blue-600 mr-2" />
             <h4 className="text-lg md:text-xl font-bold text-blue-900 leading-tight">
