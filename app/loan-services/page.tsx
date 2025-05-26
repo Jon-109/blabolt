@@ -75,9 +75,9 @@ export default function LoanServices() {
       <section className="bg-gradient-to-br from-primary-blue to-primary-blue/80 text-white py-12">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-block bg-white/10 text-white px-6 py-2 rounded-full mb-4">
-              Loan Brokering: Pay Only When You Get Funded
-            </div>
+            <div className="inline-block px-6 py-1.5 rounded-full mb-4 border-2 border-yellow-400 shadow-lg bg-gradient-to-r from-yellow-300/30 via-white/10 to-yellow-400/20 text-yellow-200 font-semibold animate-pulse" style={{ boxShadow: '0 2px 12px 0 rgba(255, 215, 0, 0.15)' }}>
+  <span className="text-yellow-300 drop-shadow">Loan Brokering: Pay Only When You Get Funded</span>
+</div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Need Funding? We’ll Help You Get Loan-Ready and Funded
             </h1>
@@ -292,7 +292,9 @@ export default function LoanServices() {
       </section>
 
       {/* Add the calculator after your main content */}
-      <LoanPaymentCalculator />
+      <div id="loan-calculator">
+        <LoanPaymentCalculator />
+      </div>
     </div>
   );
 }
