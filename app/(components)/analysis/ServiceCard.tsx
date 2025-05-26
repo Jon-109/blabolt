@@ -62,7 +62,7 @@ const ServiceCard = () => (
     <Card className="flex-1 shadow-lg border-2 border-gray-100">
       <CardContent className="pt-8 pb-4 px-6 md:px-8 flex flex-col h-full">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Loan Brokering</h2>
-        <p className="text-gray-700 text-base mb-2 font-bold text-center">
+        <p className="text-left text-gray-700 text-base mb-2 font-bold">
           Want us to find the right lender for you? We’ll handle it.
         </p>
 
