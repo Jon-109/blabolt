@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
         product_type: 'cash_flow_analysis',
         product_id: 'prod_RPjWBW6yTN629z',
       },
+      allow_promotion_codes: true,
     });
 
     // 8. Return the checkout URL
