@@ -207,7 +207,7 @@ function HomeContent() {
             </h2>
           </div>
           <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-            We've compiled answers to common questions about our services and the business lending process. Find the information you need quickly and easily.
+            We've compiled answers to the most common questions about our services and the business lending process. Find the information you need quickly and easily.
           </p>
           <Link
             href="/faq"
