@@ -87,14 +87,7 @@ export async function POST(req: NextRequest) {
       payment_method_types: ['card'],
       line_items: [
         {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Comprehensive Cash Flow Analysis',
-              description: 'Detailed financial analysis with lender-ready report',
-            },
-            unit_amount: STRIPE_PRICE,
-          },
+          price: 'price_1RPyhHBT7qyj5BcoebrwMMhr', // Use saved Stripe Price ID
           quantity: 1,
         },
       ],
