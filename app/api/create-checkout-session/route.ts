@@ -108,7 +108,10 @@ export async function POST(req: NextRequest) {
         product_type: 'cash_flow_analysis',
         product_id: 'prod_RPjWBW6yTN629z',
       },
+      // Enable all valid promotion codes including DSCR25 (promo_1RUEZcBT7qyj5Bco2RaBgoI2)
       allow_promotion_codes: true,
+      // The following line is an alternative approach if you want to restrict to only this promo code
+      // discounts: [{ promotion_code: 'promo_1RUEZcBT7qyj5Bco2RaBgoI2' }],
     });
 
     // 8. Return the checkout URL
