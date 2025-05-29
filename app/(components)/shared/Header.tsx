@@ -21,6 +21,8 @@ const Header = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [hasPaidForCashFlowAnalysis, setHasPaidForCashFlowAnalysis] = useState(false);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -30,12 +32,18 @@ const Header = () => {
         console.error('Error checking auth status:', error);
         setIsLoggedIn(false);
         setUserEmail(null);
-      } else if (data?.session?.user?.email) {
+        setUserId(null);
+      } else if (data?.session?.user) {
         setIsLoggedIn(true);
-        setUserEmail(data.session.user.email);
+        setUserEmail(data.session.user.email || null);
+        setUserId(data.session.user.id);
+        
+        // Check if user has paid for cash flow analysis
+        await checkCashFlowAnalysisPurchase(data.session.user.id);
       } else {
         setIsLoggedIn(false);
         setUserEmail(null);
+        setUserId(null);
       }
       setIsLoading(false);
     };
@@ -45,12 +53,16 @@ const Header = () => {
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event: AuthChangeEvent, session: Session | null) => {
-        if (event === 'SIGNED_IN' && session?.user?.email) {
+        if (event === 'SIGNED_IN' && session?.user) {
           setIsLoggedIn(true);
-          setUserEmail(session.user.email);
+          setUserEmail(session.user.email || null);
+          setUserId(session.user.id);
+          checkCashFlowAnalysisPurchase(session.user.id);
         } else if (event === 'SIGNED_OUT') {
           setIsLoggedIn(false);
           setUserEmail(null);
+          setUserId(null);
+          setHasPaidForCashFlowAnalysis(false);
         }
       }
     );
@@ -59,6 +71,30 @@ const Header = () => {
       authListener?.subscription.unsubscribe();
     };
   }, []);
+
+  // Check if user has paid for cash flow analysis
+  const checkCashFlowAnalysisPurchase = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('paid')
+        .eq('user_id', userId)
+        .eq('product_type', 'cash_flow_analysis')
+        .eq('product_id', 'prod_RPjWBW6yTN629z')
+        .eq('paid', true)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking purchase status:', error);
+        setHasPaidForCashFlowAnalysis(false);
+      } else {
+        setHasPaidForCashFlowAnalysis(!!data);
+      }
+    } catch (err) {
+      console.error('Error in payment verification:', err);
+      setHasPaidForCashFlowAnalysis(false);
+    }
+  };
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
@@ -138,14 +174,16 @@ const Header = () => {
                   onBlur={closeDropdown}
                 >
                   <div className="py-1" role="menu" aria-orientation="vertical">
-                    <Link 
-                      href="/comprehensive-cash-flow-analysis" 
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                      onClick={closeDropdown}
-                      role="menuitem"
-                    >
-                      Cash Flow Analysis (DSCR)
-                    </Link>
+                    {hasPaidForCashFlowAnalysis && (
+                      <Link 
+                        href="/comprehensive-cash-flow-analysis" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                        onClick={closeDropdown}
+                        role="menuitem"
+                      >
+                        Cash Flow Analysis (DSCR)
+                      </Link>
+                    )}
 
                     <button 
                       onClick={async () => {
@@ -237,6 +275,7 @@ const Header = () => {
                 <MyServicesDropdown
                   setIsMobileMenuOpen={setIsMobileMenuOpen}
                   router={router}
+                  hasPaidForCashFlowAnalysis={hasPaidForCashFlowAnalysis}
                 />
               ) : null}
 
@@ -288,7 +327,15 @@ const MenuItem = ({ href, label, onClick, small, large }: MenuItemProps) => (
 );
 
 // MyServicesDropdown for mobile menu
-const MyServicesDropdown = ({ setIsMobileMenuOpen, router }: { setIsMobileMenuOpen: (open: boolean) => void; router: any }) => {
+const MyServicesDropdown = ({ 
+  setIsMobileMenuOpen, 
+  router,
+  hasPaidForCashFlowAnalysis 
+}: { 
+  setIsMobileMenuOpen: (open: boolean) => void; 
+  router: any;
+  hasPaidForCashFlowAnalysis: boolean;
+}) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col">
@@ -303,12 +350,14 @@ const MyServicesDropdown = ({ setIsMobileMenuOpen, router }: { setIsMobileMenuOp
       </button>
       {open && (
         <div id="my-services-dropdown" className="flex flex-col gap-1 pb-2">
-          <MenuItem
-            href="/comprehensive-cash-flow-analysis"
-            label="Cash Flow Analysis (DSCR)"
-            onClick={() => setIsMobileMenuOpen(false)}
-            small
-          />
+          {hasPaidForCashFlowAnalysis && (
+            <MenuItem
+              href="/comprehensive-cash-flow-analysis"
+              label="Cash Flow Analysis (DSCR)"
+              onClick={() => setIsMobileMenuOpen(false)}
+              small
+            />
+          )}
 
           <button
             onClick={async () => {
