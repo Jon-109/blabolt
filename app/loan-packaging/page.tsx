@@ -189,16 +189,13 @@ export default function LoanPackagingPage() {
     return (
       <main className="min-h-screen bg-gray-50 pt-8">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="bg-gradient-to-br from-[#f8fafc] via-[#f3f4f6] to-[#e0e7ef] rounded-2xl shadow-2xl p-12 border border-gray-200 mb-10">
-  <div className="max-w-2xl mx-auto flex flex-col items-center">
-    <h1
-      className="text-4xl md:text-5xl font-extrabold mb-3 text-center bg-gradient-to-r from-[#1e293b] via-[#0ea5e9] to-[#f59e42] bg-clip-text text-transparent drop-shadow-lg tracking-tight"
-      style={{ letterSpacing: '-0.02em' }}
-    >
+          <div className="bg-gray-900 rounded-2xl shadow-2xl p-8 md:p-10 border border-gray-800 mb-6">
+  <div className="max-w-3xl mx-auto flex flex-col items-center">
+    <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-2 text-center text-white tracking-tight whitespace-nowrap">
       Loan Packaging: Step-By-Step Guide
     </h1>
-    <div className="w-24 h-1 rounded-full bg-gradient-to-r from-[#f59e42] via-[#fbbf24] to-[#0ea5e9] mb-6"></div>
-    <h2 className="text-xl md:text-2xl font-medium text-center text-gray-600 mb-8 leading-relaxed tracking-wide max-w-xl">
+    <div className="w-16 h-1 rounded-full bg-blue-500 mb-4"></div>
+    <h2 className="text-lg md:text-xl font-medium text-center text-gray-300 mb-2 leading-snug max-w-2xl">
       Choose how you'd like us to help you secure funding for your business.
     </h2>
   </div>
