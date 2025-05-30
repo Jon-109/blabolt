@@ -187,11 +187,13 @@ export default function LoanPackagingPage() {
       <main className="min-h-screen bg-gray-50 pt-24">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="bg-white rounded-xl shadow-lg p-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-6">Business Lending Services</h1>
-            
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Business Lending Services</h1>
+            <h2 className="text-lg text-gray-700 mb-8">Choose how you'd like us to help you secure funding for your business.</h2>
+
             {/* Loan Purpose Selection */}
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">What is your loan purpose?</h2>
+              <label className="block text-lg font-semibold text-gray-800 mb-2">Step 1: What do you need funding for?</label>
+              <div className="text-gray-600 text-sm mb-4">Your loan purpose helps us tailor your documents or match you with the right lender.</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <select
                   className="p-3 border border-gray-300 rounded-lg w-full"
@@ -214,9 +216,9 @@ export default function LoanPackagingPage() {
             {/* Service Type Selection */}
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Choose your service type</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {/* Loan Packaging Option */}
+               {/* Loan Packaging Option */}
               <div className="border border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-md transition-all">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Loan Packaging</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">🗂️ Prepare My Application</h3>
                 <p className="text-gray-600 mb-4">We'll help you prepare a professional loan package you can download and share with lenders.</p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start">
@@ -239,14 +241,13 @@ export default function LoanPackagingPage() {
                   disabled={isSubmitting || !selectedLoanPurpose}
                   className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'Processing...' : 'Select Loan Packaging'}
+                  {isSubmitting ? 'Processing...' : 'Get My Loan Package'}
                 </button>
               </div>
-              
-              {/* Loan Brokering Option */}
+                            {/* Loan Brokering Option */}
               <div className="border border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-md transition-all">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Loan Brokering</h3>
-                <p className="text-gray-600 mb-4">We'll match you with the right lenders and manage the application process for you.</p>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">🤝 Help Me Get Funded</h3>
+                <p className="text-gray-600 mb-4">We’ll match you with the right lenders and manage the application process for you.</p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -266,8 +267,9 @@ export default function LoanPackagingPage() {
                   onClick={() => handleServiceSelection('loan_brokering')}
                   disabled={isSubmitting || !selectedLoanPurpose}
                   className="w-full py-3 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  title="We only earn when you're funded."
                 >
-                  {isSubmitting ? 'Processing...' : 'Select Loan Brokering'}
+                  {isSubmitting ? 'Processing...' : 'Match Me With a Lender'}
                 </button>
               </div>
             </div>
