@@ -294,24 +294,22 @@ export default function LoanPackagingPage() {
                     {/* What's Included Accordion */}
                     <AccordionItem value="included">
                       <AccordionTrigger className="bg-emerald-50 rounded-md px-4 py-2 font-semibold text-emerald-900 shadow hover:bg-emerald-100 transition border border-emerald-100 flex items-center gap-2">
-                        <svg className="inline mr-2 text-emerald-600" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
                         What's Included?
                       </AccordionTrigger>
                       <AccordionContent className="bg-white rounded-b-md border border-t-0 border-emerald-100 px-4 py-4">
-                        <div className="mb-3 text-gray-800 flex items-center gap-2">
-                          <span className="text-2xl">💸</span>
+                        <div className="mb-3 text-gray-800">
                           <span>Our <span className="font-bold text-emerald-700">1% commission</span> covers everything you need to get funded — from start to finish.<br/>This includes full loan packaging (normally $499) and expert brokering support, all the way through to closing.</span>
                         </div>
-                        <div className="mb-2 font-semibold text-emerald-900">✔️ Here’s exactly what’s included:</div>
+                        <div className="mb-2 font-semibold text-emerald-900">Here's exactly what's included:</div>
                         <ul className="mb-4 space-y-2 pl-2">
-                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Lender-ready loan packaging — <span className="font-medium">professionally organized and formatted for submission</span> <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">$499 value</span></span></li>
-                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Smart lender matchmaking — we connect you with lenders that best fit your goals</span></li>
-                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Application submission & follow-up — we handle the communication for you</span></li>
-                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Status updates every few days — so you always know what’s going on</span></li>
-                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Support through closing — we’re with you until the funds are in your hands</span></li>
+                          <li className="flex items-start gap-2"><span>Lender-ready loan packaging — <span className="font-medium">professionally organized and formatted for submission</span> <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">$499 value</span></span></li>
+                          <li className="flex items-start gap-2"><span>Smart lender matchmaking — we connect you with lenders that best fit your goals</span></li>
+                          <li className="flex items-start gap-2"><span>Application submission & follow-up — we handle the communication for you</span></li>
+                          <li className="flex items-start gap-2"><span>Status updates every few days — so you always know what’s going on</span></li>
+                          <li className="flex items-start gap-2"><span>Support through closing — we’re with you until the funds are in your hands</span></li>
                         </ul>
                         <div className="mb-4">
-                          <div className="mb-1 font-semibold text-emerald-900 flex items-center gap-2"><span className="text-lg">💰</span>See the savings:</div>
+                          <div className="mb-1 font-semibold text-emerald-900">See the savings:</div>
                           <table className="w-full text-sm border rounded overflow-hidden">
                             <thead>
                               <tr className="bg-emerald-50 text-emerald-900">
@@ -332,7 +330,7 @@ export default function LoanPackagingPage() {
                           </table>
                         </div>
                         <div className="mt-2 text-sm flex flex-col gap-1">
-                          <span className="flex items-center gap-2"><span className="text-lg">🧾</span> <span>Your fee is handled directly at closing by the title company.</span></span>
+                          <span>Your fee is handled directly at closing by the title company.</span>
                           <span className="text-gray-700">No upfront payments. No invoices. No out-of-pocket costs.</span>
                         </div>
                       </AccordionContent>
@@ -340,16 +338,15 @@ export default function LoanPackagingPage() {
                     {/* Commission-Based Questions Accordion */}
                     <AccordionItem value="commission-faq">
                       <AccordionTrigger className="bg-blue-50 rounded-md px-4 py-2 font-semibold text-blue-900 shadow hover:bg-blue-100 transition border border-blue-100 flex items-center gap-2">
-                        <svg className="inline mr-2 text-blue-500" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                         Commission-Based Questions
                       </AccordionTrigger>
                       <AccordionContent className="bg-white rounded-b-md border border-t-0 border-blue-100 px-4 py-4">
                         <div className="mb-4">
-                          <div className="mb-2 font-semibold text-blue-900 flex items-center gap-2"><span className="text-lg">❓</span>How does the 1% commission work?</div>
+                          <div className="mb-2 font-semibold text-blue-900">How does the 1% commission work?</div>
                           <div className="mb-4 text-gray-700">You pay a flat 1% of your funded loan amount — <span className="font-semibold">only if you receive funding</span>.<br/>This fee includes everything: document prep, lender matching, applications, and full support until closing.<br/>And the best part? <span className="font-semibold">You don’t even have to handle the payment</span> — it’s processed through the title company at closing.</div>
-                          <div className="mb-2 font-semibold text-blue-900 flex items-center gap-2"><span className="text-lg">❓</span>When do I pay?</div>
+                          <div className="mb-2 font-semibold text-blue-900">When do I pay?</div>
                           <div className="mb-4 text-gray-700">You don’t. The 1% commission is <span className="font-semibold">automatically paid to us at closing</span> through the title company or lender’s attorney.<br/>There’s no invoice, no wire transfer, no out-of-pocket expense — it’s all handled seamlessly as part of the closing process.</div>
-                          <div className="mb-2 font-semibold text-blue-900 flex items-center gap-2"><span className="text-lg">❓</span>What’s covered in the 1%?</div>
+                          <div className="mb-2 font-semibold text-blue-900">What's covered in the 1%?</div>
                           <div className="mb-1 text-gray-700">Everything from start to finish:</div>
                           <ul className="list-disc pl-6 text-gray-700 space-y-1">
                             <li>Preparing a professional loan package</li>
@@ -360,6 +357,40 @@ export default function LoanPackagingPage() {
                           </ul>
                           <div className="mt-2 text-gray-700">This full-service experience — often costing thousands — is included in one success-based fee paid only at closing.</div>
                         </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    {/* What to Expect Accordion */}
+                    <AccordionItem value="what-to-expect">
+                      <AccordionTrigger className="bg-yellow-50 rounded-md px-4 py-2 font-semibold text-yellow-900 shadow hover:bg-yellow-100 transition border border-yellow-100 flex items-center gap-2">
+                        What to Expect (Final Version, 6 Steps)
+                      </AccordionTrigger>
+                      <AccordionContent className="bg-white rounded-b-md border border-t-0 border-yellow-100 px-4 py-4">
+                        <ol className="list-decimal pl-6 text-gray-800 space-y-3">
+                          <li>
+                            <span className="font-semibold">Sign the Broker Agreement</span><br/>
+                            To get started, you’ll review and sign a short agreement confirming our 1% success-based fee. No upfront payment required.
+                          </li>
+                          <li>
+                            <span className="font-semibold">Access Your Dashboard</span><br/>
+                            Once signed, you’ll unlock your personal dashboard to upload all required documents (like tax returns, bank statements, etc.).
+                          </li>
+                          <li>
+                            <span className="font-semibold">Your Loan Package Is Instantly Ready</span><br/>
+                            As soon as your documents are uploaded, your lender-ready loan package is automatically complete and ready to go — no extra steps needed.
+                          </li>
+                          <li>
+                            <span className="font-semibold">We Start Contacting Lenders</span><br/>
+                            We begin reaching out to trusted lenders that fit your business. If a lender is interested, we’ll connect you — and they might ask a few quick questions, but we handle everything else.
+                          </li>
+                          <li>
+                            <span className="font-semibold">We Keep You in the Loop</span><br/>
+                            You’ll get regular updates from us every few days so you always know what’s happening. No chasing, no confusion.
+                          </li>
+                          <li>
+                            <span className="font-semibold">Secure Your Funding</span><br/>
+                            Once a lender is ready to move forward, we’ll guide you through the final approval process and help get your deal closed.
+                          </li>
+                        </ol>
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
