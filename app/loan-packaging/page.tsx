@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/app/(components)/ui/tooltip'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/app/(components)/ui/accordion'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/supabase/helpers/client'
 import { loanPurposes } from '@/lib/loanPurposes'
@@ -22,6 +24,7 @@ interface Document {
 }
 
 export default function LoanPackagingPage() {
+  const [showIncludedModal, setShowIncludedModal] = useState(false);
   // User authentication state
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -187,7 +190,7 @@ export default function LoanPackagingPage() {
       <main className="min-h-screen bg-gray-50 pt-24">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="bg-white rounded-xl shadow-lg p-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Business Lending Services</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Loan Packaging: Step-By-Step Guide</h1>
             <h2 className="text-lg text-gray-700 mb-8">Choose how you'd like us to help you secure funding for your business.</h2>
 
             {/* Loan Purpose Selection */}
@@ -219,7 +222,7 @@ export default function LoanPackagingPage() {
                {/* Loan Packaging Option */}
               <div className="border border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-md transition-all">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">🗂️ Prepare My Application</h3>
-                <p className="text-gray-600 mb-4">We'll help you prepare a professional loan package you can download and share with lenders.</p>
+                <p className="text-gray-600 mb-4">We’ll create a lender-ready loan package you can easily download and submit anywhere. Perfect if you already have a lender or want to apply on your own.</p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -247,11 +250,11 @@ export default function LoanPackagingPage() {
                             {/* Loan Brokering Option */}
               <div className="border border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-md transition-all">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">🤝 Help Me Get Funded</h3>
-                <p className="text-gray-600 mb-4">We’ll match you with the right lenders and manage the application process for you.</p>
+                <p className="text-gray-600 mb-4">We’ll match you with the right lenders and guide you through the full loan application process — from start to funding.</p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
-                    <span>Everything in Loan Packaging</span>
+                    <span>Includes Everything in Loan Packaging</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -259,10 +262,24 @@ export default function LoanPackagingPage() {
                   </li>
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
-                    <span>Application management</span>
+                    <span>Application Submissions & Follow-Ups</span>
                   </li>
                 </ul>
-                <div className="text-xl font-bold text-gray-900 mb-4">Commission based</div>
+                <div className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-4">
+                  Commission based
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0} className="cursor-pointer align-middle">
+                          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs">
+                        We only charge 1% of your funded loan amount. That includes full packaging, lender matching, and application help. No upfront fees or hidden costs.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <button 
                   onClick={() => handleServiceSelection('loan_brokering')}
                   disabled={isSubmitting || !selectedLoanPurpose}
@@ -271,6 +288,69 @@ export default function LoanPackagingPage() {
                 >
                   {isSubmitting ? 'Processing...' : 'Match Me With a Lender'}
                 </button>
+                {/* What's Included Link & Modal */}
+                <div className="mt-2 text-center">
+                  <button
+                    type="button"
+                    className="text-blue-700 underline text-sm hover:text-blue-900 focus:outline-none"
+                    onClick={() => setShowIncludedModal(true)}
+                  >
+                    What’s Included?
+                  </button>
+                </div>
+                {showIncludedModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div className="bg-white rounded-xl shadow-lg max-w-lg w-full p-6 relative">
+                      <button
+                        onClick={() => setShowIncludedModal(false)}
+                        className="absolute top-2 right-3 text-gray-400 hover:text-gray-700 text-2xl font-bold"
+                        aria-label="Close"
+                      >×</button>
+                      <h3 className="text-xl font-bold mb-2">What’s Included in Our 1% Brokering Fee</h3>
+                      <p className="mb-4 text-gray-700">Our 1% commission includes full loan packaging (normally $499) and hands-on brokering support through every stage of funding.</p>
+                      <ul className="mb-4 space-y-1 text-green-700">
+                        <li>✔️ Lender-ready loan packaging (valued at $499)</li>
+                        <li>✔️ Smart lender matchmaking</li>
+                        <li>✔️ Application submission & follow-up</li>
+                        <li>✔️ Updates on your loan status every few days</li>
+                        <li>✔️ Support until funding is secured</li>
+                      </ul>
+                      <div className="mb-4">
+                        <table className="w-full text-sm border">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="border p-2">Industry Average</th>
+                              <th className="border p-2">Our Fee</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="border p-2">Loan Packaging: 1%–3% or $2,000+</td>
+                              <td className="border p-2">Included</td>
+                            </tr>
+                            <tr>
+                              <td className="border p-2">Loan Brokering: 1%–6% or more</td>
+                              <td className="border p-2">1% flat (when funded)</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-2">You only pay after your loan is successfully funded. No upfront fees. No hidden costs.</div>
+                    </div>
+                  </div>
+                )}
+                {/* What to Expect Callout */}
+                <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 rounded-md p-4">
+                  <h4 className="font-bold text-blue-800 mb-2">What to Expect</h4>
+                  <ol className="list-decimal list-inside text-blue-900 space-y-1">
+                    <li>Sign the Broker Fee Agreement to get started.</li>
+                    <li>Access your dashboard to upload the required documents.</li>
+                    <li>Once all docs are uploaded, we prepare your complete lender-ready package.</li>
+                    <li>We begin reaching out to our lender network on your behalf.</li>
+                    <li>You’ll receive updates every few days on the status of your loan outreach.</li>
+                    <li>When a lender is secured, we assist with the final approval process.</li>
+                  </ol>
+                </div>
               </div>
             </div>
             
