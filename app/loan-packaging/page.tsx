@@ -298,15 +298,20 @@ export default function LoanPackagingPage() {
                         What's Included?
                       </AccordionTrigger>
                       <AccordionContent className="bg-white rounded-b-md border border-t-0 border-emerald-100 px-4 py-4">
-                        <div className="mb-2 text-gray-700">Our <span className="font-bold text-emerald-700">1% commission</span> includes <span className="font-semibold">full loan packaging</span> (normally $499) and hands-on brokering support through every stage of funding.</div>
-                        <ul className="mb-4 space-y-2">
-                          <li className="flex items-center gap-2"><span className="text-emerald-600">✔️</span> Lender-ready loan packaging <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">$499 value</span></li>
-                          <li className="flex items-center gap-2"><span className="text-emerald-600">✔️</span> Smart lender matchmaking</li>
-                          <li className="flex items-center gap-2"><span className="text-emerald-600">✔️</span> Application submission & follow-up</li>
-                          <li className="flex items-center gap-2"><span className="text-emerald-600">✔️</span> Updates on your loan status every few days</li>
-                          <li className="flex items-center gap-2"><span className="text-emerald-600">✔️</span> Support until funding is secured</li>
+                        <div className="mb-3 text-gray-800 flex items-center gap-2">
+                          <span className="text-2xl">💸</span>
+                          <span>Our <span className="font-bold text-emerald-700">1% commission</span> covers everything you need to get funded — from start to finish.<br/>This includes full loan packaging (normally $499) and expert brokering support, all the way through to closing.</span>
+                        </div>
+                        <div className="mb-2 font-semibold text-emerald-900">✔️ Here’s exactly what’s included:</div>
+                        <ul className="mb-4 space-y-2 pl-2">
+                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Lender-ready loan packaging — <span className="font-medium">professionally organized and formatted for submission</span> <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">$499 value</span></span></li>
+                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Smart lender matchmaking — we connect you with lenders that best fit your goals</span></li>
+                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Application submission & follow-up — we handle the communication for you</span></li>
+                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Status updates every few days — so you always know what’s going on</span></li>
+                          <li className="flex items-start gap-2"><span className="text-emerald-600">✔️</span> <span>Support through closing — we’re with you until the funds are in your hands</span></li>
                         </ul>
                         <div className="mb-4">
+                          <div className="mb-1 font-semibold text-emerald-900 flex items-center gap-2"><span className="text-lg">💰</span>See the savings:</div>
                           <table className="w-full text-sm border rounded overflow-hidden">
                             <thead>
                               <tr className="bg-emerald-50 text-emerald-900">
@@ -321,12 +326,15 @@ export default function LoanPackagingPage() {
                               </tr>
                               <tr>
                                 <td className="border p-2">Loan Brokering: 1%–6% or more</td>
-                                <td className="border p-2 text-emerald-700 font-bold">1% flat (when funded)</td>
+                                <td className="border p-2 text-emerald-700 font-bold">1% flat — paid at closing</td>
                               </tr>
                             </tbody>
                           </table>
                         </div>
-                        <div className="text-xs text-gray-500 mt-2">You only pay <span className="font-semibold text-emerald-700">after your loan is successfully funded</span>. No upfront fees. No hidden costs.</div>
+                        <div className="mt-2 text-sm flex flex-col gap-1">
+                          <span className="flex items-center gap-2"><span className="text-lg">🧾</span> <span>Your fee is handled directly at closing by the title company.</span></span>
+                          <span className="text-gray-700">No upfront payments. No invoices. No out-of-pocket costs.</span>
+                        </div>
                       </AccordionContent>
                     </AccordionItem>
                     {/* Commission-Based Questions Accordion */}
@@ -336,48 +344,30 @@ export default function LoanPackagingPage() {
                         Commission-Based Questions
                       </AccordionTrigger>
                       <AccordionContent className="bg-white rounded-b-md border border-t-0 border-blue-100 px-4 py-4">
-                        <div className="mb-2 font-semibold text-blue-800">How does the 1% commission work?</div>
-                        <div className="mb-4 text-gray-700">You only pay 1% of your funded loan amount, and only after you receive funding. There are no upfront costs or hidden fees. This covers all packaging, lender matching, application help, and support until you’re funded.</div>
-                        <div className="mb-2 font-semibold text-blue-800">When do I pay?</div>
-                        <div className="mb-4 text-gray-700">After your loan is funded and you receive the money, we send you an invoice for the 1% commission. If you don’t get funded, you pay nothing.</div>
-                        <div className="mb-2 font-semibold text-blue-800">What’s covered?</div>
-                        <div className="mb-2 text-gray-700">Everything from document prep to lender outreach and application follow-ups. We support you every step of the way until you are funded.</div>
+                        <div className="mb-4">
+                          <div className="mb-2 font-semibold text-blue-900 flex items-center gap-2"><span className="text-lg">❓</span>How does the 1% commission work?</div>
+                          <div className="mb-4 text-gray-700">You pay a flat 1% of your funded loan amount — <span className="font-semibold">only if you receive funding</span>.<br/>This fee includes everything: document prep, lender matching, applications, and full support until closing.<br/>And the best part? <span className="font-semibold">You don’t even have to handle the payment</span> — it’s processed through the title company at closing.</div>
+                          <div className="mb-2 font-semibold text-blue-900 flex items-center gap-2"><span className="text-lg">❓</span>When do I pay?</div>
+                          <div className="mb-4 text-gray-700">You don’t. The 1% commission is <span className="font-semibold">automatically paid to us at closing</span> through the title company or lender’s attorney.<br/>There’s no invoice, no wire transfer, no out-of-pocket expense — it’s all handled seamlessly as part of the closing process.</div>
+                          <div className="mb-2 font-semibold text-blue-900 flex items-center gap-2"><span className="text-lg">❓</span>What’s covered in the 1%?</div>
+                          <div className="mb-1 text-gray-700">Everything from start to finish:</div>
+                          <ul className="list-disc pl-6 text-gray-700 space-y-1">
+                            <li>Preparing a professional loan package</li>
+                            <li>Connecting with trusted lenders</li>
+                            <li>Managing all communication and submissions</li>
+                            <li>Providing regular updates</li>
+                            <li>Helping finalize your deal and close with confidence</li>
+                          </ul>
+                          <div className="mt-2 text-gray-700">This full-service experience — often costing thousands — is included in one success-based fee paid only at closing.</div>
+                        </div>
+                      </AccordionContent>
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
                 </div>
-                {/* What to Expect Callout */}
-                <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 rounded-md p-4">
-                  <h4 className="font-bold text-blue-800 mb-2">What to Expect</h4>
-                  <ol className="list-decimal list-inside text-blue-900 space-y-1">
-                    <li>Sign the Broker Fee Agreement to get started.</li>
-                    <li>Access your dashboard to upload the required documents.</li>
-                    <li>Once all docs are uploaded, we prepare your complete lender-ready package.</li>
-                    <li>We begin reaching out to our lender network on your behalf.</li>
-                    <li>You’ll receive updates every few days on the status of your loan outreach.</li>
-                    <li>When a lender is secured, we assist with the final approval process.</li>
-                  </ol>
-                </div>
               </div>
             </div>
-            {/* FAQ Accordion */}
-            <div className="mt-8">
-              <Accordion type="multiple" className="space-y-2">
-                {/* FAQ Accordion Item */}
-                <AccordionItem value="faq">
-                  <AccordionTrigger className="bg-blue-50 rounded-md px-4 py-2 font-semibold text-blue-900 shadow hover:bg-blue-100 transition border border-blue-100 flex items-center gap-2">
-                    <svg className="inline mr-2 text-blue-500" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                    Frequently Asked Questions
-                  </AccordionTrigger>
-                  <AccordionContent className="bg-white rounded-b-md border border-t-0 border-blue-100 px-4 py-4">
-                    <div className="mb-2 font-semibold text-blue-800">What is the difference between Loan Packaging and Loan Brokering?</div>
-                    <div className="mb-4 text-gray-700">Loan Packaging provides a lender-ready loan package that you can use to apply for funding on your own. Loan Brokering, on the other hand, includes everything in Loan Packaging plus hands-on support from our team to match you with the right lenders and guide you through the application process.</div>
-                    <div className="mb-2 font-semibold text-blue-800">How long does the loan application process take?</div>
-                    <div className="mb-2 text-gray-700">The length of the loan application process varies depending on the lender and the complexity of your application. On average, it can take anywhere from a few days to several weeks to receive a decision.</div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </div>
+
             {error && (
               <div className="p-4 bg-red-50 text-red-700 rounded-lg mb-6">
                 {error}
