@@ -187,11 +187,22 @@ export default function LoanPackagingPage() {
   // Service Selection Step
   if (currentStep === 'service_selection') {
     return (
-      <main className="min-h-screen bg-gray-50 pt-24">
+      <main className="min-h-screen bg-gray-50 pt-8">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Loan Packaging: Step-By-Step Guide</h1>
-            <h2 className="text-lg text-gray-700 mb-8">Choose how you'd like us to help you secure funding for your business.</h2>
+          <div className="bg-gradient-to-br from-[#f8fafc] via-[#f3f4f6] to-[#e0e7ef] rounded-2xl shadow-2xl p-12 border border-gray-200 mb-10">
+  <div className="max-w-2xl mx-auto flex flex-col items-center">
+    <h1
+      className="text-4xl md:text-5xl font-extrabold mb-3 text-center bg-gradient-to-r from-[#1e293b] via-[#0ea5e9] to-[#f59e42] bg-clip-text text-transparent drop-shadow-lg tracking-tight"
+      style={{ letterSpacing: '-0.02em' }}
+    >
+      Loan Packaging: Step-By-Step Guide
+    </h1>
+    <div className="w-24 h-1 rounded-full bg-gradient-to-r from-[#f59e42] via-[#fbbf24] to-[#0ea5e9] mb-6"></div>
+    <h2 className="text-xl md:text-2xl font-medium text-center text-gray-600 mb-8 leading-relaxed tracking-wide max-w-xl">
+      Choose how you'd like us to help you secure funding for your business.
+    </h2>
+  </div>
+
 
             {/* Loan Purpose Selection */}
             <div className="mb-8">
@@ -362,7 +373,7 @@ export default function LoanPackagingPage() {
                     {/* What to Expect Accordion */}
                     <AccordionItem value="what-to-expect">
                       <AccordionTrigger className="bg-yellow-50 rounded-md px-4 py-2 font-semibold text-yellow-900 shadow hover:bg-yellow-100 transition border border-yellow-100 flex items-center gap-2">
-                        What to Expect (Final Version, 6 Steps)
+                        What to Expect
                       </AccordionTrigger>
                       <AccordionContent className="bg-white rounded-b-md border border-t-0 border-yellow-100 px-4 py-4">
                         <ol className="list-decimal pl-6 text-gray-800 space-y-3">
