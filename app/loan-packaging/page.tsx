@@ -31,6 +31,7 @@ export default function LoanPackagingPage() {
   const [serviceType, setServiceType] = useState<ServiceType>(null)
   const [currentStep, setCurrentStep] = useState<Step>('service_selection')
   const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('')
+  const [promoCode, setPromoCode] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   
@@ -140,7 +141,8 @@ export default function LoanPackagingPage() {
           },
           body: JSON.stringify({
             productType: 'loan_packaging',
-            loanPurpose: selectedLoanPurpose
+            loanPurpose: selectedLoanPurpose,
+            promoCode: promoCode.trim() || undefined
           })
         });
         
@@ -150,7 +152,7 @@ export default function LoanPackagingPage() {
           // Redirect to Stripe checkout
           window.location.href = data.url;
         } else {
-          throw new Error('Failed to create checkout session');
+          setError(data.error || 'Failed to create checkout session');
         }
       } catch (err) {
         console.error('Error creating checkout session:', err);
@@ -164,6 +166,7 @@ export default function LoanPackagingPage() {
       window.location.href = 'https://form.jotform.com/loan-brokering-agreement';
     }
   };
+
 
   if (loadingUser) {
     return (
@@ -230,6 +233,15 @@ export default function LoanPackagingPage() {
                   </li>
                 </ul>
                 <div className="text-xl font-bold text-gray-900 mb-4">$499</div>
+                {/* Promo Code Input */}
+                <input
+                  type="text"
+                  placeholder="Promo code (optional)"
+                  value={promoCode}
+                  onChange={e => setPromoCode(e.target.value)}
+                  className="w-full mb-3 p-2 border border-gray-300 rounded-lg"
+                  disabled={isSubmitting}
+                />
                 <button 
                   onClick={() => handleServiceSelection('loan_packaging')}
                   disabled={isSubmitting || !selectedLoanPurpose}

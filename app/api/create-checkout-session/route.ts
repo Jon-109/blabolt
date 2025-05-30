@@ -48,66 +48,63 @@ export async function POST(req: NextRequest) {
     const userId = user.id;
     const userEmail = user.email;
     
-    // 5. Check for existing analysis in the database
-    const { data: existingRows, error: existingError } = await supabase
-      .from('cash_flow_analyses')
-      .select('id, status, created_at')
-      .eq('user_id', userId)
-      .in('status', ['in_progress', 'submitted'])
-      .order('created_at', { ascending: false });
+    // 5. Parse request body for product type and promo code
+    const body = await req.json();
+    const { productType, loanPurpose, promoCode } = body;
 
-    if (existingError) {
-      console.error('[DB] Error checking for existing analysis:', existingError);
-      return NextResponse.json(
-        { error: 'Error checking existing analyses' },
-        { status: 500 }
-      );
-    }
-
-    // 6. If there's an existing analysis, return it
-    if (existingRows && existingRows.length > 0) {
-      const existingAnalysis = existingRows[0];
-      if (existingAnalysis && existingAnalysis.id && existingAnalysis.status) {
-        return NextResponse.json({
-          analysisId: existingAnalysis.id,
-          status: existingAnalysis.status,
-          message: 'Analysis already exists'
-        });
-      } else {
-        console.error('[DB] Invalid analysis data structure', existingAnalysis);
-        return NextResponse.json(
-          { error: 'Invalid analysis data found' },
-          { status: 500 }
-        );
-      }
-    }
-
-    // 7. Create a new checkout session with Stripe
-    const checkoutSession = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: 'price_1RPyhHBT7qyj5BcoebrwMMhr', // Use saved Stripe Price ID
-          quantity: 1,
+    // 6. Conditional logic for loan packaging or cash flow analysis
+    let checkoutSession;
+    if (productType === 'loan_packaging') {
+      // Loan Packaging checkout
+      checkoutSession = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: 'price_1QWsfeBT7qyj5Bco1lgWTNpN', // Loan Packaging Price ID
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${SITE_URL}/loan-packaging?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${SITE_URL}/loan-packaging?cancelled=true`,
+        client_reference_id: userId,
+        customer_email: userEmail,
+        metadata: {
+          user_id: userId,
+          product_type: 'loan_packaging',
+          product_id: 'prod_RPi5e24PCy1D1p',
+          loan_purpose: loanPurpose || '',
         },
-      ],
-      mode: 'payment',
-      success_url: `${SITE_URL}/comprehensive-cash-flow-analysis?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/cash-flow-analysis?cancelled=true`,
-      client_reference_id: userId,
-      customer_email: userEmail,
-      metadata: {
-        user_id: userId,
-        product_type: 'cash_flow_analysis',
-        product_id: 'prod_RPjWBW6yTN629z',
-      },
-      // Enable all valid promotion codes including DSCR25 (promo_1RUEZcBT7qyj5Bco2RaBgoI2)
-      allow_promotion_codes: true,
-      // The following line is an alternative approach if you want to restrict to only this promo code
-      // discounts: [{ promotion_code: 'promo_1RUEZcBT7qyj5Bco2RaBgoI2' }],
-    });
+        // If a promo code is provided, restrict to that code, else allow all
+        ...(promoCode
+          ? { discounts: [{ promotion_code: promoCode }] }
+          : { allow_promotion_codes: true }),
+      });
+    } else {
+      // Default: Cash Flow Analysis checkout (legacy)
+      checkoutSession = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: 'price_1RPyhHBT7qyj5BcoebrwMMhr',
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${SITE_URL}/comprehensive-cash-flow-analysis?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${SITE_URL}/cash-flow-analysis?cancelled=true`,
+        client_reference_id: userId,
+        customer_email: userEmail,
+        metadata: {
+          user_id: userId,
+          product_type: 'cash_flow_analysis',
+          product_id: 'prod_RPjWBW6yTN629z',
+        },
+        allow_promotion_codes: true,
+      });
+    }
 
-    // 8. Return the checkout URL
+    // 7. Return the checkout URL
     return NextResponse.json({ url: checkoutSession.url });
     
   } catch (error) {
