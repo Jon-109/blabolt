@@ -361,7 +361,6 @@ export default function LoanPackagingPage() {
                           <div className="mt-2 text-gray-700">This full-service experience — often costing thousands — is included in one success-based fee paid only at closing.</div>
                         </div>
                       </AccordionContent>
-                      </AccordionContent>
                     </AccordionItem>
                   </Accordion>
                 </div>
