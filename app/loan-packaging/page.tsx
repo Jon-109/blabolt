@@ -189,16 +189,17 @@ export default function LoanPackagingPage() {
     return (
       <main className="min-h-screen bg-gray-50 pt-8">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="rounded-2xl bg-gray-900 shadow-2xl p-8 md:p-10 border border-gray-800 mb-6 text-center mx-auto max-w-3xl">
-  <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-2 text-white tracking-tight whitespace-nowrap">
-    Loan Packaging: Step-By-Step Guide
-  </h1>
-  <div className="w-16 h-1 rounded-full bg-blue-500 mx-auto mb-4"></div>
-  <h2 className="text-lg md:text-xl font-medium text-gray-300 mb-2 leading-snug max-w-2xl mx-auto">
-    Choose how you'd like us to help you secure funding for your business.
-  </h2>
+          <div className="w-full bg-gray-900 py-10 md:py-16 shadow-2xl border-b border-gray-800 mb-8">
+  <div className="max-w-3xl mx-auto text-center px-4">
+    <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-2 text-white tracking-tight whitespace-nowrap">
+      Loan Packaging: Step-By-Step Guide
+    </h1>
+    <div className="w-16 h-1 rounded-full bg-blue-500 mx-auto mb-4"></div>
+    <h2 className="text-lg md:text-xl font-medium text-gray-300 mb-2 leading-snug max-w-2xl mx-auto">
+      Choose how you'd like us to help you secure funding for your business.
+    </h2>
+  </div>
 </div>
-
 
             {/* Loan Purpose Selection */}
             <div className="mb-8">
