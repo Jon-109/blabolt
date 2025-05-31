@@ -262,13 +262,17 @@ export default function LoanPackagingPage() {
                     <span>Document organization & formatting</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="text-green-500 mr-2">✓</span>
-                    <span>Professional cover letter</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-green-500 mr-2">✓</span>
-                    <span>Secure sharing with lenders</span>
-                  </li>
+  <span className="text-green-500 mr-2">✓</span>
+  <span>Professional cover letter</span>
+</li>
+<li className="flex items-start">
+  <span className="text-green-500 mr-2">✓</span>
+  <span>Access to all required templates</span>
+</li>
+<li className="flex items-start">
+  <span className="text-green-500 mr-2">✓</span>
+  <span>Secure sharing with lenders</span>
+</li>
                 </ul>
                 <div className="text-xl font-bold text-gray-900 mb-4">$499</div>
 
