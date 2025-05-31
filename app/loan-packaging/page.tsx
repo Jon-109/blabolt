@@ -201,20 +201,28 @@ export default function LoanPackagingPage() {
 
             {/* Loan Purpose Selection */}
             <div className="mb-8">
-              <label className="block text-lg font-semibold text-gray-800 mb-2">Step 1: What do you need funding for?</label>
-              <div className="text-gray-600 text-sm mb-4">Your loan purpose helps us tailor your documents or match you with the right lender.</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select
-                  className="p-3 border border-gray-300 rounded-lg w-full"
-                  value={selectedLoanPurpose}
-                  onChange={(e) => setSelectedLoanPurpose(e.target.value)}
-                >
-                  <option value="">Select a loan purpose</option>
-                  {Object.entries(loanPurposes).map(([key, purpose]) => (
-                    <option key={key} value={key}>{purpose.title}</option>
-                  ))}
-                </select>
-              </div>
+  {/* Step 1 Required Note */}
+  <div className="text-xs text-red-700 mb-2">Step 1 is <span className="font-semibold">required</span> to continue. The documents needed for your loan package depend on your selection here.</div>
+              <label className="block text-lg font-semibold text-gray-800 mb-2">
+  Step 1: What do you need funding for?
+  <span className="text-red-600 ml-1" title="Required">*</span>
+</label>
+<div className="text-gray-600 text-sm mb-4">Your loan purpose helps us tailor your documents or match you with the right lender.</div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <select
+    className="p-3 border border-gray-300 rounded-lg w-full"
+    value={selectedLoanPurpose}
+    onChange={(e) => setSelectedLoanPurpose(e.target.value)}
+    aria-required="true"
+    required
+  >
+    <option value="">Select a loan purpose</option>
+    {Object.entries(loanPurposes).map(([key, purpose]) => (
+      <option key={key} value={key}>{purpose.title}</option>
+    ))}
+  </select>
+</div>
+<div className="text-xs text-red-600 mt-1 ml-1" role="alert">(required)</div>
               {selectedLoanPurpose && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                   <p className="text-gray-700">{loanPurposes[selectedLoanPurpose]?.description}</p>
@@ -227,7 +235,7 @@ export default function LoanPackagingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                {/* Loan Packaging Option */}
               <div className="border border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-md transition-all">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">🗂️ Prepare My Application</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">🗂️ Prepare My Application <span className="font-normal text-gray-500">(Loan Packaging)</span></h3>
                 <p className="text-gray-600 mb-4">We’ll create a lender-ready loan package you can easily download and submit anywhere. Perfect if you already have a lender or want to apply on your own.</p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start">
@@ -245,17 +253,28 @@ export default function LoanPackagingPage() {
                 </ul>
                 <div className="text-xl font-bold text-gray-900 mb-4">$499</div>
 
-                <button 
-                  onClick={() => handleServiceSelection('loan_packaging')}
-                  disabled={isSubmitting || !selectedLoanPurpose}
-                  className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? 'Processing...' : 'Get My Loan Package'}
-                </button>
+                <TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        onClick={() => handleServiceSelection('loan_packaging')}
+        disabled={isSubmitting || !selectedLoanPurpose}
+        className={`w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ${(!selectedLoanPurpose || isSubmitting) ? 'disabled:bg-gray-500' : ''} disabled:cursor-not-allowed`}
+      >
+        {isSubmitting ? 'Processing...' : 'Get My Loan Package'}
+      </button>
+    </TooltipTrigger>
+    {(!selectedLoanPurpose && !isSubmitting) && (
+      <TooltipContent className="bg-gray-900 text-white text-xs rounded px-2 py-1">
+        Select a loan purpose to continue
+      </TooltipContent>
+    )}
+  </Tooltip>
+</TooltipProvider> 
               </div>
                             {/* Loan Brokering Option */}
               <div className="border border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-md transition-all">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">🤝 Help Me Get Funded</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">🤝 Help Me Get Funded <span className="font-normal text-gray-500">(Loan Brokering)</span></h3>
                 <p className="text-gray-600 mb-4">We’ll match you with the right lenders and guide you through the full loan application process — from start to funding.</p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start">
@@ -274,14 +293,25 @@ export default function LoanPackagingPage() {
                 <div className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-4">
   Commission based: <span className="font-bold text-blue-700 ml-1">1% broker fee</span>
 </div>
-                <button 
-                  onClick={() => handleServiceSelection('loan_brokering')}
-                  disabled={isSubmitting || !selectedLoanPurpose}
-                  className="w-full py-3 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  title="We only earn when you're funded."
-                >
-                  {isSubmitting ? 'Processing...' : 'Match Me With a Lender'}
-                </button>
+                <TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        onClick={() => handleServiceSelection('loan_brokering')}
+        disabled={isSubmitting || !selectedLoanPurpose}
+        className={`w-full py-3 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors ${(!selectedLoanPurpose || isSubmitting) ? 'disabled:bg-gray-500' : ''} disabled:cursor-not-allowed`}
+        title="We only earn when you're funded."
+      >
+        {isSubmitting ? 'Processing...' : 'Match Me With a Lender'}
+      </button>
+    </TooltipTrigger>
+    {(!selectedLoanPurpose && !isSubmitting) && (
+      <TooltipContent className="bg-gray-900 text-white text-xs rounded px-2 py-1">
+        Select a loan purpose to continue
+      </TooltipContent>
+    )}
+  </Tooltip>
+</TooltipProvider> 
                 {/* Accordions for Brokering Details */}
                 <div className="mt-4">
                   <Accordion type="multiple" className="space-y-2">
