@@ -201,8 +201,7 @@ export default function LoanPackagingPage() {
 
             {/* Loan Purpose Selection */}
             <div className="mb-8">
-  {/* Step 1 Required Note */}
-  <div className="text-xs text-red-700 mb-2">Step 1 is <span className="font-semibold">required</span> to continue. The documents needed for your loan package depend on your selection here.</div>
+
               <label className="block text-lg font-semibold text-gray-800 mb-2">
   Step 1: What do you need funding for?
   <span className="text-red-600 ml-1" title="Required">*</span>
