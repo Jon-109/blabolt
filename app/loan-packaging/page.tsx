@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/supabase/helpers/client'
 import { loanPurposes } from '@/lib/loanPurposes'
 import Image from 'next/image'
+import Testimonials from '@/app/(components)/shared/Testimonials'
 
 // Define types for the Loan Packaging process
 type ServiceType = 'loan_packaging' | 'loan_brokering' | null;
@@ -200,7 +201,7 @@ export default function LoanPackagingPage() {
   // Service Selection Step
   if (currentStep === 'service_selection') {
     return (
-      <main className="min-h-screen bg-gray-50 pt-8">
+      <main className="min-h-screen bg-gray-50">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="w-full bg-gray-900 py-4 md:py-4 border-b border-gray-800 mb-2 flex flex-col items-center justify-center">
   <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-2 text-white tracking-tight whitespace-nowrap text-center">
@@ -452,6 +453,9 @@ export default function LoanPackagingPage() {
                 {error}
               </div>
             )}
+          </div>
+          <div className="mt-16">
+            <Testimonials />
           </div>
       </main>
     );
