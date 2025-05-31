@@ -123,10 +123,14 @@ function CashFlowAnalysisInner() {
   // Handler for the $99 CTA button (triggers login if needed, then checkout)
   const handleStartCheckout = async () => {
     try {
+      console.log("[DEBUG] Starting checkout process");
+      
       // Check Supabase session first
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log("[DEBUG] Auth session exists:", !!session, "Error:", sessionError);
       
       if (sessionError || !session) {
+        console.error("[DEBUG] No valid session found, redirecting to login");
         // Store in sessionStorage that we want to checkout after login
         sessionStorage.setItem('returnToCheckout', 'true');
         
@@ -134,6 +138,13 @@ function CashFlowAnalysisInner() {
         const redirectTo = encodeURIComponent('/cash-flow-analysis?checkout=true');
         router.push(`/login?redirectTo=${redirectTo}`);
         return;
+      }
+      
+      console.log("[DEBUG] User ID from session:", session.user?.id);
+      console.log("[DEBUG] Is token present:", !!session.access_token);
+      // Log first few chars of token for debugging
+      if (session.access_token) {
+        console.log("[DEBUG] Token prefix:", session.access_token.substring(0, 10) + "...");
       }
       
       // Check if user has already purchased the comprehensive analysis
@@ -159,6 +170,7 @@ function CashFlowAnalysisInner() {
       }
       
       // If we get here, user is logged in and has not purchased - proceed to checkout
+      console.log("[DEBUG] Starting fetch to /api/create-checkout-session");
       const res = await fetch('/api/create-checkout-session', { 
         method: 'POST',
         headers: {
@@ -167,8 +179,13 @@ function CashFlowAnalysisInner() {
         },
       });
       
+      console.log("[DEBUG] Checkout response status:", res.status, res.statusText);
+      
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
+        const errorData = await res.json().catch(() => ({
+          error: "Failed to parse error response"
+        }));
+        console.error("[DEBUG] Checkout error response:", errorData);
         throw new Error(errorData.error || 'Failed to create checkout session');
       }
       
