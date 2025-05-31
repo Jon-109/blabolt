@@ -177,7 +177,12 @@ function CashFlowAnalysisInner() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` // Include JWT token
         },
+        body: JSON.stringify({
+          productType: 'cash_flow_analysis' // Required by the API route
+        }),
       });
+      
+      console.log("[DEBUG] Request made with productType: cash_flow_analysis");
       
       console.log("[DEBUG] Checkout response status:", res.status, res.statusText);
       
