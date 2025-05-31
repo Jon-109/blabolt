@@ -202,7 +202,7 @@ export default function LoanPackagingPage() {
     return (
       <main className="min-h-screen bg-gray-50 pt-8">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="w-full bg-gray-900 py-4 md:py-4 shadow-2xl border-b border-gray-800 mb-2 flex flex-col items-center justify-center">
+          <div className="w-full bg-gray-900 py-4 md:py-4 border-b border-gray-800 mb-2 flex flex-col items-center justify-center">
   <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-2 text-white tracking-tight whitespace-nowrap text-center">
     Loan Packaging: Step-By-Step Guide
   </h1>
@@ -292,8 +292,10 @@ export default function LoanPackagingPage() {
 </TooltipProvider> 
               </div>
                             {/* Loan Brokering Option */}
-              <div className="border border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-md transition-all">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">🤝 Help Me Get Funded <span className="font-normal text-gray-500">(Loan Brokering)</span></h3>
+              <div className="relative border-2 border-emerald-500 bg-emerald-50 rounded-xl p-6 hover:border-emerald-600 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-emerald-400 transform transition-transform duration-200 hover:-translate-y-1">
+  {/* Recommended Badge */}
+  <span className="absolute -top-4 left-4 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm z-10">Recommended</span>
+  <h3 className="text-lg font-semibold text-gray-800 mb-2">🤝 Help Me Get Funded <span className="font-normal text-gray-500">(Loan Brokering)</span></h3>
                 <p className="text-gray-800 mb-4">We’ll match you with the right lenders and guide you through the full loan application process — from start to funding.</p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start">
