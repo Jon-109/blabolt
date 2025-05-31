@@ -345,10 +345,10 @@ function CashFlowAnalysisInner() {
 
       {/* DSCR Calculator Section - Right after pricing */}
       {showCalculator && (
-        <section id="dscr-calculator" className="py-12 bg-gray-50" ref={calculatorRef}>
+        <section id="dscr-calculator" className="py-4 bg-gray-50" ref={calculatorRef}>
           <div className="container mx-auto px-6">
             <div className="max-w-3xl mx-auto">
-              <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+              <div className="bg-white rounded-lg shadow-lg p-6">
                 <DscrQuickCalculator
                   initialValues={formValues}
                   onValuesChange={setFormValues}
@@ -362,7 +362,7 @@ function CashFlowAnalysisInner() {
       
 
       {/* Comparison Table Section */}
-      <section className="py-8">
+      <section className="py-4">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl font-bold mb-4 text-center">
             Compare Our Services
