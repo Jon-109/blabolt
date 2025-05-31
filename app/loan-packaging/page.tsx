@@ -47,6 +47,32 @@ export default function LoanPackagingPage() {
     }
   }, [])
 
+  // On mount, check for Stripe session_id in URL and verify payment
+  useEffect(() => {
+    if (typeof window !== 'undefined' && userId) {
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get('session_id');
+      if (sessionId) {
+        // Verify payment in Supabase purchases table
+        const verifyPayment = async () => {
+          const { data, error } = await supabase
+            .from('purchases')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('product_type', 'loan_packaging')
+            .eq('paid', true)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          if (!error && data && data.length > 0) {
+            // Payment confirmed, move to dashboard
+            setCurrentStep('dashboard');
+          }
+        };
+        verifyPayment();
+      }
+    }
+  }, [userId]);
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   
