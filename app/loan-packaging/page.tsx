@@ -35,6 +35,17 @@ export default function LoanPackagingPage() {
   const [currentStep, setCurrentStep] = useState<Step>('service_selection')
   const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('')
 
+  // On mount, check for ?purpose= in URL and set dropdown
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const purpose = params.get('purpose')
+      if (purpose && Object.keys(loanPurposes).includes(purpose)) {
+        setSelectedLoanPurpose(purpose)
+      }
+    }
+  }, [])
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   
@@ -152,8 +163,10 @@ export default function LoanPackagingPage() {
         const data = await response.json();
         
         if (data.url) {
-          // Redirect to Stripe checkout
-          window.location.href = data.url;
+          // Redirect to Stripe checkout with ?purpose= param
+          const checkoutUrl = new URL(data.url)
+          checkoutUrl.searchParams.set('purpose', selectedLoanPurpose)
+          window.location.href = checkoutUrl.toString();
         } else {
           setError(data.error || 'Failed to create checkout session');
         }
@@ -189,7 +202,7 @@ export default function LoanPackagingPage() {
     return (
       <main className="min-h-screen bg-gray-50 pt-8">
         <div className="max-w-[1200px] mx-auto px-6">
-          <div className="w-full bg-gray-900 py-4 md:py-6 shadow-2xl border-b border-gray-800 mb-2 flex flex-col items-center justify-center">
+          <div className="w-full bg-gray-900 py-4 md:py-4 shadow-2xl border-b border-gray-800 mb-2 flex flex-col items-center justify-center">
   <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-2 text-white tracking-tight whitespace-nowrap text-center">
     Loan Packaging: Step-By-Step Guide
   </h1>
@@ -207,19 +220,26 @@ export default function LoanPackagingPage() {
   <span className="text-red-600 ml-1" title="Required">*</span>
 </label>
 <div className="text-gray-600 text-sm mb-4">Your loan purpose helps us tailor your documents or match you with the right lender.</div>
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
   <select
-    className="p-3 border border-gray-300 rounded-lg w-full"
+    className="p-3 pr-10 border border-gray-300 rounded-lg w-full appearance-none bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
     value={selectedLoanPurpose}
     onChange={(e) => setSelectedLoanPurpose(e.target.value)}
     aria-required="true"
     required
+    style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
   >
     <option value="">Select a loan purpose</option>
     {Object.entries(loanPurposes).map(([key, purpose]) => (
       <option key={key} value={key}>{purpose.title}</option>
     ))}
   </select>
+  {/* Chevron Down SVG */}
+  <span className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+    <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+      <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  </span>
 </div>
 <div className="text-xs text-red-600 mt-1 ml-1" role="alert">(required)</div>
               {selectedLoanPurpose && (
@@ -230,12 +250,12 @@ export default function LoanPackagingPage() {
             </div>
             
             {/* Service Type Selection */}
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Choose your service type</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Step 2: Choose Your Service Type</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                {/* Loan Packaging Option */}
               <div className="border border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-md transition-all">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">🗂️ Prepare My Application <span className="font-normal text-gray-500">(Loan Packaging)</span></h3>
-                <p className="text-gray-600 mb-4">We’ll create a lender-ready loan package you can easily download and submit anywhere. Perfect if you already have a lender or want to apply on your own.</p>
+                <p className="text-gray-800 mb-4">We’ll create a lender-ready loan package you can easily download and submit anywhere. Perfect if you already have a lender or want to apply on your own.</p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -274,7 +294,7 @@ export default function LoanPackagingPage() {
                             {/* Loan Brokering Option */}
               <div className="border border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-md transition-all">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">🤝 Help Me Get Funded <span className="font-normal text-gray-500">(Loan Brokering)</span></h3>
-                <p className="text-gray-600 mb-4">We’ll match you with the right lenders and guide you through the full loan application process — from start to funding.</p>
+                <p className="text-gray-800 mb-4">We’ll match you with the right lenders and guide you through the full loan application process — from start to funding.</p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -360,7 +380,7 @@ export default function LoanPackagingPage() {
                     </AccordionItem>
                     {/* Commission-Based Questions Accordion */}
                     <AccordionItem value="commission-faq">
-                      <AccordionTrigger className="bg-blue-50 rounded-md px-4 py-2 font-semibold text-blue-900 shadow hover:bg-blue-100 transition border border-blue-100 flex items-center gap-2">
+                      <AccordionTrigger className="bg-blue-50 rounded-md px-4 py-2 font-semibold text-blue-900 shadow hover:bg-blue-100 transition border border-blue-100 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
                         Commission-Based Questions
                       </AccordionTrigger>
                       <AccordionContent className="bg-white rounded-b-md border border-t-0 border-blue-100 px-4 py-4">
