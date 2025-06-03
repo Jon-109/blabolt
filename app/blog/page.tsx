@@ -25,11 +25,11 @@ export const metadata: Metadata = {
 
 const blogs = [
   {
-    slug: 'improve-dscr',
-    title: 'Coming Soon: How to Improve Your DSCR',
-    description: 'Learn actionable strategies to boost your Debt Service Coverage Ratio and qualify for better business loans.',
-    coverImage: '/images/Logo.png',
-    tags: ['DSCR', 'CashFlow'],
+    slug: 'how-to-make-your-business-loan-ready-5-mistakes',
+    title: 'How to Make Your Business Loan-Ready: 5 Mistakes That Get Applications Rejected',
+    description: 'Avoid the hidden red flags that sink small-business loan requests—and learn the simple fixes that turn lenders into eager partners.',
+    coverImage: '/images/business-loan-readiness-cover.png',
+    tags: ['LoanReadiness', 'Mistakes', 'SmallBusiness'],
   },
   {
     slug: 'ultimate-loan-packaging',
@@ -84,6 +84,9 @@ export default function BlogPage() {
               key={blog.slug}
               className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow flex flex-col items-stretch p-6 relative min-h-[340px]"
             >
+              {idx === 0 ? (
+                <Link href="/blog/how-to-make-your-business-loan-ready-5-mistakes" className="absolute inset-0 z-10" aria-label={blog.title} />
+              ) : null}
               <div className="w-full h-40 bg-gray-100 rounded-md mb-4 flex items-center justify-center overflow-hidden">
                 <Image
                   src={blog.coverImage || '/images/Logo.png'}
@@ -93,9 +96,11 @@ export default function BlogPage() {
                   className="object-cover w-full h-full"
                 />
               </div>
-              <span className="absolute top-4 right-4 bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full shadow-sm rounded-full flex items-center gap-1">
-                <span role="img" aria-label="clock">⏰</span> Coming Soon
-              </span>
+              {idx !== 0 && (
+                <span className="absolute top-4 right-4 bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full shadow-sm rounded-full flex items-center gap-1">
+                  <span role="img" aria-label="clock">⏰</span> Coming Soon
+                </span>
+              )}
               <h2 className="text-xl font-bold text-gray-900 mb-1">{blog.title}</h2>
               <div className="flex flex-wrap gap-2 mb-2">
                 {blog.tags.map(tag => (
@@ -106,12 +111,6 @@ export default function BlogPage() {
             </div>
           ))}
         </div>
-      </section>
-
-      {/* Mid-page: Email subscribe */}
-      <section className="w-full flex justify-center mt-16 mb-8 px-4 z-10">
-        {/* Client-side subscribe form */}
-        <SubscribeForm />
       </section>
 
       {/* Navigation Buttons */}
