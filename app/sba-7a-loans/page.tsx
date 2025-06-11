@@ -148,10 +148,11 @@ const SBA7aLoans = () => {
               >
                 Find Out If You Are Eligible
               </button>
-              <Link href="/get-funded" passHref legacyBehavior>
-  <a className="px-8 py-4 bg-primary-blue text-white rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors border border-white">
-    Start Your SBA 7(a) Loan Application
-  </a>
+              <Link
+  href="/get-funded"
+  className="px-8 py-4 bg-primary-blue text-white rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors border border-white text-center flex items-center justify-center"
+>
+  Start Your SBA 7(a) Loan Application
 </Link>
             </div>
           </div>
@@ -294,10 +295,11 @@ const SBA7aLoans = () => {
               >
                 Check Eligibility Now
               </button>
-              <Link href="/get-funded" passHref legacyBehavior>
-                <a className="px-8 py-4 bg-primary-blue text-white rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors border border-white">
-                  Start Your SBA 7(a) Loan Application
-                </a>
+              <Link
+                href="/get-funded"
+                className="px-8 py-4 bg-primary-blue text-white rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors border border-white text-center flex items-center justify-center"
+              >
+                Start Your SBA 7(a) Loan Application
               </Link>
             </div>
           </div>
