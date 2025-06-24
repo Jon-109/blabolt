@@ -86,12 +86,13 @@ export default function LoanServices() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild className="h-12 px-8 bg-white text-primary-blue rounded-lg font-semibold hover:bg-gray-100 transition-colors sm:flex-1 flex items-center justify-center text-base">
-                <Link href="/get-funded">Start Your Application Now</Link>
+                <Link href="/get-funded" id="loanservices-page-hero-cta-apply">Start Your Application Now</Link>
               </Button>
               <a
                 href="#loan-calculator"
                 onClick={scrollToCalculator}
                 className="h-12 px-8 bg-primary-blue hover:bg-primary-blue/80 text-white rounded-lg font-semibold transition-colors shadow-lg flex items-center justify-center gap-2 sm:flex-1 text-base"
+                id="loanservices-page-hero-cta-loan-cost"
               >
                 See What Your Loan Could Cost
                 <ArrowRight className="w-5 h-5" />
@@ -194,8 +195,8 @@ export default function LoanServices() {
 
             <div className="text-center">
               <p className="text-xl mb-6">Want to know if an SBA 7(a) loan is right for you?</p>
-              <Link href="/sba-7a-loans">
-                <button className="px-8 py-4 bg-white text-primary-blue rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+              <Link href="/sba-7a-loans" id="loanservices-page-sba-learnmore-link">
+                <button className="px-8 py-4 bg-white text-primary-blue rounded-lg font-semibold hover:bg-gray-100 transition-colors" id="loanservices-page-sba-learnmore-btn">
                   Learn More About SBA 7(a) Loans
                 </button>
               </Link>
@@ -281,10 +282,10 @@ export default function LoanServices() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild className="px-8 py-4 bg-white text-primary-blue rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                <Link href="/get-funded">Start Your Application Now</Link>
+                <Link href="/get-funded" id="loanservices-page-cta-apply-again">Start Your Application Now</Link>
               </Button>
               <Button asChild className="px-8 py-4 bg-primary-blue text-white rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors border border-white">
-                <Link href="/get-funded">Find Your Perfect Lender</Link>
+                <Link href="/get-funded" id="loanservices-page-cta-find-lender">Find Your Perfect Lender</Link>
               </Button>
             </div>
           </div>

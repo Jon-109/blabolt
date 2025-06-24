@@ -150,7 +150,8 @@ const InputField: React.FC<{
   value: number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
-}> = ({ label, name, placeholder, tooltip, value, onChange, required }) => {
+  id?: string;
+}> = ({ label, name, placeholder, tooltip, value, onChange, required, id }) => {
   const [displayValue, setDisplayValue] = React.useState(value ? value.toLocaleString('en-US') : '');
   const [isFocused, setIsFocused] = React.useState(false);
 
@@ -196,7 +197,7 @@ const InputField: React.FC<{
         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
         <input
           type="text"
-          id={name}
+          id={id || name}
           name={name}
           placeholder={placeholder}
           value={displayValue}
@@ -411,6 +412,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                   onChange={handleLoanPurposeChange}
                   className="w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                   required
+                  data-ga-id="dscr-calc-form-loan-purpose"
                 >
                   {loanPurposeKeys.map((purpose) => (
                     <option key={purpose} value={purpose}>
@@ -430,6 +432,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                 value={parseInt(loanAmount.replace(/[$,]/g, '')) || 0}
                 onChange={handleLoanAmountChange}
                 required
+                id="dscr-calc-form-loan-amount"
               />
             </div>
           </div>
@@ -445,6 +448,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                 tooltip="Monthly payments for business real estate loans."
                 value={values.realEstateDebt}
                 onChange={handleInputChange}
+                id="dscr-calc-form-real-estate-debt"
               />
               <InputField
                 label="Credit Cards"
@@ -453,6 +457,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                 tooltip="Minimum monthly payments for all business credit cards."
                 value={values.creditCards}
                 onChange={handleInputChange}
+                id="dscr-calc-form-credit-cards"
               />
               <InputField
                 label="Vehicle/Equipment Loans"
@@ -461,6 +466,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                 tooltip="Monthly payments for business vehicles or equipment."
                 value={values.vehicleEquipment}
                 onChange={handleInputChange}
+                id="dscr-calc-form-vehicle-equipment"
               />
               <InputField
                 label="Lines of Credit"
@@ -469,6 +475,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                 tooltip="Monthly payments for business lines of credit."
                 value={values.linesOfCredit}
                 onChange={handleInputChange}
+                id="dscr-calc-form-lines-of-credit"
               />
               <InputField
                 label="Other Debt"
@@ -477,6 +484,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                 tooltip="Any other minimum monthly debt payments."
                 value={values.otherDebt}
                 onChange={handleInputChange}
+                id="dscr-calc-form-other-debt"
               />
             </div>
           </div>
@@ -495,6 +503,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
               handleCalculate();
             }}
             className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
+            id="dscr-calc-btn-calculate"
           >
             Calculate DSCR
           </button>
@@ -594,16 +603,17 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                   <h3 className="font-semibold text-blue-800 text-lg mb-1">Comprehensive Cash Flow Analysis - $99</h3>
                   <p className="text-sm text-blue-700">Bank-Level Analysis with a Detailed PDF Report</p>
                   <Button
-  className="mt-3 w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors shadow-lg max-w-xs mx-auto text-lg"
-  size="lg"
-  onClick={handleStartCheckout}
-  disabled={loading}
->
-  {loading ? 'Redirecting...' : 'Get Started Now!'}
-</Button>
-{error && (
-  <div className="mt-2 text-red-600 text-sm text-center font-medium">{error}</div>
-)}
+                    className="mt-3 w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors shadow-lg max-w-xs mx-auto text-lg"
+                    size="lg"
+                    onClick={handleStartCheckout}
+                    disabled={loading}
+                    id="dscr-calc-cta-start-checkout"
+                  >
+                    {loading ? 'Redirecting...' : 'Get Started Now!'}
+                  </Button>
+                  {error && (
+                    <div className="mt-2 text-red-600 text-sm text-center font-medium">{error}</div>
+                  )}
                 </div>
                 <div className="grid md:grid-cols-3 gap-4 mt-3">
                   <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">

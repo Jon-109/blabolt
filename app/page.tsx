@@ -77,11 +77,12 @@ function HomeContent() {
               <Link
                 href="/cash-flow-analysis?showCalculator=true#dscr-calculator"
                 className="px-6 py-3 min-h-[44px] min-w-[220px] bg-[#002c55] hover:bg-[#001a33] rounded-xl font-bold text-lg shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#002c55] border border-white border-[0.5px] w-full sm:w-auto"
+                id="home-hero-cta-check-afford-loan"
               >
                 Check If You Can Afford Loan
               </Link>
-              <Link href="/loan-services" className="focus:outline-none w-full sm:w-auto">
-                <button className="px-6 py-3 min-h-[44px] min-w-[220px] bg-white text-[#002c55] rounded-xl font-bold text-lg border border-[#002c55] shadow-md hover:bg-gray-50 transition-colors w-full sm:w-auto">
+              <Link href="/loan-services" className="focus:outline-none w-full sm:w-auto" id="home-hero-link-loan-services">
+                <button className="px-6 py-3 min-h-[44px] min-w-[220px] bg-white text-[#002c55] rounded-xl font-bold text-lg border border-[#002c55] shadow-md hover:bg-gray-50 transition-colors w-full sm:w-auto" id="home-hero-btn-loan-services">
                   Explore Loan Services
                 </button>
               </Link>
@@ -154,7 +155,7 @@ function HomeContent() {
           </div>
           {/* CTA / Scroll prompt */}
           <div className="flex justify-center mt-1">
-            <a href="#funding-process" className="text-[#002c55] text-base md:text-lg font-medium hover:underline hover:text-[#001a33] transition-colors opacity-80 flex items-center gap-2">
+            <a href="#funding-process" className="text-[#002c55] text-base md:text-lg font-medium hover:underline hover:text-[#001a33] transition-colors opacity-80 flex items-center gap-2" id="home-problem-solution-scroll-funding-process">
               See how it works <span className="animate-bounce-slow">↓</span>
             </a>
           </div>
@@ -183,6 +184,7 @@ function HomeContent() {
   href="/cash-flow-analysis?showCalculator=true#dscr-calculator"
   className="inline-flex items-center gap-3 px-10 py-5 rounded-full bg-white text-[#002c55] font-bold text-xl shadow-xl border-2 border-white/70 hover:bg-gray-100 hover:scale-105 focus-visible:ring-4 focus-visible:ring-white/60 transition-all duration-200 ease-out drop-shadow-lg group"
   aria-label="Get Your Free DSCR Check"
+  id="home-dscr-cta-get-free-check"
 >
   <span className="text-2xl">→</span> Get Your Free DSCR Check
 </Link>
@@ -212,6 +214,7 @@ function HomeContent() {
           <Link
             href="/faq"
             className="inline-flex items-center gap-2 px-8 py-3 bg-primary-blue hover:bg-primary-blue/90 text-white rounded-lg font-semibold text-lg transition-colors shadow-md"
+            id="home-faq-link"
           >
             Visit Our FAQ Page
             <ArrowRightIcon className="w-5 h-5" />

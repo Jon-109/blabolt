@@ -231,6 +231,7 @@ function CashFlowAnalysisInner() {
                 <button 
                   className="px-8 py-3 bg-white text-primary-blue rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-md mb-1"
                   onClick={handleShowCalculator}
+                  id="cashflow-page-cta-primary-dscr-check"
                 >
                   Start Free DSCR Check
                 </button>
@@ -246,6 +247,7 @@ function CashFlowAnalysisInner() {
                     }
                   }}
                   className="px-8 py-3 bg-transparent border-2 border-white text-white rounded-lg font-semibold hover:bg-white/10 transition-colors"
+                  id="cashflow-page-cta-secondary-comprehensive-link"
                 >
                   See Comprehensive Analysis
                 </button>
@@ -326,6 +328,7 @@ function CashFlowAnalysisInner() {
               <button 
                 className="w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors"
                 onClick={handleShowCalculator}
+                id="cashflow-page-quick-get-started"
               >
                 Run a Free Quick Check
               </button>
@@ -357,6 +360,7 @@ function CashFlowAnalysisInner() {
               <button 
                 onClick={handleStartCheckout}
                 className="w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors"
+                id="cashflow-page-comprehensive-get-started"
               >
                 Get Started at $99
               </button>
@@ -409,12 +413,14 @@ function CashFlowAnalysisInner() {
         <button
           className="w-full sm:w-auto px-8 py-4 bg-white text-primary-blue font-bold rounded-xl shadow-lg border-2 border-white/80 hover:bg-blue-50 hover:scale-[1.03] hover:shadow-2xl active:scale-100 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-150 mb-2 sm:mb-0 sm:mr-2"
           onClick={handleShowCalculator}
+          id="cashflow-page-cta-quick-analysis"
         >
           Start Quick Analysis for Free
         </button>
         <button
           onClick={handleStartCheckout}
           className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-700 to-primary-blue text-white font-semibold rounded-xl border-2 border-white/30 shadow-lg hover:from-blue-800 hover:to-primary-blue hover:scale-[1.03] hover:shadow-2xl active:scale-100 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-150"
+          id="cashflow-page-cta-comprehensive-analysis"
         >
           Get Comprehensive Analysis ($99)
         </button>
