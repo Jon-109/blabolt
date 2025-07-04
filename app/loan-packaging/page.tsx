@@ -25,6 +25,9 @@ interface Document {
 }
 
 export default function LoanPackagingPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const [showIncludedModal, setShowIncludedModal] = useState(false);
   // User authentication state
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -33,6 +36,7 @@ export default function LoanPackagingPage() {
   
   // Service selection and flow state
   const [serviceType, setServiceType] = useState<ServiceType>(null)
+
   const [currentStep, setCurrentStep] = useState<Step>('service_selection')
   const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('')
 
