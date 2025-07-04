@@ -169,44 +169,13 @@ export default function LoanPackagingPage() {
     }
     
     setError('');
+    // Temporarily bypass payment; take user straight to dashboard
     setIsSubmitting(true);
-    
-    if (type === 'loan_packaging') {
-      // Create a Stripe checkout session
-      try {
-        const response = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-          },
-          body: JSON.stringify({
-            productType: 'loan_packaging',
-            loanPurpose: selectedLoanPurpose,
-
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.url) {
-          // Redirect to Stripe checkout with ?purpose= param
-          const checkoutUrl = new URL(data.url)
-          checkoutUrl.searchParams.set('purpose', selectedLoanPurpose)
-          window.location.href = checkoutUrl.toString();
-        } else {
-          setError(data.error || 'Failed to create checkout session');
-        }
-      } catch (err) {
-        console.error('Error creating checkout session:', err);
-        setError('Failed to process payment. Please try again.');
-      } finally {
-        setIsSubmitting(false);
-      }
-    } else if (type === 'loan_brokering') {
-      // Redirect to JotForm for loan brokering agreement
-      // Note: Replace with actual JotForm URL
-      window.location.href = 'https://form.jotform.com/loan-brokering-agreement';
+    try {
+      // Optionally: you could write a placeholder purchase record here
+      setCurrentStep('dashboard');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
