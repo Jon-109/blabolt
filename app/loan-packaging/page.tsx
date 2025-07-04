@@ -24,6 +24,14 @@ interface Document {
   aiGenerated?: boolean;
 }
 
+// Default documents to initialize in the dashboard
+const DEFAULT_DOCUMENTS: Document[] = [
+  { id: 'business-plan', name: 'Business Plan', description: 'A detailed plan describing your company, market, and financial projections.', status: 'not_started', required: true, templateUrl: '/templates/business_plan_template.docx' },
+  { id: 'cover-letter', name: 'Cover Letter', description: 'Personalized cover letter for lenders.', status: 'not_started', required: true, templateUrl: '/templates/cover_letter_template.docx' },
+  { id: 'financial-statements', name: 'Financial Statements', description: "Your company's financial statements.", status: 'not_started', required: true, templateUrl: '/templates/financial_statements_template.xlsx' },
+  { id: 'tax-returns', name: 'Tax Returns', description: 'Last two years of business tax returns.', status: 'not_started', required: false, templateUrl: '/templates/tax_returns_template.pdf' },
+];
+
 export default function LoanPackagingPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -141,7 +149,33 @@ export default function LoanPackagingPage() {
       console.error('Error loading documents:', err);
     }
   };
-  
+
+  // Initialize default dashboard documents when first entering dashboard (top-level)
+  useEffect(() => {
+    if (currentStep === 'dashboard' && loanPackagingId && documents.length === 0) {
+      const initializeDocuments = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('loan_packaging_documents')
+            .select('id')
+            .eq('loan_packaging_id', loanPackagingId);
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            const docsWithId = DEFAULT_DOCUMENTS.map((d) => ({ ...d, loan_packaging_id: loanPackagingId }));
+            const { error: insertErr } = await supabase
+              .from('loan_packaging_documents')
+              .insert(docsWithId);
+            if (insertErr) throw insertErr;
+            loadDocuments(loanPackagingId);
+          }
+        } catch (err) {
+          console.error('Error initializing documents:', err);
+        }
+      };
+      initializeDocuments();
+    }
+  }, [currentStep, loanPackagingId, documents.length]);
+
   // Handle service type selection
   const handleServiceSelection = async (type: ServiceType) => {
     setServiceType(type);
@@ -162,6 +196,125 @@ export default function LoanPackagingPage() {
     }
   };
 
+  // Handle document upload
+  const handleFileUpload = async (documentId: string, file: File) => {
+    if (!loanPackagingId || !userId) return;
+    
+    try {
+      // 1. Upload file to Supabase Storage
+      const fileName = `${userId}/${loanPackagingId}/${documentId}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('loan-packaging-documents')
+        .upload(fileName, file);
+        
+      if (uploadError) throw uploadError;
+      
+      // 2. Get public URL
+      const { data: urlData } = supabase.storage
+        .from('loan-packaging-documents')
+        .getPublicUrl(fileName);
+        
+      // 3. Update document status in database
+      const { error: updateError } = await supabase
+        .from('loan_packaging_documents')
+        .update({ 
+          status: 'uploaded', 
+          file_url: urlData.publicUrl,
+          file_name: file.name,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+        .eq('loan_packaging_id', loanPackagingId);
+        
+      if (updateError) throw updateError;
+      
+      // 4. Reload documents to update UI
+      loadDocuments(loanPackagingId);
+    } catch (err) {
+      console.error('Error uploading document:', err);
+      setError('Failed to upload document. Please try again.');
+    }
+  };
+
+  // Handle document status update
+  const updateDocumentStatus = async (documentId: string, status: DocumentStatus) => {
+    if (!loanPackagingId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('loan_packaging_documents')
+        .update({ 
+          status, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', documentId)
+        .eq('loan_packaging_id', loanPackagingId);
+        
+      if (error) throw error;
+      
+      // Reload documents
+      loadDocuments(loanPackagingId);
+    } catch (err) {
+      console.error('Error updating document status:', err);
+    }
+  };
+
+  // Generate cover letter
+  const generateCoverLetter = async (formData: any) => {
+    if (!loanPackagingId || !userId) return;
+    
+    try {
+      // This would typically call an API endpoint that uses AI to generate the letter
+      // For now, we'll just simulate success and update the status
+        
+      // Update document status
+      const { error } = await supabase
+        .from('loan_packaging_documents')
+        .update({ 
+          status: 'generated', 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', 'cover-letter')
+        .eq('loan_packaging_id', loanPackagingId);
+        
+      if (error) throw error;
+      
+      // Reload documents
+      loadDocuments(loanPackagingId);
+    } catch (err) {
+      console.error('Error generating cover letter:', err);
+      setError('Failed to generate cover letter. Please try again.');
+    }
+  };
+
+  // Handle final submission/download
+  const handleFinalization = async () => {
+    if (!loanPackagingId || !userId || !serviceType) return;
+    
+    try {
+      if (serviceType === 'loan_packaging') {
+        // Generate a ZIP file of all documents for download
+        // This would typically call an API endpoint that packages all files
+        alert('Download functionality will be implemented in the next version');
+      } else if (serviceType === 'loan_brokering') {
+        // Mark the loan packaging as submitted for broker review
+        const { error } = await supabase
+          .from('loan_packaging')
+          .update({ 
+            status: 'submitted', 
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', loanPackagingId);
+          
+        if (error) throw error;
+        
+        alert('Your loan package has been submitted to our team for review.');
+      }
+    } catch (err) {
+      console.error('Error finalizing loan package:', err);
+      setError('Failed to finalize loan package. Please try again.');
+    }
+  };
 
   if (loadingUser) {
     return (
@@ -445,116 +598,8 @@ export default function LoanPackagingPage() {
     const totalDocuments = documents.length || 1; // Avoid division by zero
     const progressPercentage = Math.round((completedDocuments / totalDocuments) * 100);
     
-    // Define the default document list if none exists
-    const defaultDocuments: Document[] = [
-      {
-        id: 'cover-letter',
-        name: 'Cover Letter',
-        description: 'A professional letter explaining your loan request',
-        status: 'not_started',
-        required: true,
-        aiGenerated: true
-      },
-      {
-        id: 'business-plan',
-        name: 'Business Plan',
-        description: 'A detailed plan outlining your business strategy and goals',
-        status: 'not_started',
-        required: true,
-        templateUrl: '/templates/business-plan-template.docx'
-      },
-      {
-        id: 'financial-statements',
-        name: 'Financial Statements',
-        description: 'Balance sheet, income statement, and cash flow statement',
-        status: 'not_started',
-        required: true,
-        templateUrl: '/templates/financial-statements-template.xlsx'
-      },
-      {
-        id: 'tax-returns',
-        name: 'Business Tax Returns',
-        description: 'Last 2-3 years of business tax returns',
-        status: 'not_started',
-        required: true
-      },
-      {
-        id: 'profit-loss',
-        name: 'Profit & Loss Statement',
-        description: 'Detailed profit and loss statement for the past 12 months',
-        status: 'not_started',
-        required: true,
-        templateUrl: '/templates/profit-loss-template.xlsx'
-      },
-      {
-        id: 'bank-statements',
-        name: 'Bank Statements',
-        description: 'Last 3-6 months of business bank statements',
-        status: 'not_started',
-        required: true
-      },
-      {
-        id: 'personal-financial-statement',
-        name: 'Personal Financial Statement',
-        description: 'Statement of personal assets, liabilities, and net worth',
-        status: 'not_started',
-        required: true,
-        templateUrl: '/templates/personal-financial-statement.pdf'
-      },
-      {
-        id: 'business-licenses',
-        name: 'Business Licenses & Permits',
-        description: 'Copies of all relevant business licenses and permits',
-        status: 'not_started',
-        required: true
-      },
-      {
-        id: 'collateral-documentation',
-        name: 'Collateral Documentation',
-        description: 'Documentation for any assets offered as collateral',
-        status: 'not_started',
-        required: false
-      }
-    ];
-    
-    // If no documents are loaded yet, use the default list
-    useEffect(() => {
-      if (documents.length === 0 && loanPackagingId) {
-        // Initialize documents in the database if they don't exist
-        const initializeDocuments = async () => {
-          try {
-            // Check if documents already exist
-            const { data, error } = await supabase
-              .from('loan_packaging_documents')
-              .select('id')
-              .eq('loan_packaging_id', loanPackagingId);
-              
-            if (error) throw error;
-            
-            if (!data || data.length === 0) {
-              // No documents exist, create them
-              const documentsWithPackagingId = defaultDocuments.map((doc: Document) => ({
-                ...doc,
-                loan_packaging_id: loanPackagingId
-              }));
-              
-              const { error: insertError } = await supabase
-                .from('loan_packaging_documents')
-                .insert(documentsWithPackagingId);
-                
-              if (insertError) throw insertError;
-              
-              // Reload documents
-              loadDocuments(loanPackagingId);
-            }
-          } catch (err) {
-            console.error('Error initializing documents:', err);
-          }
-        };
-        
-        initializeDocuments();
-      }
-    }, [loanPackagingId, documents.length]);
+
+
     
     // Handle document upload
     const handleFileUpload = async (documentId: string, file: File) => {
