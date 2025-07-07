@@ -44,9 +44,13 @@ export default function LoanPackagingPage() {
   
   // Service selection and flow state
   const [serviceType, setServiceType] = useState<ServiceType>(null)
-
   const [currentStep, setCurrentStep] = useState<Step>('service_selection')
   const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('')
+
+  // Log currentStep on every render (must come after currentStep is declared)
+  useEffect(() => {
+    console.log('[LoanPackagingPage] Rendered with currentStep:', currentStep);
+  }, [currentStep]);
 
   // On mount, check for ?purpose= in URL and set dropdown
   useEffect(() => {
@@ -674,24 +678,76 @@ export default function LoanPackagingPage() {
     );
   }
   
+  // Show service selection UI if currentStep is 'service_selection'
+  if (currentStep === 'service_selection') {
+    console.log('[LoanPackagingPage] Rendering service selection UI');
+    // Render the ACTUAL service selection UI instead of a placeholder
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-lg w-full text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Start Your Loan Package</h1>
+          <p className="text-gray-600 mb-6">Select a service type and loan purpose to begin.</p>
+          {/* Service type buttons */}
+          <div className="flex justify-center gap-4 mb-4">
+            <button
+              className={`py-2 px-4 rounded-lg font-semibold ${serviceType === 'loan_packaging' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+              onClick={() => setServiceType('loan_packaging')}
+            >
+              Loan Packaging
+            </button>
+            <button
+              className={`py-2 px-4 rounded-lg font-semibold ${serviceType === 'loan_brokering' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+              onClick={() => setServiceType('loan_brokering')}
+            >
+              Loan Brokering
+            </button>
+          </div>
+          {/* Loan purpose dropdown */}
+          <select
+            className="w-full p-2 border rounded-lg mb-4"
+            value={selectedLoanPurpose}
+            onChange={e => setSelectedLoanPurpose(e.target.value)}
+          >
+            <option value="">Select Loan Purpose</option>
+            {Object.entries(loanPurposes).map(([key, val]) => (
+              <option key={key} value={key}>{val.title}</option>
+            ))}
+          </select>
+          {/* Error message */}
+          {error && <div className="text-red-600 mb-2">{error}</div>}
+          {/* Continue button */}
+          <button
+            className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold"
+            onClick={() => handleServiceSelection(serviceType)}
+            disabled={isSubmitting}
+          >
+            Continue
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   // Fallback view if no step is active (should not happen)
-  // Log when fallback view is rendered
-  console.warn('[LoanPackagingPage] Fallback "Something went wrong" screen rendered');
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong</h1>
-        <p className="text-gray-600 mb-6">We couldn't determine your current step in the loan packaging process.</p>
-        <button
-          onClick={() => {
-            console.log('[LoanPackagingPage] Start Over button clicked on fallback screen');
-            handleStartOver();
-          }}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Start Over
-        </button>
+  const validSteps: Step[] = ['dashboard', 'service_selection', 'payment'];
+  if (!validSteps.includes(currentStep)) {
+    console.warn('[LoanPackagingPage] Fallback "Something went wrong" screen rendered with currentStep:', currentStep);
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong</h1>
+          <p className="text-gray-600 mb-6">We couldn't determine your current step in the loan packaging process.</p>
+          <button
+            onClick={() => {
+              console.log('[LoanPackagingPage] Start Over button clicked on fallback screen');
+              handleStartOver();
+            }}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Start Over
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 }
