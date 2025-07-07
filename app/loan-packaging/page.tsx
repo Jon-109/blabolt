@@ -20,16 +20,16 @@ interface Document {
   description: string;
   status: DocumentStatus;
   required: boolean;
-  templateUrl?: string;
+  template_url?: string;
   aiGenerated?: boolean;
 }
 
 // Default documents to initialize in the dashboard
 const DEFAULT_DOCUMENTS: Document[] = [
-  { id: 'business-plan', name: 'Business Plan', description: 'A detailed plan describing your company, market, and financial projections.', status: 'not_started', required: true, templateUrl: '/templates/business_plan_template.docx' },
-  { id: 'cover-letter', name: 'Cover Letter', description: 'Personalized cover letter for lenders.', status: 'not_started', required: true, templateUrl: '/templates/cover_letter_template.docx' },
-  { id: 'financial-statements', name: 'Financial Statements', description: "Your company's financial statements.", status: 'not_started', required: true, templateUrl: '/templates/financial_statements_template.xlsx' },
-  { id: 'tax-returns', name: 'Tax Returns', description: 'Last two years of business tax returns.', status: 'not_started', required: false, templateUrl: '/templates/tax_returns_template.pdf' },
+  { id: 'business-plan', name: 'Business Plan', description: 'A detailed plan describing your company, market, and financial projections.', status: 'not_started', required: true, template_url: '/templates/business_plan_template.docx' },
+  { id: 'cover-letter', name: 'Cover Letter', description: 'Personalized cover letter for lenders.', status: 'not_started', required: true, template_url: '/templates/cover_letter_template.docx' },
+  { id: 'financial-statements', name: 'Financial Statements', description: "Your company's financial statements.", status: 'not_started', required: true, template_url: '/templates/financial_statements_template.xlsx' },
+  { id: 'tax-returns', name: 'Tax Returns', description: 'Last two years of business tax returns.', status: 'not_started', required: false, template_url: '/templates/tax_returns_template.pdf' },
 ];
 
 export default function LoanPackagingPage() {
@@ -610,9 +610,9 @@ export default function LoanPackagingPage() {
                           
                           <div className="flex flex-wrap gap-2">
                             {/* Template button */}
-                            {doc.templateUrl && (
+                            {doc.template_url && (
                               <a 
-                                href={doc.templateUrl} 
+                                href={doc.template_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
