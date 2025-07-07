@@ -26,10 +26,11 @@ interface Document {
 
 // Default documents to initialize in the dashboard
 const DEFAULT_DOCUMENTS: Document[] = [
-  { id: 'business-plan', name: 'Business Plan', description: 'A detailed plan describing your company, market, and financial projections.', status: 'not_started', required: true, template_url: '/templates/business_plan_template.docx' },
-  { id: 'cover-letter', name: 'Cover Letter', description: 'Personalized cover letter for lenders.', status: 'not_started', required: true, template_url: '/templates/cover_letter_template.docx' },
-  { id: 'financial-statements', name: 'Financial Statements', description: "Your company's financial statements.", status: 'not_started', required: true, template_url: '/templates/financial_statements_template.xlsx' },
-  { id: 'tax-returns', name: 'Tax Returns', description: 'Last two years of business tax returns.', status: 'not_started', required: false, template_url: '/templates/tax_returns_template.pdf' },
+  { id: 'personal-financial-statement', name: 'Personal Financial Statement', description: 'A summary of your personal assets, liabilities, and net worth.', status: 'not_started', required: true, template_url: '/templates/personal_financial_statement_template.xlsx' },
+  { id: 'personal-debt-summary', name: 'Personal Debt Summary', description: 'A list of your personal debts and obligations.', status: 'not_started', required: true, template_url: '/templates/personal_debt_summary_template.xlsx' },
+  { id: 'business-debt-summary', name: 'Business Debt Summary', description: 'A summary of all business debts and liabilities.', status: 'not_started', required: true, template_url: '/templates/business_debt_summary_template.xlsx' },
+  { id: 'balance-sheet', name: 'Balance Sheet', description: 'A statement of your company’s assets, liabilities, and equity.', status: 'not_started', required: true, template_url: '/templates/balance_sheet_template.xlsx' },
+  { id: 'profit-loss-statement', name: 'Profit & Loss Statement', description: 'A report of your company’s revenues, costs, and expenses.', status: 'not_started', required: true, template_url: '/templates/profit_loss_statement_template.xlsx' },
 ];
 
 export default function LoanPackagingPage() {
@@ -475,92 +476,62 @@ export default function LoanPackagingPage() {
     };
     
     return (
-      <main className="min-h-screen bg-gray-50 pt-24 pb-12">
-        <div className="max-w-[1200px] mx-auto px-6">
+      <main className="min-h-screen bg-gray-50 pt-8 pb-12">
+        {/* Header Banner */}
+        <div className="max-w-3xl mx-auto mb-8 px-4">
+          <div className="bg-white rounded-2xl shadow-lg p-8 text-center md:text-left border border-gray-100">
+            <h1 className="text-3xl md:text-4xl font-bold text-blue-900 mb-2 tracking-tight">Loan Packaging Dashboard</h1>
+            <p className="text-gray-600 text-lg">Complete all steps to generate your lender-ready loan package.</p>
+          </div>
+        </div>
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Sidebar with Progress Tracker */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  {serviceType === 'loan_packaging' ? 'Loan Package' : 'Loan Brokering'}
-                </h2>
-                
-                {/* Progress Circle */}
-                <div className="flex justify-center mb-6">
-                  <div className="relative h-32 w-32">
-                    {/* Background circle */}
-                    <svg className="h-full w-full" viewBox="0 0 100 100">
-                      <circle
-                        className="text-gray-200"
-                        strokeWidth="8"
-                        stroke="currentColor"
-                        fill="transparent"
-                        r="45"
-                        cx="50"
-                        cy="50"
-                      />
-                      {/* Progress circle */}
-                      <circle
-                        className="text-blue-600"
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                        stroke="currentColor"
-                        fill="transparent"
-                        r="45"
-                        cx="50"
-                        cy="50"
-                        strokeDasharray={`${2 * Math.PI * 45}`}
-                        strokeDashoffset={`${2 * Math.PI * 45 * (1 - progressPercentage / 100)}`}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-gray-800">{progressPercentage}%</span>
-                    </div>
+              <div className="bg-white rounded-2xl shadow-xl p-6 sticky top-24 border border-gray-100">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Progress Tracker</h2>
+                {/* Progress Bar */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-medium text-gray-700">{completedDocuments} of {totalDocuments} completed</span>
+                    <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${progressPercentage === 100 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{progressPercentage}%</span>
+                  </div>
+                  <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-3 rounded-full transition-all duration-500 ${progressPercentage === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                      style={{ width: `${progressPercentage}%` }}
+                    ></div>
                   </div>
                 </div>
-                
-                {/* Progress text */}
-                <p className="text-center text-gray-700 mb-6">
-                  You've completed {completedDocuments} of {totalDocuments} documents
-                </p>
-                
-                {/* Next action recommendation */}
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                  <h3 className="font-medium text-blue-800 mb-2">Next Step:</h3>
-                  <p className="text-gray-700">
-                    {completedDocuments === 0 ? 
-                      "Start by uploading your business plan or generating a cover letter." :
-                      completedDocuments === totalDocuments ? 
+                {/* Next Step Recommendation */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+                  <h3 className="font-medium text-blue-800 mb-2">Next Step</h3>
+                  <p className="text-gray-700 text-sm">
+                    {completedDocuments === 0 ?
+                      "Start by uploading your Personal Financial Statement." :
+                      completedDocuments === totalDocuments ?
                       "All documents are complete! You can now finalize your loan package." :
                       `Continue uploading the remaining documents (${totalDocuments - completedDocuments} left).`
                     }
                   </p>
                 </div>
-                
                 {/* Finalize button - only show when all documents are complete */}
                 {completedDocuments === totalDocuments && (
                   <button
                     onClick={handleFinalization}
-                    className="w-full mt-6 py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    className="w-full mt-2 py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-lg"
                   >
                     {serviceType === 'loan_packaging' ? 'Download Package' : 'Submit to Broker'}
                   </button>
                 )}
               </div>
             </div>
-            
             {/* Main Content - Document Checklist */}
             <div className="lg:col-span-3">
-              <div className="bg-white rounded-xl shadow-lg p-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {serviceType === 'loan_packaging' ? 'Loan Package Builder' : 'Loan Brokering Submission'}
-                </h1>
-                <p className="text-gray-600 mb-8">
-                  {selectedLoanPurpose && loanPurposes[selectedLoanPurpose] ? 
-                    `Purpose: ${loanPurposes[selectedLoanPurpose].title}` : 
-                    'Complete all required documents to finalize your loan package'}
-                </p>
-                
+              <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                {/* Section Heading */}
+                <h2 className="text-2xl font-bold text-blue-900 mb-1">Step 2: Upload Required Documents</h2>
+                <p className="text-gray-600 mb-8 text-base">Upload each document below to complete your loan package.</p>
                 {error && (
                   <div className="p-4 bg-red-50 text-red-700 rounded-lg mb-6">
                     {error}
@@ -568,93 +539,86 @@ export default function LoanPackagingPage() {
                 )}
                 
                 {/* Document list */}
-                <div className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
                   {documents.length > 0 ? (
-                    documents.map((doc: Document) => (
-                      <div 
-                        key={doc.id} 
-                        className={`border rounded-lg p-6 ${doc.status === 'completed' || doc.status === 'generated' || doc.status === 'uploaded' ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}
+                    documents.map((doc: Document, idx) => (
+                      <div
+                        key={doc.id}
+                        className={`group flex items-start gap-4 rounded-2xl border bg-white shadow-md p-6 transition hover:shadow-lg hover:border-blue-200 ${doc.status === 'completed' || doc.status === 'generated' || doc.status === 'uploaded' ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                        tabIndex={0}
+                        aria-label={doc.name}
                       >
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                        {/* Icon */}
+                        <div className="flex-shrink-0 text-3xl md:text-4xl mt-1">
+                          {idx === 0 && '🧾'}
+                          {idx === 1 && '💳'}
+                          {idx === 2 && '🏢'}
+                          {idx === 3 && '📊'}
+                          {idx === 4 && '📈'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold text-gray-900">
                               {doc.name}
-                              {doc.required && <span className="ml-2 text-xs text-red-500">*Required</span>}
                             </h3>
-                            <p className="text-gray-600 text-sm mt-1">{doc.description}</p>
-                            
-                            {/* Status indicator */}
-                            <div className="mt-2">
-                              {doc.status === 'not_started' && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                  Not Started
-                                </span>
-                              )}
-                              {doc.status === 'uploaded' && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  Uploaded
-                                </span>
-                              )}
-                              {doc.status === 'generated' && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  Generated
-                                </span>
-                              )}
-                              {doc.status === 'completed' && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  Completed
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-2">
-                            {/* Template button */}
-                            {doc.template_url && (
-                              <a 
-                                href={doc.template_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                              >
-                                View Template
-                              </a>
+                            {doc.required && <span className="ml-2 text-xs text-red-500">*Required</span>}
+                            {/* Status badge */}
+                            {doc.status === 'not_started' && (
+                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">Not Started</span>
                             )}
-                            
+                            {doc.status === 'uploaded' && (
+                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Uploaded</span>
+                            )}
+                            {doc.status === 'generated' && (
+                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Generated</span>
+                            )}
+                            {doc.status === 'completed' && (
+                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Completed</span>
+                            )}
+                          </div>
+                          <p className="text-gray-600 text-sm mb-3">{doc.description}</p>
+                          <div className="flex flex-wrap gap-2 items-center">
                             {/* Upload button */}
                             {doc.status !== 'completed' && !doc.aiGenerated && (
-                              <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+                              <label className="inline-block px-5 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors cursor-pointer min-h-[44px]">
                                 Upload File
-                                <input 
-                                  type="file" 
-                                  className="hidden" 
+                                <input
+                                  type="file"
+                                  className="hidden"
                                   onChange={(e) => {
                                     if (e.target.files && e.target.files[0]) {
                                       handleFileUpload(doc.id, e.target.files[0]);
                                     }
-                                  }} 
+                                  }}
                                 />
                               </label>
                             )}
-                            
+                            {/* View Template button */}
+                            {doc.template_url && (
+                              <a
+                                href={doc.template_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block px-5 py-2 border border-blue-600 text-blue-700 bg-white rounded-lg font-semibold hover:bg-blue-50 transition-colors min-h-[44px]"
+                              >
+                                View Template
+                              </a>
+                            )}
                             {/* Generate button for AI documents */}
                             {doc.status !== 'completed' && doc.aiGenerated && (
-                              <button 
-                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                              <button
+                                className="inline-block px-5 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors min-h-[44px]"
                                 onClick={() => {
-                                  // Open a modal or form to collect information for generation
-                                  // For now, just simulate generating with empty data
                                   generateCoverLetter({});
                                 }}
                               >
                                 {doc.status === 'not_started' ? 'Generate' : 'Edit'}
                               </button>
                             )}
-                            
                             {/* Mark as completed button */}
                             {(doc.status === 'uploaded' || doc.status === 'generated') && (
-                              <button 
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                              <button
+                                className="inline-block px-5 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors min-h-[44px]"
                                 onClick={() => updateDocumentStatus(doc.id, 'completed')}
                               >
                                 Mark as Completed
