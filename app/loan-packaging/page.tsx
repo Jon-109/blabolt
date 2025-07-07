@@ -125,6 +125,12 @@ export default function LoanPackagingPage() {
         setSelectedLoanPurpose(data[0].loan_purpose || '');
         setCurrentStep('dashboard');
         loadDocuments(data[0].id);
+      } else {
+        // No session: prompt user to start a new loan package
+        setCurrentStep('service_selection');
+        setServiceType(null);
+        setLoanPackagingId(null);
+        setSelectedLoanPurpose('');
       }
     } catch (err) {
       console.error('Error checking existing loan packaging:', err);
