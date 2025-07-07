@@ -185,41 +185,138 @@ export default function LoanPackagingPage() {
   // Handle service type selection
   const handleServiceSelection = async (type: ServiceType) => {
     setServiceType(type);
-    
+    console.log('[handleServiceSelection] Called with type:', type, 'selectedLoanPurpose:', selectedLoanPurpose, 'loanPackagingId:', loanPackagingId, 'userId:', userId);
     if (!selectedLoanPurpose) {
       setError('Please select a loan purpose');
+      console.warn('[handleServiceSelection] No loan purpose selected');
       return;
     }
-    
     setError('');
-    // Temporarily bypass payment; take user straight to dashboard
     setIsSubmitting(true);
     try {
-      // Optionally: you could write a placeholder purchase record here
+      // Insert a new loan packaging session if one does not exist
+      if (!loanPackagingId && userId) {
+        console.log('[handleServiceSelection] Inserting new loan_packaging row');
+        const { data, error } = await supabase
+          .from('loan_packaging')
+          .insert({
+            user_id: userId,
+            service_type: type,
+            loan_purpose: selectedLoanPurpose,
+            status: 'active',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        if (error) {
+          console.error('[handleServiceSelection] Error inserting loan_packaging:', error);
+          throw error;
+        }
+        setLoanPackagingId(data.id);
+        console.log('[handleServiceSelection] Inserted loan_packaging id:', data.id);
+        // Initialize documents for the new session
+        const docsWithId = DEFAULT_DOCUMENTS.map((d) => ({ ...d, loan_packaging_id: data.id }));
+        const { error: insertErr } = await supabase
+          .from('loan_packaging_documents')
+          .insert(docsWithId);
+        if (insertErr) {
+          console.error('[handleServiceSelection] Error inserting loan_packaging_documents:', insertErr);
+          throw insertErr;
+        }
+        console.log('[handleServiceSelection] Inserted default documents for loan_packaging_id:', data.id);
+        loadDocuments(data.id);
+      }
       setCurrentStep('dashboard');
+      console.log('[handleServiceSelection] Set currentStep to dashboard');
+    } catch (err) {
+      setError('Failed to start a new loan packaging session. Please try again.');
+      console.error('[handleServiceSelection] Exception:', err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Handle Start Over button
+  const handleStartOver = async () => {
+    setError('');
+    setIsSubmitting(true);
+    console.log('[handleStartOver] Called with userId:', userId, 'serviceType:', serviceType, 'selectedLoanPurpose:', selectedLoanPurpose);
+    try {
+      if (userId && serviceType && selectedLoanPurpose) {
+        // Insert a new loan packaging session
+        console.log('[handleStartOver] Inserting new loan_packaging row');
+        const { data, error } = await supabase
+          .from('loan_packaging')
+          .insert({
+            user_id: userId,
+            service_type: serviceType,
+            loan_purpose: selectedLoanPurpose,
+            status: 'active',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        if (error) {
+          console.error('[handleStartOver] Error inserting loan_packaging:', error);
+          throw error;
+        }
+        setLoanPackagingId(data.id);
+        setCurrentStep('dashboard');
+        console.log('[handleStartOver] Inserted loan_packaging id:', data.id, 'Set currentStep to dashboard');
+        // Initialize documents for the new session
+        const docsWithId = DEFAULT_DOCUMENTS.map((d) => ({ ...d, loan_packaging_id: data.id }));
+        const { error: insertErr } = await supabase
+          .from('loan_packaging_documents')
+          .insert(docsWithId);
+        if (insertErr) {
+          console.error('[handleStartOver] Error inserting loan_packaging_documents:', insertErr);
+          throw insertErr;
+        }
+        console.log('[handleStartOver] Inserted default documents for loan_packaging_id:', data.id);
+        loadDocuments(data.id);
+      } else {
+        // If not enough info, send user to service selection
+        setServiceType(null);
+        setLoanPackagingId(null);
+        setSelectedLoanPurpose('');
+        setCurrentStep('service_selection');
+        console.warn('[handleStartOver] Not enough info to start new session, resetting to service_selection');
+      }
+    } catch (err) {
+      setError('Failed to start over. Please try again.');
+      console.error('[handleStartOver] Exception:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
   // Handle document upload
   const handleFileUpload = async (documentId: string, file: File) => {
-    if (!loanPackagingId || !userId) return;
+    if (!loanPackagingId || !userId) {
+      console.warn('[handleFileUpload] Missing loanPackagingId or userId', { loanPackagingId, userId });
+      return;
+    }
     
     try {
+      console.log('[handleFileUpload] Uploading file', file.name, 'for documentId:', documentId, 'loanPackagingId:', loanPackagingId, 'userId:', userId);
       // 1. Upload file to Supabase Storage
       const fileName = `${userId}/${loanPackagingId}/${documentId}-${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from('loan-packaging-documents')
         .upload(fileName, file);
-        
-      if (uploadError) throw uploadError;
-      
+      if (uploadError) {
+        console.error('[handleFileUpload] Error uploading file to storage:', uploadError);
+        throw uploadError;
+      }
+      console.log('[handleFileUpload] File uploaded to storage:', fileName);
       // 2. Get public URL
       const { data: urlData } = await supabase.storage
         .from('loan-packaging-documents')
         .getPublicUrl(fileName);
-        
+      console.log('[handleFileUpload] Got public URL:', urlData?.publicUrl);
       // 3. Update document status in database
       const { error: updateError } = await supabase
         .from('loan_packaging_documents')
@@ -231,13 +328,15 @@ export default function LoanPackagingPage() {
         })
         .eq('id', documentId)
         .eq('loan_packaging_id', loanPackagingId);
-        
-      if (updateError) throw updateError;
-      
+      if (updateError) {
+        console.error('[handleFileUpload] Error updating document row:', updateError);
+        throw updateError;
+      }
+      console.log('[handleFileUpload] Updated document row for documentId:', documentId);
       // 4. Reload documents to update UI
       loadDocuments(loanPackagingId);
     } catch (err) {
-      console.error('Error uploading document:', err);
+      console.error('[handleFileUpload] Exception:', err);
       setError('Failed to upload document. Please try again.');
     }
   };
@@ -576,13 +675,18 @@ export default function LoanPackagingPage() {
   }
   
   // Fallback view if no step is active (should not happen)
+  // Log when fallback view is rendered
+  console.warn('[LoanPackagingPage] Fallback "Something went wrong" screen rendered');
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong</h1>
         <p className="text-gray-600 mb-6">We couldn't determine your current step in the loan packaging process.</p>
         <button
-          onClick={() => setCurrentStep('service_selection')}
+          onClick={() => {
+            console.log('[LoanPackagingPage] Start Over button clicked on fallback screen');
+            handleStartOver();
+          }}
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           Start Over
