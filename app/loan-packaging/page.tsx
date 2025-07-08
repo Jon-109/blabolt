@@ -476,174 +476,138 @@ export default function LoanPackagingPage() {
     };
     
     return (
-      <main className="min-h-screen bg-gray-50 pt-8 pb-12">
+      <main className="min-h-screen bg-slate-50 pt-0 pb-12">
         {/* Header Banner */}
-        <div className="max-w-3xl mx-auto mb-8 px-4">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center md:text-left border border-gray-100">
-            <h1 className="text-3xl md:text-4xl font-bold text-blue-900 mb-2 tracking-tight">Loan Packaging Dashboard</h1>
-            <p className="text-gray-600 text-lg">Complete all steps to generate your lender-ready loan package.</p>
+        <header className="w-full bg-white shadow-sm border-b border-slate-100">
+          <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col items-center text-center gap-2">
+            <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">Loan Packaging Dashboard</h1>
+            <p className="text-lg md:text-xl text-slate-600 font-medium">Complete all steps to generate your lender-ready loan package.</p>
           </div>
-        </div>
-        <div className="max-w-[1200px] mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Sidebar with Progress Tracker */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-2xl shadow-xl p-6 sticky top-24 border border-gray-100">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Progress Tracker</h2>
-                {/* Progress Bar */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-medium text-gray-700">{completedDocuments} of {totalDocuments} completed</span>
-                    <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${progressPercentage === 100 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{progressPercentage}%</span>
-                  </div>
-                  <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-3 rounded-full transition-all duration-500 ${progressPercentage === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                      style={{ width: `${progressPercentage}%` }}
-                    ></div>
-                  </div>
-                </div>
-                {/* Next Step Recommendation */}
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
-                  <h3 className="font-medium text-blue-800 mb-2">Next Step</h3>
-                  <p className="text-gray-700 text-sm">
-                    {completedDocuments === 0 ?
-                      "Start by uploading your Personal Financial Statement." :
-                      completedDocuments === totalDocuments ?
-                      "All documents are complete! You can now finalize your loan package." :
-                      `Continue uploading the remaining documents (${totalDocuments - completedDocuments} left).`
-                    }
-                  </p>
-                </div>
-                {/* Finalize button - only show when all documents are complete */}
-                {completedDocuments === totalDocuments && (
-                  <button
-                    onClick={handleFinalization}
-                    className="w-full mt-2 py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-lg"
+        </header>
+        {/* Horizontal Progress Bar */}
+        <section className="w-full bg-white border-b border-slate-100">
+          <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row md:items-center md:gap-8 gap-4">
+            <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2">
+              <span className="text-base font-medium text-slate-700">Progress:</span>
+              <span className="font-semibold text-slate-900">{completedDocuments} of {totalDocuments} documents completed</span>
+              <span className="ml-2 text-sm text-slate-500">({progressPercentage}%)</span>
+            </div>
+            <div className="flex-1">
+              <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-3 bg-blue-600 rounded-full transition-all duration-700"
+                  style={{ width: `${progressPercentage}%` }}
+                  aria-valuenow={progressPercentage}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  role="progressbar"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </section>
+        {/* Main Content - Step 2: Upload Required Documents */}
+        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
+          <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Step 2: Upload Required Documents</h2>
+              <p className="text-slate-600 text-base">Upload each document below to complete your loan package.</p>
+            </div>
+            {error && (
+              <div className="p-4 bg-red-50 text-red-700 rounded-lg mb-6">
+                {error}
+              </div>
+            )}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {documents.length > 0 ? (
+                documents.map((doc: Document) => (
+                  <div
+                    key={doc.id}
+                    className={`flex flex-col rounded-2xl border bg-white shadow-md p-6 transition hover:shadow-lg hover:border-blue-200 ${doc.status === 'completed' || doc.status === 'generated' || doc.status === 'uploaded' ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                    tabIndex={0}
+                    aria-label={doc.name}
                   >
-                    {serviceType === 'loan_packaging' ? 'Download Package' : 'Submit to Broker'}
-                  </button>
-                )}
-              </div>
-            </div>
-            {/* Main Content - Document Checklist */}
-            <div className="lg:col-span-3">
-              <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                {/* Section Heading */}
-                <h2 className="text-2xl font-bold text-blue-900 mb-1">Step 2: Upload Required Documents</h2>
-                <p className="text-gray-600 mb-8 text-base">Upload each document below to complete your loan package.</p>
-                {error && (
-                  <div className="p-4 bg-red-50 text-red-700 rounded-lg mb-6">
-                    {error}
-                  </div>
-                )}
-                
-                {/* Document list */}
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-                  {documents.length > 0 ? (
-                    documents.map((doc: Document, idx) => (
-                      <div
-                        key={doc.id}
-                        className={`group flex items-start gap-4 rounded-2xl border bg-white shadow-md p-6 transition hover:shadow-lg hover:border-blue-200 ${doc.status === 'completed' || doc.status === 'generated' || doc.status === 'uploaded' ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
-                        tabIndex={0}
-                        aria-label={doc.name}
-                      >
-                        {/* Icon */}
-                        <div className="flex-shrink-0 text-3xl md:text-4xl mt-1">
-                          {idx === 0 && '🧾'}
-                          {idx === 1 && '💳'}
-                          {idx === 2 && '🏢'}
-                          {idx === 3 && '📊'}
-                          {idx === 4 && '📈'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {doc.name}
-                            </h3>
-                            {doc.required && <span className="ml-2 text-xs text-red-500">*Required</span>}
-                            {/* Status badge */}
-                            {doc.status === 'not_started' && (
-                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">Not Started</span>
-                            )}
-                            {doc.status === 'uploaded' && (
-                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Uploaded</span>
-                            )}
-                            {doc.status === 'generated' && (
-                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Generated</span>
-                            )}
-                            {doc.status === 'completed' && (
-                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Completed</span>
-                            )}
-                          </div>
-                          <p className="text-gray-600 text-sm mb-3">{doc.description}</p>
-                          <div className="flex flex-wrap gap-2 items-center">
-                            {/* Upload button */}
-                            {doc.status !== 'completed' && !doc.aiGenerated && (
-                              <label className="inline-block px-5 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors cursor-pointer min-h-[44px]">
-                                Upload File
-                                <input
-                                  type="file"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    if (e.target.files && e.target.files[0]) {
-                                      handleFileUpload(doc.id, e.target.files[0]);
-                                    }
-                                  }}
-                                />
-                              </label>
-                            )}
-                            {/* View Template button */}
-                            {doc.template_url && (
-                              <a
-                                href={doc.template_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-block px-5 py-2 border border-blue-600 text-blue-700 bg-white rounded-lg font-semibold hover:bg-blue-50 transition-colors min-h-[44px]"
-                              >
-                                View Template
-                              </a>
-                            )}
-                            {/* Generate button for AI documents */}
-                            {doc.status !== 'completed' && doc.aiGenerated && (
-                              <button
-                                className="inline-block px-5 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors min-h-[44px]"
-                                onClick={() => {
-                                  generateCoverLetter({});
-                                }}
-                              >
-                                {doc.status === 'not_started' ? 'Generate' : 'Edit'}
-                              </button>
-                            )}
-                            {/* Mark as completed button */}
-                            {(doc.status === 'uploaded' || doc.status === 'generated') && (
-                              <button
-                                className="inline-block px-5 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors min-h-[44px]"
-                                onClick={() => updateDocumentStatus(doc.id, 'completed')}
-                              >
-                                Mark as Completed
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-gray-500">Loading documents...</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{doc.name}</h3>
+                    <p className="text-gray-600 text-sm mb-4">{doc.description}</p>
+                    <div className="flex-1"></div>
+                    <div className="flex items-center gap-2 mb-2">
+                      {doc.required && <span className="ml-2 text-xs text-red-500">*Required</span>}
+                      {/* Status badge */}
+                      {doc.status === 'not_started' && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">Not Started</span>
+                      )}
+                      {doc.status === 'uploaded' && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Uploaded</span>
+                      )}
+                      {doc.status === 'generated' && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Generated</span>
+                      )}
+                      {doc.status === 'completed' && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Completed</span>
+                      )}
                     </div>
-                  )}
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {/* Upload button */}
+                      {doc.status !== 'completed' && !doc.aiGenerated && (
+                        <label className="w-full">
+                          <input
+                            type="file"
+                            className="hidden"
+                            onChange={e => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleFileUpload(doc.id, e.target.files[0]);
+                              }
+                            }}
+                          />
+                          <span className="block w-full py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center cursor-pointer">Upload File</span>
+                        </label>
+                      )}
+                      {/* View Template button */}
+                      {doc.template_url && (
+                        <a
+                          href={doc.template_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2 border border-blue-600 text-blue-700 bg-white rounded-lg font-semibold hover:bg-blue-50 transition-colors text-center text-sm"
+                        >
+                          View Template
+                        </a>
+                      )}
+                      {/* Generate button for AI documents */}
+                      {doc.status !== 'completed' && doc.aiGenerated && (
+                        <button
+                          className="w-full py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
+                          onClick={() => generateCoverLetter({})}
+                        >
+                          {doc.status === 'not_started' ? 'Generate' : 'Edit'}
+                        </button>
+                      )}
+                      {/* Mark as completed button */}
+                      {(doc.status === 'uploaded' || doc.status === 'generated') && (
+                        <button
+                          className="w-full py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                          onClick={() => updateDocumentStatus(doc.id, 'completed')}
+                        >
+                          Mark as Completed
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">Loading documents...</p>
                 </div>
-              </div>
+              )}
             </div>
           </div>
-        </div>
+        </section>
       </main>
     );
-  }
-  
-  // Show service selection UI if currentStep is 'service_selection'
-  if (currentStep === 'service_selection') {
+}
+
+// Show service selection UI if currentStep is 'service_selection'
+if (currentStep === 'service_selection') {
     console.log('[LoanPackagingPage] Rendering service selection UI');
     // Render the ACTUAL service selection UI instead of a placeholder
     return (
