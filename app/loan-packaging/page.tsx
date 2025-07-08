@@ -513,75 +513,91 @@ export default function LoanPackagingPage() {
         </header>
         {/* Progress Bar */}
         <section className="w-full bg-white border-b border-slate-100">
-          <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row md:items-center md:gap-8 gap-4">
-            <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2">
-              <span className="text-base font-semibold text-slate-800">Progress:</span>
-              <span className="font-bold text-slate-900">{progressLabel}</span>
-              <span className="ml-2 text-sm text-slate-500">({progressPercentage}%)</span>
-            </div>
-            <div className="flex-1">
-              <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
-                  style={{ width: `${progressPercentage}%` }}
-                  aria-valuenow={progressPercentage}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  role="progressbar"
-                ></div>
+          <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2">
+            <div className="flex flex-row items-center justify-between gap-4 w-full">
+              <div className="flex items-center gap-2 min-w-[180px]">
+                <span className="text-base font-semibold text-slate-800">Progress:</span>
+                <span className="font-bold text-slate-900">{progressPercentage}%</span>
               </div>
+              <div className="flex-1">
+                <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
+                    style={{ width: `${progressPercentage}%` }}
+                    aria-valuenow={progressPercentage}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    role="progressbar"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            {/* Instructional text below progress bar */}
+            <div className="text-sm text-slate-600 pt-2 min-h-[24px]">
+              {(() => {
+                if (!isStep1Complete) return 'Next Step: Complete Loan Details';
+                if (!isStep2Complete) return 'Next Step: Upload Required Documents';
+                if (!isStep3Complete) return 'Next Step: Generate Cover Letter';
+                return 'All steps complete! You may finalize your package.';
+              })()}
             </div>
           </div>
         </section>
-        {/* Step 1: Loan Details */}
-        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
-          <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
-            <div className="flex items-center gap-3 mb-2">
-              <h2 className={`text-2xl md:text-3xl font-bold mb-0 flex items-center gap-2 ${isStep1Complete ? 'text-green-700' : 'text-slate-900'}`}>Step 1: Loan Details
+        {/* Step 1: Loan Details (Accordion) */}
+        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-8">
+          <Accordion type="single" collapsible defaultValue={isStep1Complete ? undefined : 'step1'} value={isStep1Complete ? undefined : 'step1'}>
+            <AccordionItem value="step1" className="bg-white rounded-xl shadow-md border border-slate-200 mb-4">
+              <AccordionTrigger className="px-6 py-4 flex items-center gap-3 text-2xl md:text-3xl font-bold text-left focus:outline-none">
+                <span className={isStep1Complete ? 'text-green-700' : 'text-slate-900'}>Step 1: Loan Details</span>
                 {isStep1Complete && (
                   <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-100 border-2 border-green-500 ml-2">
                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   </span>
                 )}
-              </h2>
-            </div>
-            <p className="text-slate-600 text-base mb-4">Enter your loan details to begin packaging your application.</p>
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex-1">
-                <label htmlFor="loanAmount" className="block font-medium text-slate-800 mb-1">Loan Amount <span className="text-red-500">*</span></label>
-                <input
-                  id="loanAmount"
-                  type="number"
-                  min={0}
-                  placeholder="e.g. 50000"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-lg font-semibold bg-slate-50"
-                  value={loanAmount}
-                  onChange={e => setLoanAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  disabled={isStep1Complete}
-                  required
-                />
-              </div>
-              <div className="flex-1">
-                <label htmlFor="loanPurpose" className="block font-medium text-slate-800 mb-1">Loan Purpose <span className="text-red-500">*</span></label>
-                <select
-                  id="loanPurpose"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-lg bg-slate-50"
-                  value={selectedLoanPurpose}
-                  onChange={e => setSelectedLoanPurpose(e.target.value)}
-                  disabled={isStep1Complete}
-                  required
-                >
-                  <option value="">Select loan purpose...</option>
-                  {Object.entries(loanPurposes).map(([key, val]) => (
-                    <option key={key} value={key}>{val.title}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {!isStep1Complete && (
-              <div className="text-sm text-slate-500 mt-2">Both fields are required to continue.</div>
-            )}
-          </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6 pt-0">
+                <p className="text-slate-600 text-base mb-3 mt-1">Enter your loan details to begin packaging your application.</p>
+                <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+                  <div className="flex-1">
+                    <label htmlFor="loanAmount" className="block font-medium text-slate-800 mb-1">Loan Amount <span className="text-red-500">*</span></label>
+                    <input
+                      id="loanAmount"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="^[0-9,]*$"
+                      placeholder="e.g. 50,000"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-lg font-semibold bg-slate-50"
+                      value={typeof loanAmount === 'number' && !isNaN(loanAmount) && loanAmount !== 0 ? loanAmount.toLocaleString('en-US') : loanAmount}
+                      onChange={e => {
+                        // Only allow whole numbers, commas, no decimals
+                        const raw = e.target.value.replace(/[^\d]/g, '');
+                        setLoanAmount(raw === '' ? '' : Number(raw));
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="loanPurpose" className="block font-medium text-slate-800 mb-1">Loan Purpose <span className="text-red-500">*</span></label>
+                    <select
+                      id="loanPurpose"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-lg bg-slate-50"
+                      value={selectedLoanPurpose}
+                      onChange={e => setSelectedLoanPurpose(e.target.value)}
+                      required
+                    >
+                      <option value="">Select loan purpose...</option>
+                      {Object.entries(loanPurposes).map(([key, val]) => (
+                        <option key={key} value={key}>{val.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {!isStep1Complete && (
+                  <div className="text-sm text-slate-500 mt-2">Both fields are required to continue.</div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </section>
 
         {/* Main Content - Step 2: Upload Required Documents */}
@@ -592,16 +608,19 @@ export default function LoanPackagingPage() {
               <p className="text-slate-600 text-base">Upload each document below to complete your loan package.</p>
             </div>
             {error && (
-              <div className="p-4 bg-red-50 text-red-700 rounded-lg mb-6">
-                {error}
-              </div>
+              <p className="text-red-600 mb-2">{error}</p>
             )}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {documents.length > 0 ? (
-                documents.map((doc: Document) => (
+            {documents.length > 0 ? (
+              documents
+                .filter((doc: Document) => [
+                  'balance-sheet',
+                  'profit-loss-statement',
+                  'tax-returns'
+                ].includes(doc.id))
+                .map((doc: Document) => (
                   <div
                     key={doc.id}
-                    className={`flex flex-col rounded-2xl border bg-white shadow-md p-6 transition hover:shadow-lg hover:border-blue-200 ${doc.status === 'completed' || doc.status === 'generated' || doc.status === 'uploaded' ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                    className={`flex flex-col rounded-2xl border bg-white shadow-md p-6 transition hover:shadow-lg hover:border-blue-200 ${doc.status === 'completed' || doc.status === 'uploaded' ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
                     tabIndex={0}
                     aria-label={doc.name}
                   >
@@ -617,16 +636,13 @@ export default function LoanPackagingPage() {
                       {doc.status === 'uploaded' && (
                         <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Uploaded</span>
                       )}
-                      {doc.status === 'generated' && (
-                        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Generated</span>
-                      )}
                       {doc.status === 'completed' && (
                         <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Completed</span>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">
                       {/* Upload button */}
-                      {doc.status !== 'completed' && !doc.aiGenerated && (
+                      {doc.status !== 'completed' && (
                         <label className="w-full">
                           <input
                             type="file"
@@ -651,17 +667,8 @@ export default function LoanPackagingPage() {
                           View Template
                         </a>
                       )}
-                      {/* Generate button for AI documents */}
-                      {doc.status !== 'completed' && doc.aiGenerated && (
-                        <button
-                          className="w-full py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
-                          onClick={() => generateCoverLetter({})}
-                        >
-                          {doc.status === 'not_started' ? 'Generate' : 'Edit'}
-                        </button>
-                      )}
                       {/* Mark as completed button */}
-                      {(doc.status === 'uploaded' || doc.status === 'generated') && (
+                      {doc.status === 'uploaded' && (
                         <button
                           className="w-full py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
                           onClick={() => updateDocumentStatus(doc.id, 'completed')}
@@ -678,14 +685,13 @@ export default function LoanPackagingPage() {
                 </div>
               )}
             </div>
-          </div>
-        </section>
-      </main>
-    );
-}
+          </section>
+        </main>
+      );
+  }
 
-// Show service selection UI if currentStep is 'service_selection'
-if (currentStep === 'service_selection') {
+  // Show service selection UI if currentStep is 'service_selection'
+  if (currentStep === 'service_selection') {
     console.log('[LoanPackagingPage] Rendering service selection UI');
     // Render the ACTUAL service selection UI instead of a placeholder
     return (
