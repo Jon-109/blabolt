@@ -34,6 +34,10 @@ const DEFAULT_DOCUMENTS: Document[] = [
 ];
 
 export default function LoanPackagingPage() {
+  // Step 1: Loan Details state (must be top-level for progress logic)
+  const [loanAmount, setLoanAmount] = useState<number | ''>('');
+  const [coverLetterApproved, setCoverLetterApproved] = useState(false); // Step 3 placeholder
+
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -348,13 +352,35 @@ export default function LoanPackagingPage() {
 
   // Dashboard view after payment/agreement completion
   if (currentStep === 'dashboard') {
-    // Calculate progress percentage
-    const totalDocuments = documents.length || 1; // Avoid division by zero
-    const progressPercentage = Math.round((completedDocuments / totalDocuments) * 100);
-    
+    // Progress logic for 3 steps
+    const isStep1Complete = !!loanAmount && !!selectedLoanPurpose;
+    const docsUploaded = documents.filter((doc: Document) => doc.status === 'uploaded' || doc.status === 'completed').length;
+    const totalDocs = documents.length || 1;
+    const step1Pct = 20;
+    const step2Pct = Math.round((docsUploaded / totalDocs) * 70); // Step 2 = 70% max
+    const isStep2Complete = docsUploaded === totalDocs;
+    const isStep3Complete = coverLetterApproved; // Placeholder for Step 3 logic
+    let progressPercentage = 0;
+    if (isStep1Complete && isStep2Complete && isStep3Complete) {
+      progressPercentage = 100;
+    } else if (isStep1Complete && isStep2Complete) {
+      progressPercentage = 90;
+    } else if (isStep1Complete) {
+      progressPercentage = step1Pct + step2Pct;
+    } else {
+      progressPercentage = 0;
+    }
+    let progressLabel = '';
+    if (!isStep1Complete) progressLabel = 'Step 1: Loan Details';
+    else if (!isStep2Complete) progressLabel = `Step 2: Upload Documents (${docsUploaded}/${totalDocs})`;
+    else if (!isStep3Complete) progressLabel = 'Step 3: Cover Letter';
+    else progressLabel = 'All steps complete!';
 
+    // Step 1: Loan Details state is at top-level of component (do not redeclare here)
 
-    
+    // Step 1: Loan Details UI
+    // This will be rendered above Step 2
+
     // Handle document upload
     const handleFileUpload = async (documentId: string, file: File) => {
       if (!loanPackagingId || !userId) return;
@@ -477,25 +503,26 @@ export default function LoanPackagingPage() {
     
     return (
       <main className="min-h-screen bg-slate-50 pt-0 pb-12">
-        {/* Header Banner */}
-        <header className="w-full bg-white shadow-sm border-b border-slate-100">
-          <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col items-center text-center gap-2">
-            <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">Loan Packaging Dashboard</h1>
-            <p className="text-lg md:text-xl text-slate-600 font-medium">Complete all steps to generate your lender-ready loan package.</p>
+        {/* Top Banner/Header */}
+        <header className="w-full bg-[#101928] shadow-lg relative z-10">
+          <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col items-center text-center gap-2">
+            <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-lg">Loan Packaging Dashboard</h1>
+            <p className="text-lg md:text-xl text-white/80 font-medium">Complete all steps to generate your lender-ready loan package.</p>
           </div>
+          <div className="absolute inset-0 pointer-events-none" style={{boxShadow:'0 8px 32px 0 rgba(16,25,40,0.25), 0 1.5px 0 0 #1a2233'}}></div>
         </header>
-        {/* Horizontal Progress Bar */}
+        {/* Progress Bar */}
         <section className="w-full bg-white border-b border-slate-100">
           <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row md:items-center md:gap-8 gap-4">
             <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2">
-              <span className="text-base font-medium text-slate-700">Progress:</span>
-              <span className="font-semibold text-slate-900">{completedDocuments} of {totalDocuments} documents completed</span>
+              <span className="text-base font-semibold text-slate-800">Progress:</span>
+              <span className="font-bold text-slate-900">{progressLabel}</span>
               <span className="ml-2 text-sm text-slate-500">({progressPercentage}%)</span>
             </div>
             <div className="flex-1">
-              <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
                 <div
-                  className="h-3 bg-blue-600 rounded-full transition-all duration-700"
+                  className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
                   style={{ width: `${progressPercentage}%` }}
                   aria-valuenow={progressPercentage}
                   aria-valuemin={0}
@@ -506,9 +533,60 @@ export default function LoanPackagingPage() {
             </div>
           </div>
         </section>
-        {/* Main Content - Step 2: Upload Required Documents */}
+        {/* Step 1: Loan Details */}
         <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
           <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
+            <div className="flex items-center gap-3 mb-2">
+              <h2 className={`text-2xl md:text-3xl font-bold mb-0 flex items-center gap-2 ${isStep1Complete ? 'text-green-700' : 'text-slate-900'}`}>Step 1: Loan Details
+                {isStep1Complete && (
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-100 border-2 border-green-500 ml-2">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  </span>
+                )}
+              </h2>
+            </div>
+            <p className="text-slate-600 text-base mb-4">Enter your loan details to begin packaging your application.</p>
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="flex-1">
+                <label htmlFor="loanAmount" className="block font-medium text-slate-800 mb-1">Loan Amount <span className="text-red-500">*</span></label>
+                <input
+                  id="loanAmount"
+                  type="number"
+                  min={0}
+                  placeholder="e.g. 50000"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-lg font-semibold bg-slate-50"
+                  value={loanAmount}
+                  onChange={e => setLoanAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  disabled={isStep1Complete}
+                  required
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="loanPurpose" className="block font-medium text-slate-800 mb-1">Loan Purpose <span className="text-red-500">*</span></label>
+                <select
+                  id="loanPurpose"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-lg bg-slate-50"
+                  value={selectedLoanPurpose}
+                  onChange={e => setSelectedLoanPurpose(e.target.value)}
+                  disabled={isStep1Complete}
+                  required
+                >
+                  <option value="">Select loan purpose...</option>
+                  {Object.entries(loanPurposes).map(([key, val]) => (
+                    <option key={key} value={key}>{val.title}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {!isStep1Complete && (
+              <div className="text-sm text-slate-500 mt-2">Both fields are required to continue.</div>
+            )}
+          </div>
+        </section>
+
+        {/* Main Content - Step 2: Upload Required Documents */}
+        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
+          <div className={`bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6 transition-opacity ${!isStep1Complete ? 'opacity-50 pointer-events-none select-none' : ''}`}> 
             <div>
               <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Step 2: Upload Required Documents</h2>
               <p className="text-slate-600 text-base">Upload each document below to complete your loan package.</p>
