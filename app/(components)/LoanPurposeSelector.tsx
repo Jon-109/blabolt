@@ -10,19 +10,16 @@ const LEVEL1_OPTIONS = [
     key: 'purchase',
     title: 'Purchase',
     subtext: 'Buy something for your business',
-    color: 'from-blue-100 to-blue-50',
   },
   {
     key: 'refinance',
     title: 'Refinance',
     subtext: 'Replace existing business debt',
-    color: 'from-green-100 to-green-50',
   },
   {
     key: 'working-capital',
     title: 'Working Capital',
     subtext: 'Fund day-to-day operations',
-    color: 'from-purple-100 to-purple-50',
   },
 ];
 
@@ -36,16 +33,13 @@ const LEVEL2_OPTIONS: Record<string, { key: string; label: string; term: string;
   ],
   refinance: [
     { key: 'debt-consolidation', label: 'Debt Consolidation', term: '3 years', amortization: '3 years', downPayment: '0%', interestRate: '8%' },
-    { key: 'mortgage-refinance', label: 'Mortgage Refinance', term: '30 years', amortization: '30 years', downPayment: '0%', interestRate: '4%' },
+    { key: 'vehicle-refinance', label: 'Vehicle Refinance', term: '5 years', amortization: '5 years', downPayment: '10%', interestRate: '7%' },
     { key: 'equipment-refinance', label: 'Equipment Refinance', term: '5 years', amortization: '5 years', downPayment: '0%', interestRate: '6%' },
-    { key: 'working-capital-refinance', label: 'Working Capital Refinance', term: '2 years', amortization: '2 years', downPayment: '0%', interestRate: '9%' },
+    { key: 'real-estate-refinance', label: 'Real Estate Refinance', term: '25 years', amortization: '25 years', downPayment: '20%', interestRate: '5%' },
   ],
   'working-capital': [
-    { key: 'payroll', label: 'Payroll', term: '6 months', amortization: '6 months', downPayment: '0%', interestRate: '9%' },
-    { key: 'marketing', label: 'Marketing', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '10%' },
-    { key: 'expansion', label: 'Expansion', term: '2 years', amortization: '2 years', downPayment: '10%', interestRate: '11%' },
-    { key: 'inventory', label: 'Inventory', term: '1 year', amortization: '1 year', downPayment: '5%', interestRate: '10%' },
-    { key: 'other-working-capital', label: 'Other Working Capital', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '12%' },
+    { key: 'working-capital-loan', label: 'Working Capital Loan', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '9%' },
+    { key: 'line-of-credit', label: 'Line of Credit', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '10%' },
   ],
 };
 
@@ -88,23 +82,25 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
     <div className="w-full">
       {/* Step 1: Level 1 Category Selection */}
       {!level1 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="flex flex-row justify-center gap-4 mt-2 mb-2">
           {LEVEL1_OPTIONS.map(opt => (
             <button
               key={opt.key}
               type="button"
-              className={`flex flex-col items-center p-8 rounded-2xl border border-slate-200 bg-gradient-to-b ${opt.color} shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 min-w-[180px] mx-auto group`}
+              className={`flex flex-col items-center px-8 py-6 rounded-xl border border-neutral-200 bg-white shadow-sm hover:shadow-md hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150 min-w-[180px] max-w-[220px] mx-2 group
+                ${level1 === opt.key ? 'ring-2 ring-blue-500 border-blue-500 shadow-md' : ''}`}
+              style={{ boxShadow: '0 2px 12px 0 rgba(16,25,40,0.06)' }}
               onClick={() => {
                 setAnimating(true);
                 setTimeout(() => {
                   setLevel1(opt.key);
                   setAnimating(false);
-                }, 250);
+                }, 180);
               }}
               aria-pressed={level1 === opt.key}
             >
-              <span className="text-lg font-bold mb-1 text-slate-800">{opt.title}</span>
-              <span className="text-sm text-slate-500">{opt.subtext}</span>
+              <span className="text-xl font-extrabold text-slate-900 mb-1 tracking-tight">{opt.title}</span>
+              <span className="text-base text-slate-500 font-medium">{opt.subtext}</span>
             </button>
           ))}
         </div>
@@ -130,18 +126,18 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
           >
             ← Back
           </button>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 rounded-xl p-3 border border-slate-200 max-w-xl mx-auto">
             {LEVEL2_OPTIONS[level1]?.map(opt => (
               <button
                 key={opt.key}
                 type="button"
-                className={`flex flex-col items-center p-6 rounded-2xl border border-slate-200 bg-white shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 min-w-[160px] mx-auto group ${
+                className={`flex flex-col items-center justify-center p-6 rounded-lg border border-slate-300 bg-white shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 min-w-[120px] h-24 text-center font-semibold text-slate-800 ${
                   level2 === opt.key ? 'ring-2 ring-blue-500 border-blue-400 bg-blue-50' : ''
                 }`}
                 onClick={() => setLevel2(opt.key)}
                 aria-pressed={level2 === opt.key}
               >
-                <span className="text-base font-semibold text-slate-800 mb-1">{opt.label}</span>
+                <span>{opt.label}</span>
               </button>
             ))}
           </div>
