@@ -354,25 +354,21 @@ export default function LoanPackagingPage() {
   // Dashboard view after payment/agreement completion
   if (currentStep === 'dashboard') {
     // Progress logic for 3 steps
-    const isStep1Complete = !!loanAmount && !!selectedLoanPurpose;
+    const isLoanAmountEntered = !!loanAmount;
+    const isLoanPurposeSelected = !!selectedLoanPurpose;
+    const isStep1Complete = isLoanAmountEntered && isLoanPurposeSelected;
     const docsUploaded = documents.filter((doc: Document) => doc.status === 'uploaded' || doc.status === 'completed').length;
     const totalDocs = documents.length || 1;
-    const step1Pct = 20;
-    const step2Pct = Math.round((docsUploaded / totalDocs) * 70); // Step 2 = 70% max
+    const docsPct = Math.round((docsUploaded / totalDocs) * 80); // Step 2 = 80% max
     const isStep2Complete = docsUploaded === totalDocs;
     const isStep3Complete = coverLetterApproved; // Placeholder for Step 3 logic
     let progressPercentage = 0;
-    if (isStep1Complete && isStep2Complete && isStep3Complete) {
-      progressPercentage = 100;
-    } else if (isStep1Complete && isStep2Complete) {
-      progressPercentage = 90;
-    } else if (isStep1Complete) {
-      progressPercentage = step1Pct + step2Pct;
-    } else {
-      progressPercentage = 0;
-    }
+    if (isLoanAmountEntered) progressPercentage += 10;
+    if (isLoanPurposeSelected) progressPercentage += 10;
+    if (isStep2Complete) progressPercentage += 80;
     let progressLabel = '';
-    if (!isStep1Complete) progressLabel = 'Step 1: Loan Details';
+    if (!isLoanAmountEntered) progressLabel = 'Step 1: Enter Loan Amount';
+    else if (!isLoanPurposeSelected) progressLabel = 'Step 1: Select Loan Purpose';
     else if (!isStep2Complete) progressLabel = `Step 2: Upload Documents (${docsUploaded}/${totalDocs})`;
     else if (!isStep3Complete) progressLabel = 'Step 3: Cover Letter';
     else progressLabel = 'All steps complete!';
@@ -554,29 +550,40 @@ export default function LoanPackagingPage() {
                 <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
                   Loan Amount <span className="text-red-500">*</span>
                 </label>
-                <div className="flex items-center">
-                  <span className="px-3 py-4 text-2xl font-bold text-gray-700 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg select-none">$</span>
+                <div className="flex items-center max-w-md">
+                  <span className="px-3 py-2 text-xl font-bold text-gray-700 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg select-none">$</span>
                   <input
                     id="loan-amount"
                     name="loan-amount"
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9,]*"
-                    className="w-full px-4 py-4 text-3xl font-semibold border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50"
+                    className="w-full px-3 py-2 text-xl font-semibold border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50"
                     placeholder="50,000"
-                    value={loanAmount}
+                    value={typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}
                     onChange={e => {
-                      const cleaned = e.target.value.replace(/[^\d,]/g, '');
-                      if (cleaned === '') {
+                      // Remove non-digits, format with commas
+                      const raw = e.target.value.replace(/[^\d]/g, '');
+                      if (raw === '') {
                         setLoanAmount('');
                       } else {
-                        setLoanAmount(Number(cleaned.replace(/,/g, '')));
+                        setLoanAmount(Number(raw));
                       }
                     }}
                     required
-                    autoFocus
                   />
                 </div>
+              </div>
+
+              {/* Loan Purpose Selector - two-level */}
+              <div className="mb-6">
+                <label className="block text-lg font-semibold text-gray-900 mb-2">
+                  Loan Purpose <span className="text-red-500">*</span>
+                </label>
+                <LoanPurposeSelector
+                  value={selectedLoanPurpose}
+                  onChange={setSelectedLoanPurpose}
+                />
               </div>
             </div>
           </div>
