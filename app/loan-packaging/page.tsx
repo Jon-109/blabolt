@@ -8,6 +8,7 @@ import { supabase } from '@/supabase/helpers/client'
 import { loanPurposes } from '@/lib/loanPurposes'
 import Image from 'next/image'
 import Testimonials from '@/app/(components)/shared/Testimonials'
+import LoanPurposeSelector from '@/app/(components)/LoanPurposeSelector'
 
 // Define types for the Loan Packaging process
 type ServiceType = 'loan_packaging' | 'loan_brokering' | null;
@@ -543,64 +544,44 @@ export default function LoanPackagingPage() {
             </div>
           </div>
         </section>
-        {/* Step 1: Loan Details (Accordion) */}
-        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-8">
-          <Accordion type="single" collapsible defaultValue={isStep1Complete ? undefined : 'step1'} value={isStep1Complete ? undefined : 'step1'}>
-            <AccordionItem value="step1" className="bg-white rounded-xl shadow-md border border-slate-200 mb-4">
-              <AccordionTrigger className="px-6 py-4 flex items-center gap-3 text-2xl md:text-3xl font-bold text-left focus:outline-none">
-                <span className={isStep1Complete ? 'text-green-700' : 'text-slate-900'}>Step 1: Loan Details</span>
-                {isStep1Complete && (
-                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-100 border-2 border-green-500 ml-2">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  </span>
-                )}
-              </AccordionTrigger>
-              <AccordionContent className="px-6 pb-6 pt-0">
-                <p className="text-slate-600 text-base mb-3 mt-1">Enter your loan details to begin packaging your application.</p>
-                <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-                  <div className="flex-1">
-                    <label htmlFor="loanAmount" className="block font-medium text-slate-800 mb-1">Loan Amount <span className="text-red-500">*</span></label>
-                    <input
-                      id="loanAmount"
-                      type="text"
-                      inputMode="numeric"
-                      pattern="^[0-9,]*$"
-                      placeholder="e.g. 50,000"
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-lg font-semibold bg-slate-50"
-                      value={typeof loanAmount === 'number' && !isNaN(loanAmount) && loanAmount !== 0 ? loanAmount.toLocaleString('en-US') : loanAmount}
-                      onChange={e => {
-                        // Only allow whole numbers, commas, no decimals
-                        const raw = e.target.value.replace(/[^\d]/g, '');
-                        setLoanAmount(raw === '' ? '' : Number(raw));
-                      }}
-                      required
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label htmlFor="loanPurpose" className="block font-medium text-slate-800 mb-1">Loan Purpose <span className="text-red-500">*</span></label>
-                    <select
-                      id="loanPurpose"
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-lg bg-slate-50"
-                      value={selectedLoanPurpose}
-                      onChange={e => setSelectedLoanPurpose(e.target.value)}
-                      required
-                    >
-                      <option value="">Select loan purpose...</option>
-                      {Object.entries(loanPurposes).map(([key, val]) => (
-                        <option key={key} value={key}>{val.title}</option>
-                      ))}
-                    </select>
-                  </div>
+        {/* Step 1: Loan Details UI */}
+        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
+          <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-1">Step 1: Loan Details</h2>
+              <p className="text-slate-600 text-base mb-6">Enter your loan details to begin packaging your application.</p>
+              <div className="mb-6">
+                <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
+                  Loan Amount <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center">
+                  <span className="px-3 py-4 text-2xl font-bold text-gray-700 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg select-none">$</span>
+                  <input
+                    id="loan-amount"
+                    name="loan-amount"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9,]*"
+                    className="w-full px-4 py-4 text-3xl font-semibold border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50"
+                    placeholder="50,000"
+                    value={loanAmount}
+                    onChange={e => {
+                      const cleaned = e.target.value.replace(/[^\d,]/g, '');
+                      if (cleaned === '') {
+                        setLoanAmount('');
+                      } else {
+                        setLoanAmount(Number(cleaned.replace(/,/g, '')));
+                      }
+                    }}
+                    required
+                    autoFocus
+                  />
                 </div>
-                {!isStep1Complete && (
-                  <div className="text-sm text-slate-500 mt-2">Both fields are required to continue.</div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+              </div>
+            </div>
+          </div>
         </section>
-
-        {/* Main Content - Step 2: Upload Required Documents */}
+        {/* Step 2: Upload Required Documents */}
         <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
           <div className={`bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6 transition-opacity ${!isStep1Complete ? 'opacity-50 pointer-events-none select-none' : ''}`}> 
             <div>
@@ -679,63 +660,13 @@ export default function LoanPackagingPage() {
                     </div>
                   </div>
                 ))
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">Loading documents...</p>
-                </div>
-              )}
-            </div>
-          </section>
-        </main>
-      );
-  }
-
-  // Show service selection UI if currentStep is 'service_selection'
-  if (currentStep === 'service_selection') {
-    console.log('[LoanPackagingPage] Rendering service selection UI');
-    // Render the ACTUAL service selection UI instead of a placeholder
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-lg w-full text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Start Your Loan Package</h1>
-          <p className="text-gray-600 mb-6">Select a service type and loan purpose to begin.</p>
-          {/* Service type buttons */}
-          <div className="flex justify-center gap-4 mb-4">
-            <button
-              className={`py-2 px-4 rounded-lg font-semibold ${serviceType === 'loan_packaging' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}
-              onClick={() => setServiceType('loan_packaging')}
-            >
-              Loan Packaging
-            </button>
-            <button
-              className={`py-2 px-4 rounded-lg font-semibold ${serviceType === 'loan_brokering' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}
-              onClick={() => setServiceType('loan_brokering')}
-            >
-              Loan Brokering
-            </button>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading documents...</p>
+              </div>
+            )}
           </div>
-          {/* Loan purpose dropdown */}
-          <select
-            className="w-full p-2 border rounded-lg mb-4"
-            value={selectedLoanPurpose}
-            onChange={e => setSelectedLoanPurpose(e.target.value)}
-          >
-            <option value="">Select Loan Purpose</option>
-            {Object.entries(loanPurposes).map(([key, val]) => (
-              <option key={key} value={key}>{val.title}</option>
-            ))}
-          </select>
-          {/* Error message */}
-          {error && <div className="text-red-600 mb-2">{error}</div>}
-          {/* Continue button */}
-          <button
-            className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold"
-            onClick={() => handleServiceSelection(serviceType)}
-            disabled={isSubmitting}
-          >
-            Continue
-          </button>
-        </div>
+        </section>
       </main>
     );
   }
@@ -762,4 +693,3 @@ export default function LoanPackagingPage() {
       </div>
     );
   }
-}
