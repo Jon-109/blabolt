@@ -69,7 +69,8 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
 
   useEffect(() => {
     if (level2) {
-      onChange(level2);
+      const foundLabel = Object.values(LEVEL2_OPTIONS).flat().find(o => o.key === level2)?.label || level2;
+      onChange(foundLabel);
     }
   }, [level2, onChange]);
 
@@ -78,12 +79,13 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
       setLevel1(null);
       setLevel2(null);
     } else {
-      const found = Object.entries(LEVEL2_OPTIONS).find(([cat, arr]) =>
-        arr.some(opt => opt.key === value),
+      const found = Object.entries(LEVEL2_OPTIONS).find(([cat, options]) =>
+        options.some(opt => opt.label === value),
       );
       if (found) {
         setLevel1(found[0]);
-        setLevel2(value);
+        const keyFound = found[1].find(opt => opt.label === value)?.key;
+        if (keyFound) setLevel2(keyFound);
       }
     }
   }, [value]);
@@ -145,8 +147,11 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
                 className={`flex flex-col px-5 py-4 rounded-lg cursor-pointer border transition-colors duration-150 ${
                   level2 === opt.key ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-400' : 'bg-white border-slate-200 hover:bg-slate-100 hover:border-blue-300'
                 }`}
-                onClick={() => setLevel2(opt.key)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setLevel2(opt.key); }}
+                onClick={() => {
+                  setLevel2(opt.key);
+                  onChange(opt.label);
+                }}
+                onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') ) { setLevel2(opt.key); onChange(opt.label); } }}
                 aria-pressed={level2 === opt.key}
               >
                 <span className="text-lg font-bold text-slate-900 mb-1">{opt.label}</span>
