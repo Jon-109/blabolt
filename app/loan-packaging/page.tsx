@@ -38,6 +38,21 @@ export default function LoanPackagingPage() {
   // Step 1: Loan Details state (must be top-level for progress logic)
   const [loanAmount, setLoanAmount] = useState<number | ''>('');
   const [coverLetterApproved, setCoverLetterApproved] = useState(false); // Step 3 placeholder
+  // Condensed summary edit state for Step 1
+  const [showStep1Edit, setShowStep1Edit] = useState(false);
+
+  // Helper to get the label for a selected loan purpose key
+  function getLoanPurposeLabel(key: string): string {
+    // Check all level 2 options
+    for (const cat of Object.values(loanPurposes)) {
+      if (Array.isArray(cat)) {
+        const found = cat.find((opt: any) => opt.key === key);
+        if (found) return found.label;
+      }
+    }
+    return key;
+  }
+
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -542,51 +557,74 @@ export default function LoanPackagingPage() {
         </section>
         {/* Step 1: Loan Details UI */}
         <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
-          <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-1">Step 1: Loan Details</h2>
-              <p className="text-slate-600 text-base mb-6">Enter your loan details to begin packaging your application.</p>
-              <div className="mb-6">
-                <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
-                  Loan Amount <span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center max-w-md">
-                  <span className="px-3 py-2 text-xl font-bold text-gray-700 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg select-none">$</span>
-                  <input
-                    id="loan-amount"
-                    name="loan-amount"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9,]*"
-                    className="w-full px-3 py-2 text-xl font-semibold border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50"
-                    placeholder="50,000"
-                    value={typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}
-                    onChange={e => {
-                      // Remove non-digits, format with commas
-                      const raw = e.target.value.replace(/[^\d]/g, '');
-                      if (raw === '') {
-                        setLoanAmount('');
-                      } else {
-                        setLoanAmount(Number(raw));
-                      }
-                    }}
-                    required
-                  />
+          {/* Condensed summary if both loan amount and loan purpose are selected, otherwise show full UI */}
+          {isLoanAmountEntered && isLoanPurposeSelected && !showStep1Edit ? (
+            <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl md:text-3xl font-bold text-green-700">Step 1: Loan Details</span>
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-700 ml-2"><svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 11l4 4L15 7"/></svg></span>
                 </div>
+                <button className="text-blue-600 hover:underline font-semibold text-base" onClick={() => setShowStep1Edit(true)}>Edit</button>
               </div>
-
-              {/* Loan Purpose Selector - two-level */}
-              <div className="mb-6">
-                <label className="block text-lg font-semibold text-gray-900 mb-2">
-                  Loan Purpose <span className="text-red-500">*</span>
-                </label>
-                <LoanPurposeSelector
-                  value={selectedLoanPurpose}
-                  onChange={setSelectedLoanPurpose}
-                />
+              <div className="flex items-center gap-4 mt-2 text-lg font-medium text-slate-800">
+                <span>{getLoanPurposeLabel(selectedLoanPurpose)} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-1">Step 1: Loan Details</h2>
+                <p className="text-slate-600 text-base mb-6">Enter your loan details to begin packaging your application.</p>
+                <div className="mb-6">
+                  <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
+                    Loan Amount <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center max-w-md">
+                    <span className="px-3 py-2 text-xl font-bold text-gray-700 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg select-none">$</span>
+                    <input
+                      id="loan-amount"
+                      name="loan-amount"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9,]*"
+                      className="w-full px-3 py-2 text-xl font-semibold border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50"
+                      placeholder="50,000"
+                      value={typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}
+                      onChange={e => {
+                        // Remove non-digits, format with commas
+                        const raw = e.target.value.replace(/[^\d]/g, '');
+                        if (raw === '') {
+                          setLoanAmount('');
+                        } else {
+                          setLoanAmount(Number(raw));
+                        }
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Loan Purpose Selector - two-level */}
+                <div className="mb-6">
+                  <label className="block text-lg font-semibold text-gray-900 mb-2">
+                    Loan Purpose <span className="text-red-500">*</span>
+                  </label>
+                  <LoanPurposeSelector
+                    value={selectedLoanPurpose}
+                    onChange={setSelectedLoanPurpose}
+                  />
+                </div>
+                {(isLoanAmountEntered && isLoanPurposeSelected) && (
+                  <div className="flex justify-end">
+                    <button className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors" onClick={() => setShowStep1Edit(false)}>
+                      Save
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </section>
         {/* Step 2: Upload Required Documents */}
         <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">

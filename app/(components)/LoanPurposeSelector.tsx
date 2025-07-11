@@ -23,23 +23,33 @@ const LEVEL1_OPTIONS = [
   },
 ];
 
-const LEVEL2_OPTIONS: Record<string, { key: string; label: string; term: string; amortization: string; downPayment: string; interestRate: string; }[]> = {
+type LoanPurposeOption = {
+  key: string;
+  label: string;
+  description: string;
+  term: string;
+  amortization: string;
+  downPayment: string;
+  interestRate: string;
+};
+
+const LEVEL2_OPTIONS: Record<string, LoanPurposeOption[]> = {
   purchase: [
-    { key: 'vehicle-purchase', label: 'Vehicle Purchase', term: '5 years', amortization: '5 years', downPayment: '15%', interestRate: '7%' },
-    { key: 'equipment-purchase', label: 'Equipment Purchase', term: '7 years', amortization: '7 years', downPayment: '10%', interestRate: '8%' },
-    { key: 'inventory-purchase', label: 'Inventory Purchase', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '10%' },
-    { key: 'real-estate-purchase', label: 'Real Estate Purchase', term: '25 years', amortization: '25 years', downPayment: '20%', interestRate: '5%' },
-    { key: 'business-acquisition', label: 'Business Acquisition', term: '10 years', amortization: '10 years', downPayment: '20%', interestRate: '6%' },
+    { key: 'vehicle-purchase', label: 'Vehicle Purchase', description: 'Buying a car, truck, or commercial vehicle to support or expand your business operations.', term: '5 years', amortization: '5 years', downPayment: '15%', interestRate: '7%' },
+    { key: 'equipment-purchase', label: 'Equipment Purchase', description: 'Acquiring tools, machinery, or technology essential for your business to operate or grow.', term: '7 years', amortization: '7 years', downPayment: '10%', interestRate: '8%' },
+    { key: 'inventory-purchase', label: 'Inventory Purchase', description: 'Purchasing products or materials to stock up for sales, seasonal demand, or bulk inventory needs.', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '10%' },
+    { key: 'real-estate-purchase', label: 'Real Estate Purchase', description: 'Buying a commercial property, office space, or land for your business.', term: '25 years', amortization: '25 years', downPayment: '20%', interestRate: '5%' },
+    { key: 'business-acquisition', label: 'Business Acquisition', description: 'Purchasing an existing business or buying out a business partner.', term: '10 years', amortization: '10 years', downPayment: '20%', interestRate: '6%' },
   ],
   refinance: [
-    { key: 'debt-consolidation', label: 'Debt Consolidation', term: '3 years', amortization: '3 years', downPayment: '0%', interestRate: '8%' },
-    { key: 'vehicle-refinance', label: 'Vehicle Refinance', term: '5 years', amortization: '5 years', downPayment: '10%', interestRate: '7%' },
-    { key: 'equipment-refinance', label: 'Equipment Refinance', term: '5 years', amortization: '5 years', downPayment: '0%', interestRate: '6%' },
-    { key: 'real-estate-refinance', label: 'Real Estate Refinance', term: '25 years', amortization: '25 years', downPayment: '20%', interestRate: '5%' },
+    { key: 'debt-consolidation', label: 'Debt Consolidation', description: 'Combining multiple business debts into a single loan with better terms and one monthly payment.', term: '3 years', amortization: '3 years', downPayment: '0%', interestRate: '8%' },
+    { key: 'vehicle-refinance', label: 'Vehicle Refinance', description: 'Replacing your current business vehicle loan with a new one—typically to lower interest rates or monthly payments.', term: '5 years', amortization: '5 years', downPayment: '10%', interestRate: '7%' },
+    { key: 'equipment-refinance', label: 'Equipment Refinance', description: 'Refinancing existing equipment loans to improve cash flow or obtain better repayment terms.', term: '5 years', amortization: '5 years', downPayment: '0%', interestRate: '6%' },
+    { key: 'real-estate-refinance', label: 'Real Estate Refinance', description: 'Refinancing a commercial property loan to reduce payments, secure a fixed rate, or access equity.', term: '25 years', amortization: '25 years', downPayment: '20%', interestRate: '5%' },
   ],
   'working-capital': [
-    { key: 'working-capital-loan', label: 'Working Capital Loan', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '9%' },
-    { key: 'line-of-credit', label: 'Line of Credit', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '10%' },
+    { key: 'working-capital-loan', label: 'Working Capital Loan', description: 'Short-term funding to cover daily business expenses like payroll, rent, or utilities—ideal for managing cash flow.', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '9%' },
+    { key: 'line-of-credit', label: 'Line of Credit', description: 'Flexible access to funds you can draw from as needed to manage expenses or seize business opportunities.', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '10%' },
   ],
 };
 
@@ -126,30 +136,24 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
           >
             ← Back
           </button>
-          <div className="grid grid-cols-2 gap-2 bg-slate-100 rounded-xl p-3 border border-slate-200 max-w-xl mx-auto">
+          <div className="flex flex-col gap-3 bg-slate-50 rounded-xl p-4 border border-slate-200 max-w-2xl mx-auto">
             {LEVEL2_OPTIONS[level1]?.map(opt => (
-              <button
+              <div
                 key={opt.key}
-                type="button"
-                className={`flex flex-col items-center justify-center p-6 rounded-lg border border-slate-300 bg-white shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 min-w-[120px] h-24 text-center font-semibold text-slate-800 ${
-                  level2 === opt.key ? 'ring-2 ring-blue-500 border-blue-400 bg-blue-50' : ''
+                tabIndex={0}
+                role="button"
+                className={`flex flex-col px-5 py-4 rounded-lg cursor-pointer border transition-colors duration-150 ${
+                  level2 === opt.key ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-400' : 'bg-white border-slate-200 hover:bg-slate-100 hover:border-blue-300'
                 }`}
                 onClick={() => setLevel2(opt.key)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setLevel2(opt.key); }}
                 aria-pressed={level2 === opt.key}
               >
-                <span>{opt.label}</span>
-              </button>
+                <span className="text-lg font-bold text-slate-900 mb-1">{opt.label}</span>
+                <span className="text-sm text-slate-600">{opt.description}</span>
+              </div>
             ))}
           </div>
-        </div>
-      )}
-      {level2 && (
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
-          <h3 className="text-lg font-bold mb-2">Loan Details</h3>
-          <p><strong>Term:</strong> {LEVEL2_OPTIONS[level1!]?.find(opt => opt.key === level2)?.term}</p>
-          <p><strong>Amortization:</strong> {LEVEL2_OPTIONS[level1!]?.find(opt => opt.key === level2)?.amortization}</p>
-          <p><strong>Down Payment:</strong> {LEVEL2_OPTIONS[level1!]?.find(opt => opt.key === level2)?.downPayment}</p>
-          <p><strong>Interest Rate:</strong> {LEVEL2_OPTIONS[level1!]?.find(opt => opt.key === level2)?.interestRate}</p>
         </div>
       )}
     </div>
