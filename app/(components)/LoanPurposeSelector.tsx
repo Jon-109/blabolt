@@ -23,17 +23,7 @@ const LEVEL1_OPTIONS = [
   },
 ];
 
-type LoanPurposeOption = {
-  key: string;
-  label: string;
-  description: string;
-  term: string;
-  amortization: string;
-  downPayment: string;
-  interestRate: string;
-};
-
-const LEVEL2_OPTIONS: Record<string, LoanPurposeOption[]> = {
+const LEVEL2_OPTIONS: Record<string, { key: string; label: string; description: string; term: string; amortization: string; downPayment: string; interestRate: string; }[]> = {
   purchase: [
     { key: 'vehicle-purchase', label: 'Vehicle Purchase', description: 'Buying a car, truck, or commercial vehicle to support or expand your business operations.', term: '5 years', amortization: '5 years', downPayment: '15%', interestRate: '7%' },
     { key: 'equipment-purchase', label: 'Equipment Purchase', description: 'Acquiring tools, machinery, or technology essential for your business to operate or grow.', term: '7 years', amortization: '7 years', downPayment: '10%', interestRate: '8%' },
@@ -69,8 +59,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
 
   useEffect(() => {
     if (level2) {
-      const foundLabel = Object.values(LEVEL2_OPTIONS).flat().find(o => o.key === level2)?.label || level2;
-      onChange(foundLabel);
+      onChange(level2);
     }
   }, [level2, onChange]);
 
@@ -79,13 +68,12 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
       setLevel1(null);
       setLevel2(null);
     } else {
-      const found = Object.entries(LEVEL2_OPTIONS).find(([cat, options]) =>
-        options.some(opt => opt.label === value),
+      const found = Object.entries(LEVEL2_OPTIONS).find(([cat, arr]) =>
+        arr.some(opt => opt.key === value),
       );
       if (found) {
         setLevel1(found[0]);
-        const keyFound = found[1].find(opt => opt.label === value)?.key;
-        if (keyFound) setLevel2(keyFound);
+        setLevel2(value);
       }
     }
   }, [value]);
@@ -119,7 +107,27 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
       )}
 
       {/* Step 2: Level 2 Subcategory Selection */}
-      {level1 && (
+      {/* Collapsed summary once a loan purpose is selected */}
+      {level2 && (
+        <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4" aria-label="Selected Loan Purpose">
+          <div>
+            <span className="font-semibold text-slate-900">{(level1 ? LEVEL2_OPTIONS[level1]?.find(o => o.key === level2)?.label : '')}</span>
+          </div>
+          <button
+            type="button"
+            className="text-blue-600 hover:underline text-sm font-medium"
+            onClick={() => {
+              setLevel2(null);
+              setLevel1(null);
+            }}
+          >
+            Change
+          </button>
+        </div>
+      )}
+
+      {/* Show level2 list if a category is chosen and no specific purpose selected */}
+      {level1 && !level2 && (
         <div
           ref={level2Ref}
           tabIndex={-1}
@@ -138,29 +146,44 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
           >
             ← Back
           </button>
-          <div className="flex flex-col gap-3 bg-slate-50 rounded-xl p-4 border border-slate-200 max-w-2xl mx-auto">
+          <div className="flex flex-col divide-y divide-slate-200 bg-white rounded-xl border border-slate-200 max-w-2xl mx-auto">
             {LEVEL2_OPTIONS[level1]?.map(opt => (
-              <div
+              <button
                 key={opt.key}
-                tabIndex={0}
-                role="button"
-                className={`flex flex-col px-5 py-4 rounded-lg cursor-pointer border transition-colors duration-150 ${
-                  level2 === opt.key ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-400' : 'bg-white border-slate-200 hover:bg-slate-100 hover:border-blue-300'
+                type="button"
+                className={`flex flex-col text-left w-full px-4 py-3 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                  level2 === opt.key ? 'ring-2 ring-blue-500 border-blue-400 bg-blue-50' : ''
                 }`}
-                onClick={() => {
-                  setLevel2(opt.key);
-                  onChange(opt.label);
-                }}
-                onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') ) { setLevel2(opt.key); onChange(opt.label); } }}
+                onClick={() => setLevel2(opt.key)}
                 aria-pressed={level2 === opt.key}
               >
-                <span className="text-lg font-bold text-slate-900 mb-1">{opt.label}</span>
-                <span className="text-sm text-slate-600">{opt.description}</span>
-              </div>
+                <span className="font-semibold text-slate-900 text-base">{opt.label}</span>
+                <span className="text-sm text-slate-600 mt-0.5">{opt.description}</span>
+              </button>
             ))}
           </div>
         </div>
       )}
+      
+      {/* Collapsed summary view after level2 selected */}
+      {level2 && (
+        <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4" aria-label="Selected Loan Purpose">
+          <div>
+            <span className="font-semibold text-slate-900">{(level1 ? LEVEL2_OPTIONS[level1]?.find(o => o.key === level2)?.label : '')}</span>
+          </div>
+          <button
+            type="button"
+            className="text-blue-600 hover:underline text-sm font-medium"
+            onClick={() => {
+              setLevel2(null);
+              setLevel1(null);
+            }}
+          >
+            Change
+          </button>
+        </div>
+      )}
+      
     </div>
   );
 };

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/app/(components)/ui/tooltip'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/app/(components)/ui/accordion'
 import { useRouter } from 'next/navigation'
@@ -35,44 +35,24 @@ const DEFAULT_DOCUMENTS: Document[] = [
 ];
 
 export default function LoanPackagingPage() {
-  // State variables for the component
+  // Step 1: Loan Details state (must be top-level for progress logic)
   const [loanAmount, setLoanAmount] = useState<number | ''>('');
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loanPackagingId, setLoanPackagingId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState<Step>('service_selection');
-  const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('');
-  const [coverLetterApproved, setCoverLetterApproved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showStep1Edit, setShowStep1Edit] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [showIncludedModal, setShowIncludedModal] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [serviceType, setServiceType] = useState<ServiceType>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [completedDocuments, setCompletedDocuments] = useState(0);
-  
-  // Refs
-  const loanAmountInputRef = useRef<HTMLInputElement>(null);
-  
-  // Router
-  const router = useRouter();
-  
-  // Helper to get the label for a selected loan purpose key
-  function getLoanPurposeLabel(key: string): string {
-    // Check all level 2 options
-    for (const cat of Object.values(loanPurposes)) {
-      if (Array.isArray(cat)) {
-        const found = cat.find((opt: any) => opt.key === key);
-        if (found) return found.label;
-      }
-    }
-    return key;
-  }
+  const [coverLetterApproved, setCoverLetterApproved] = useState(false); // Step 3 placeholder
 
-  // Mount effect
+  const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  const [showIncludedModal, setShowIncludedModal] = useState(false);
+  // User authentication state
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [loadingUser, setLoadingUser] = useState(true)
+  
+  // Service selection and flow state
+  const [serviceType, setServiceType] = useState<ServiceType>(null)
+  const [currentStep, setCurrentStep] = useState<Step>('service_selection')
+  const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('')
+  const [showStep1Details, setShowStep1Details] = useState(true)
 
   // Log currentStep on every render (must come after currentStep is declared)
   useEffect(() => {
@@ -93,6 +73,17 @@ export default function LoanPackagingPage() {
   // Skipping payment verification for now – always allow user to proceed manually after selecting a service.
   // Previously this hook checked Stripe `session_id` in the URL and verified payment against the `purchases` table.
   // It has been removed to simplify the flow while payments are disabled.
+
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  
+  // Dashboard state (to be used after payment)
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [completedDocuments, setCompletedDocuments] = useState(0)
+  const [loanPackagingId, setLoanPackagingId] = useState<string | null>(null)
+  
+  const router = useRouter()
 
   // Authentication effect
   useEffect(() => {
@@ -312,33 +303,13 @@ export default function LoanPackagingPage() {
     }
   };
 
-  // Handle document status update
-  const updateDocumentStatus = async (documentId: string, status: DocumentStatus) => {
-    if (!loanPackagingId) return;
-    
-    try {
-      const { error } = await supabase
-        .from('loan_packaging_documents')
-        .update({ 
-          status, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', documentId)
-        .eq('loan_packaging_id', loanPackagingId);
-        
-      if (error) throw error;
-      
-      // Reload documents
-      loadDocuments(loanPackagingId);
-    } catch (err) {
-      console.error('Error updating document status:', err);
-      setError('Failed to update document status. Please try again.');
-    }
-  };
-  
-  // Define file upload handler
+
+  // Handle document upload
   const handleFileUpload = async (documentId: string, file: File) => {
-    if (!loanPackagingId || !userId) return;
+    if (!loanPackagingId || !userId) {
+      console.warn('[handleFileUpload] Missing loanPackagingId or userId', { loanPackagingId, userId });
+      return;
+    }
     
     try {
       console.log('[handleFileUpload] Uploading file', file.name, 'for documentId:', documentId, 'loanPackagingId:', loanPackagingId, 'userId:', userId);
@@ -381,67 +352,386 @@ export default function LoanPackagingPage() {
     }
   };
 
-
-  // Generate cover letter
-  const generateCoverLetter = async (formData: any) => {
-    if (!loanPackagingId || !userId) return;
-    
-    try {
-      // This would typically call an API endpoint that uses AI to generate the letter
-      // For now, we'll just simulate success and update the status
-      
-      // Update document status
-      const { error } = await supabase
-        .from('loan_packaging_documents')
-        .update({ 
-          status: 'generated', 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', 'cover-letter')
-        .eq('loan_packaging_id', loanPackagingId);
-        
-      if (error) throw error;
-      
-      // Reload documents
-      loadDocuments(loanPackagingId);
-    } catch (err) {
-      console.error('Error generating cover letter:', err);
-      setError('Failed to generate cover letter. Please try again.');
-    }
-  };
-  
   // Dashboard view after payment/agreement completion
-  const renderDashboard = () => {
-    if (currentStep === 'dashboard') {
-      // Progress logic for 3 steps
-      const isLoanAmountEntered = !!loanAmount;
-      const isLoanPurposeSelected = !!selectedLoanPurpose;
-      const isStep1Complete = isLoanAmountEntered && isLoanPurposeSelected;
-      const docsUploaded = documents.filter((doc: Document) => doc.status === 'uploaded' || doc.status === 'completed').length;
-      const totalDocs = documents.length || 1;
-      const docsPct = Math.round((docsUploaded / totalDocs) * 80); // Step 2 = 80% max
-      const isStep2Complete = docsUploaded === totalDocs;
-      const isStep3Complete = coverLetterApproved; // Placeholder for Step 3 logic
-      let progressPercentage = 0;
-      if (isLoanAmountEntered) progressPercentage += 10;
-      if (isLoanPurposeSelected) progressPercentage += 10;
-      if (isStep2Complete) progressPercentage += 80;
-      let progressLabel = '';
-      if (!isLoanAmountEntered) progressLabel = 'Step 1: Enter Loan Amount';
-      else if (!isLoanPurposeSelected) progressLabel = 'Step 1: Select Loan Purpose';
-      else if (!isStep2Complete) progressLabel = `Step 2: Upload Documents (${docsUploaded}/${totalDocs})`;
-      else if (!isStep3Complete) progressLabel = 'Step 3: Cover Letter';
-      else progressLabel = 'All steps complete!';
+  if (currentStep === 'dashboard') {
+    // Progress logic for 3 steps
+    const isLoanAmountEntered = !!loanAmount;
+    const isLoanPurposeSelected = !!selectedLoanPurpose;
+    const isStep1Complete = isLoanAmountEntered && isLoanPurposeSelected;
+    
+    // Auto-collapse Step 1 details once complete
+    useEffect(() => {
+      if (isStep1Complete) {
+        setShowStep1Details(false);
+      }
+    }, [isStep1Complete]);
+    const docsUploaded = documents.filter((doc: Document) => doc.status === 'uploaded' || doc.status === 'completed').length;
+    const totalDocs = documents.length || 1;
+    const docsPct = Math.round((docsUploaded / totalDocs) * 80); // Step 2 = 80% max
+    const isStep2Complete = docsUploaded === totalDocs;
+    const isStep3Complete = coverLetterApproved; // Placeholder for Step 3 logic
+    let progressPercentage = 0;
+    if (isLoanAmountEntered) progressPercentage += 10;
+    if (isLoanPurposeSelected) progressPercentage += 10;
+    if (isStep2Complete) progressPercentage += 80;
+    let progressLabel = '';
+    if (!isLoanAmountEntered) progressLabel = 'Step 1: Enter Loan Amount';
+    else if (!isLoanPurposeSelected) progressLabel = 'Step 1: Select Loan Purpose';
+    else if (!isStep2Complete) progressLabel = `Step 2: Upload Documents (${docsUploaded}/${totalDocs})`;
+    else if (!isStep3Complete) progressLabel = 'Step 3: Cover Letter';
+    else progressLabel = 'All steps complete!';
+
+    // Step 1: Loan Details state is at top-level of component (do not redeclare here)
+
+    // Step 1: Loan Details UI
+    // This will be rendered above Step 2
+
+    // Handle document upload
+    const handleFileUpload = async (documentId: string, file: File) => {
+      if (!loanPackagingId || !userId) return;
       
-      return (
-        <div>
-          {/* TODO: Replace with your dashboard JSX */}
-          Loan Packaging Dashboard Placeholder
+      try {
+        // 1. Upload file to Supabase Storage
+        const fileName = `${userId}/${loanPackagingId}/${documentId}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('loan-packaging-documents')
+          .upload(fileName, file);
+          
+        if (uploadError) throw uploadError;
+        
+        // 2. Get public URL
+        const { data: urlData } = supabase.storage
+          .from('loan-packaging-documents')
+          .getPublicUrl(fileName);
+          
+        // 3. Update document status in database
+        const { error: updateError } = await supabase
+          .from('loan_packaging_documents')
+          .update({ 
+            status: 'uploaded', 
+            file_url: urlData.publicUrl,
+            file_name: file.name,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', documentId)
+          .eq('loan_packaging_id', loanPackagingId);
+          
+        if (updateError) throw updateError;
+        
+        // 4. Reload documents to update UI
+        loadDocuments(loanPackagingId);
+      } catch (err) {
+        console.error('Error uploading document:', err);
+        setError('Failed to upload document. Please try again.');
+      }
+    };
+    
+    // Handle document status update
+    const updateDocumentStatus = async (documentId: string, status: DocumentStatus) => {
+      if (!loanPackagingId) return;
+      
+      try {
+        const { error } = await supabase
+          .from('loan_packaging_documents')
+          .update({ 
+            status, 
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', documentId)
+          .eq('loan_packaging_id', loanPackagingId);
+          
+        if (error) throw error;
+        
+        // Reload documents
+        loadDocuments(loanPackagingId);
+      } catch (err) {
+        console.error('Error updating document status:', err);
+      }
+    };
+    
+    // Generate cover letter
+    const generateCoverLetter = async (formData: any) => {
+      if (!loanPackagingId || !userId) return;
+      
+      try {
+        // This would typically call an API endpoint that uses AI to generate the letter
+        // For now, we'll just simulate success and update the status
+        
+        // Update document status
+        const { error } = await supabase
+          .from('loan_packaging_documents')
+          .update({ 
+            status: 'generated', 
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', 'cover-letter')
+          .eq('loan_packaging_id', loanPackagingId);
+          
+        if (error) throw error;
+        
+        // Reload documents
+        loadDocuments(loanPackagingId);
+      } catch (err) {
+        console.error('Error generating cover letter:', err);
+        setError('Failed to generate cover letter. Please try again.');
+      }
+    };
+    
+    // Handle final submission/download
+    const handleFinalization = async () => {
+      if (!loanPackagingId || !userId || !serviceType) return;
+      
+      try {
+        if (serviceType === 'loan_packaging') {
+          // Generate a ZIP file of all documents for download
+          // This would typically call an API endpoint that packages all files
+          alert('Download functionality will be implemented in the next version');
+        } else if (serviceType === 'loan_brokering') {
+          // Mark the loan packaging as submitted for broker review
+          const { error } = await supabase
+            .from('loan_packaging')
+            .update({ 
+              status: 'submitted', 
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', loanPackagingId);
+            
+          if (error) throw error;
+          
+          alert('Your loan package has been submitted to our team for review.');
+        }
+      } catch (err) {
+        console.error('Error finalizing loan package:', err);
+        setError('Failed to finalize loan package. Please try again.');
+      }
+    };
+    
+    return (
+      <main className="min-h-screen bg-slate-50 pt-0 pb-12">
+        {/* Top Banner/Header */}
+        <header className="w-full bg-[#101928] shadow-lg relative z-10">
+          <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col items-center text-center gap-2">
+            <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-lg">Loan Packaging Dashboard</h1>
+            <p className="text-lg md:text-xl text-white/80 font-medium">Complete all steps to generate your lender-ready loan package.</p>
+          </div>
+          <div className="absolute inset-0 pointer-events-none" style={{boxShadow:'0 8px 32px 0 rgba(16,25,40,0.25), 0 1.5px 0 0 #1a2233'}}></div>
+        </header>
+        {/* Progress Bar */}
+        <section className="w-full bg-white border-b border-slate-100">
+          <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2">
+            <div className="flex flex-row items-center justify-between gap-4 w-full">
+              <div className="flex items-center gap-2 min-w-[180px]">
+                <span className="text-base font-semibold text-slate-800">Progress:</span>
+                <span className="font-bold text-slate-900">{progressPercentage}%</span>
+              </div>
+              <div className="flex-1">
+                <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
+                    style={{ width: `${progressPercentage}%` }}
+                    aria-valuenow={progressPercentage}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    role="progressbar"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            {/* Instructional text below progress bar */}
+            <div className="text-sm text-slate-600 pt-2 min-h-[24px]">
+              {(() => {
+                if (!isStep1Complete) return 'Next Step: Complete Loan Details';
+                if (!isStep2Complete) return 'Next Step: Upload Required Documents';
+                if (!isStep3Complete) return 'Next Step: Generate Cover Letter';
+                return 'All steps complete! You may finalize your package.';
+              })()}
+            </div>
+          </div>
+        </section>
+        
+        {/* Step 1: Loan Details UI */}
+    {showStep1Details ? (
+      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
+        <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-1">Step 1: Loan Details</h2>
+          </div>
+            <p className="text-slate-600 text-base mb-6">Enter your loan details to begin packaging your application.</p>
+            <div className="mb-6">
+              <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
+                Loan Amount <span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-center max-w-md">
+                <span className="px-3 py-2 text-xl font-bold text-gray-700 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg select-none">$</span>
+                <input
+                  id="loan-amount"
+                  name="loan-amount"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9,]*"
+                  className="w-full px-3 py-2 text-xl font-semibold border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50"
+                  placeholder="50,000"
+                  value={typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}
+                  onChange={e => {
+                    // Remove non-digits, format with commas
+                    const raw = e.target.value.replace(/[^\d]/g, '');
+                    if (raw === '') {
+                      setLoanAmount('');
+                    } else {
+                      setLoanAmount(Number(raw));
+                    }
+                  }}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Loan Purpose Selector - two-level */}
+            <div className="mb-6">
+              <label className="block text-lg font-semibold text-gray-900 mb-2">
+                Loan Purpose <span className="text-red-500">*</span>
+              </label>
+              <LoanPurposeSelector
+                value={selectedLoanPurpose}
+                onChange={setSelectedLoanPurpose}
+              />
+            </div>
+            {error && (
+              <p className="text-red-600 mb-2">{error}</p>
+            )}
         </div>
-      );
-    }
-    return null;
-  };
-  
-  return renderDashboard();
+      </section>
+    ) : null}
+
+    {/* Step 2: Upload Required Documents - OUTSIDE Step 1 */}
+    {isStep1Complete && (
+      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
+        <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Step 2: Upload Required Documents</h2>
+          <p className="text-slate-600 text-base">Upload each document below to complete your loan package.</p>
+          {documents.length > 0 ? (
+            documents
+              .filter((doc: Document) => [
+                'balance-sheet',
+                'profit-loss-statement',
+                'tax-returns'
+              ].includes(doc.id))
+              .map((doc: Document) => (
+                <div
+                  key={doc.id}
+                  className={`flex flex-col rounded-2xl border bg-white shadow-md p-6 transition hover:shadow-lg hover:border-blue-200 ${doc.status === 'completed' || doc.status === 'uploaded' ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
+                  tabIndex={0}
+                  aria-label={doc.name}
+                >
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{doc.name}</h3>
+                  <p className="text-gray-600 text-sm mb-4">{doc.description}</p>
+                  <div className="flex-1"></div>
+                  <div className="flex items-center gap-2 mb-2">
+                    {doc.required && <span className="ml-2 text-xs text-red-500">*Required</span>}
+                    {/* Status badge */}
+                    {doc.status === 'not_started' && (
+                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">Not Started</span>
+                    )}
+                    {doc.status === 'uploaded' && (
+                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Uploaded</span>
+                    )}
+                    {doc.status === 'completed' && (
+                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Completed</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {/* Upload button */}
+                    {doc.status !== 'completed' && (
+                      <label className="w-full">
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={e => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleFileUpload(doc.id, e.target.files[0]);
+                            }
+                          }}
+                        />
+                        <span className="block w-full py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center cursor-pointer">Upload File</span>
+                      </label>
+                    )}
+                    {/* View Template button */}
+                    {doc.template_url && (
+                      <a
+                        href={doc.template_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2 border border-blue-600 text-blue-700 bg-white rounded-lg font-semibold hover:bg-blue-50 transition-colors text-center text-sm"
+                      >
+                        View Template
+                      </a>
+                    )}
+                    {/* Mark as completed button */}
+                    {doc.status === 'uploaded' && (
+                      <button
+                        className="w-full py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                        onClick={() => updateDocumentStatus(doc.id, 'completed')}
+                      >
+                        Mark as Completed
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Loading documents...</p>
+            </div>
+          )}
+        </div>
+      </section>
+    )}
+
+    {/* Step 3: Cover Letter Generator (Dashboard Box) */}
+    {isStep1Complete && (
+      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
+        <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6 border-l-4 border-blue-600">
+          <h2 className="text-2xl md:text-3xl font-bold text-blue-700 mb-1">Step 3: Generate Your Cover Letter</h2>
+          <p className="text-slate-700 text-base mb-4">
+            A strong cover letter is your opportunity to make a compelling case to lenders. It summarizes your loan request, business purpose, and qualifications in a professional narrative. Completing this step will help your package stand out and improve your chances of approval.
+          </p>
+          <div className="flex flex-row items-center gap-4">
+            <button
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow"
+              disabled
+              aria-disabled="true"
+            >
+              Start Cover Letter
+            </button>
+            <span className="text-sm text-gray-500">(Coming Soon)</span>
+          </div>
+        </div>
+      </section>
+    )}
+  </main>
+);
+
+// Fallback view if no step is active (should not happen)
+const validSteps: Step[] = ['dashboard', 'service_selection', 'payment'];
+if (!validSteps.includes(currentStep)) {
+  console.warn('[LoanPackagingPage] Fallback "Something went wrong" screen rendered with currentStep:', currentStep);
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong</h1>
+        <p className="text-gray-600 mb-6">We couldn't determine your current step in the loan packaging process.</p>
+        <button
+          onClick={() => {
+            console.log('[LoanPackagingPage] Start Over button clicked on fallback screen');
+            handleStartOver();
+          }}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Start Over
+        </button>
+      </div>
+    </div>
+  );
+}
+}
 }
