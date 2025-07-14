@@ -347,209 +347,148 @@ export default function LoanPackagingPage() {
       // 4. Reload documents to update UI
       loadDocuments(loanPackagingId);
     } catch (err) {
-      console.error('[handleFileUpload] Exception:', err);
+      console.error('Error uploading document:', err);
       setError('Failed to upload document. Please try again.');
     }
   };
-
-  // Dashboard view after payment/agreement completion
-  if (currentStep === 'dashboard') {
-    // Progress logic for 3 steps
-    const isLoanAmountEntered = !!loanAmount;
-    const isLoanPurposeSelected = !!selectedLoanPurpose;
-    const isStep1Complete = isLoanAmountEntered && isLoanPurposeSelected;
+  
+  // Handle document status update
+  const updateDocumentStatus = async (documentId: string, status: DocumentStatus) => {
+    if (!loanPackagingId) return;
     
-    // Auto-collapse Step 1 details once complete
-    useEffect(() => {
-      if (isStep1Complete) {
-        setShowStep1Details(false);
-      }
-    }, [isStep1Complete]);
-    const docsUploaded = documents.filter((doc: Document) => doc.status === 'uploaded' || doc.status === 'completed').length;
-    const totalDocs = documents.length || 1;
-    const docsPct = Math.round((docsUploaded / totalDocs) * 80); // Step 2 = 80% max
-    const isStep2Complete = docsUploaded === totalDocs;
-    const isStep3Complete = coverLetterApproved; // Placeholder for Step 3 logic
-    let progressPercentage = 0;
-    if (isLoanAmountEntered) progressPercentage += 10;
-    if (isLoanPurposeSelected) progressPercentage += 10;
-    if (isStep2Complete) progressPercentage += 80;
-    let progressLabel = '';
-    if (!isLoanAmountEntered) progressLabel = 'Step 1: Enter Loan Amount';
-    else if (!isLoanPurposeSelected) progressLabel = 'Step 1: Select Loan Purpose';
-    else if (!isStep2Complete) progressLabel = `Step 2: Upload Documents (${docsUploaded}/${totalDocs})`;
-    else if (!isStep3Complete) progressLabel = 'Step 3: Cover Letter';
-    else progressLabel = 'All steps complete!';
-
-    // Step 1: Loan Details state is at top-level of component (do not redeclare here)
-
-    // Step 1: Loan Details UI
-    // This will be rendered above Step 2
-
-    // Handle document upload
-    const handleFileUpload = async (documentId: string, file: File) => {
-      if (!loanPackagingId || !userId) return;
+    try {
+      const { error } = await supabase
+        .from('loan_packaging_documents')
+        .update({ 
+          status, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', documentId)
+        .eq('loan_packaging_id', loanPackagingId);
+        
+      if (error) throw error;
       
-      try {
-        // 1. Upload file to Supabase Storage
-        const fileName = `${userId}/${loanPackagingId}/${documentId}-${file.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from('loan-packaging-documents')
-          .upload(fileName, file);
-          
-        if (uploadError) throw uploadError;
-        
-        // 2. Get public URL
-        const { data: urlData } = supabase.storage
-          .from('loan-packaging-documents')
-          .getPublicUrl(fileName);
-          
-        // 3. Update document status in database
-        const { error: updateError } = await supabase
-          .from('loan_packaging_documents')
-          .update({ 
-            status: 'uploaded', 
-            file_url: urlData.publicUrl,
-            file_name: file.name,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', documentId)
-          .eq('loan_packaging_id', loanPackagingId);
-          
-        if (updateError) throw updateError;
-        
-        // 4. Reload documents to update UI
-        loadDocuments(loanPackagingId);
-      } catch (err) {
-        console.error('Error uploading document:', err);
-        setError('Failed to upload document. Please try again.');
-      }
-    };
+      // Reload documents
+      loadDocuments(loanPackagingId);
+    } catch (err) {
+      console.error('Error updating document status:', err);
+    }
+  };
+  
+  // Generate cover letter
+  const generateCoverLetter = async (formData: any) => {
+    if (!loanPackagingId || !userId) return;
     
-    // Handle document status update
-    const updateDocumentStatus = async (documentId: string, status: DocumentStatus) => {
-      if (!loanPackagingId) return;
+    try {
+      // This would typically call an API endpoint that uses AI to generate the letter
+      // For now, we'll just simulate success and update the status
       
-      try {
+      // Update document status
+      const { error } = await supabase
+        .from('loan_packaging_documents')
+        .update({ 
+          status: 'generated', 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', 'cover-letter')
+        .eq('loan_packaging_id', loanPackagingId);
+        
+      if (error) throw error;
+      
+      // Reload documents
+      loadDocuments(loanPackagingId);
+    } catch (err) {
+      console.error('Error generating cover letter:', err);
+      setError('Failed to generate cover letter. Please try again.');
+    }
+  };
+  
+  // Handle final submission/download
+  const handleFinalization = async () => {
+    if (!loanPackagingId || !userId || !serviceType) return;
+    
+    try {
+      if (serviceType === 'loan_packaging') {
+        // Generate a ZIP file of all documents for download
+        // This would typically call an API endpoint that packages all files
+        alert('Download functionality will be implemented in the next version');
+      } else if (serviceType === 'loan_brokering') {
+        // Mark the loan packaging as submitted for broker review
         const { error } = await supabase
-          .from('loan_packaging_documents')
+          .from('loan_packaging')
           .update({ 
-            status, 
+            status: 'submitted', 
             updated_at: new Date().toISOString() 
           })
-          .eq('id', documentId)
-          .eq('loan_packaging_id', loanPackagingId);
+          .eq('id', loanPackagingId);
           
         if (error) throw error;
         
-        // Reload documents
-        loadDocuments(loanPackagingId);
-      } catch (err) {
-        console.error('Error updating document status:', err);
+        alert('Your loan package has been submitted to our team for review.');
       }
-    };
-    
-    // Generate cover letter
-    const generateCoverLetter = async (formData: any) => {
-      if (!loanPackagingId || !userId) return;
-      
-      try {
-        // This would typically call an API endpoint that uses AI to generate the letter
-        // For now, we'll just simulate success and update the status
-        
-        // Update document status
-        const { error } = await supabase
-          .from('loan_packaging_documents')
-          .update({ 
-            status: 'generated', 
-            updated_at: new Date().toISOString() 
-          })
-          .eq('id', 'cover-letter')
-          .eq('loan_packaging_id', loanPackagingId);
-          
-        if (error) throw error;
-        
-        // Reload documents
-        loadDocuments(loanPackagingId);
-      } catch (err) {
-        console.error('Error generating cover letter:', err);
-        setError('Failed to generate cover letter. Please try again.');
-      }
-    };
-    
-    // Handle final submission/download
-    const handleFinalization = async () => {
-      if (!loanPackagingId || !userId || !serviceType) return;
-      
-      try {
-        if (serviceType === 'loan_packaging') {
-          // Generate a ZIP file of all documents for download
-          // This would typically call an API endpoint that packages all files
-          alert('Download functionality will be implemented in the next version');
-        } else if (serviceType === 'loan_brokering') {
-          // Mark the loan packaging as submitted for broker review
-          const { error } = await supabase
-            .from('loan_packaging')
-            .update({ 
-              status: 'submitted', 
-              updated_at: new Date().toISOString() 
-            })
-            .eq('id', loanPackagingId);
-            
-          if (error) throw error;
-          
-          alert('Your loan package has been submitted to our team for review.');
-        }
-      } catch (err) {
-        console.error('Error finalizing loan package:', err);
-        setError('Failed to finalize loan package. Please try again.');
-      }
-    };
-    
-    return (
-      <main className="min-h-screen bg-slate-50 pt-0 pb-12">
-        {/* Top Banner/Header */}
-        <header className="w-full bg-[#101928] shadow-lg relative z-10">
-          <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col items-center text-center gap-2">
-            <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-lg">Loan Packaging Dashboard</h1>
-            <p className="text-lg md:text-xl text-white/80 font-medium">Complete all steps to generate your lender-ready loan package.</p>
-          </div>
-          <div className="absolute inset-0 pointer-events-none" style={{boxShadow:'0 8px 32px 0 rgba(16,25,40,0.25), 0 1.5px 0 0 #1a2233'}}></div>
-        </header>
-        {/* Progress Bar */}
-        <section className="w-full bg-white border-b border-slate-100">
-          <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2">
-            <div className="flex flex-row items-center justify-between gap-4 w-full">
-              <div className="flex items-center gap-2 min-w-[180px]">
-                <span className="text-base font-semibold text-slate-800">Progress:</span>
-                <span className="font-bold text-slate-900">{progressPercentage}%</span>
-              </div>
-              <div className="flex-1">
-                <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
-                    style={{ width: `${progressPercentage}%` }}
-                    aria-valuenow={progressPercentage}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    role="progressbar"
-                  ></div>
-                </div>
+    } catch (err) {
+      console.error('Error finalizing loan package:', err);
+      setError('Failed to finalize loan package. Please try again.');
+    }
+  };
+
+  // Progress and step-completion logic for dashboard UI
+  const isLoanAmountEntered = !!loanAmount;
+  const isLoanPurposeSelected = !!selectedLoanPurpose;
+  const isStep1Complete = isLoanAmountEntered && isLoanPurposeSelected;
+  const docsUploaded = documents.filter((doc: Document) => doc.status === 'uploaded' || doc.status === 'completed').length;
+  const totalDocs = documents.length || 1;
+  const isStep2Complete = docsUploaded === totalDocs;
+  const isStep3Complete = coverLetterApproved; // Placeholder for Step 3 logic
+  let progressPercentage = 0;
+  if (isLoanAmountEntered) progressPercentage += 10;
+  if (isLoanPurposeSelected) progressPercentage += 10;
+  if (isStep2Complete) progressPercentage += 80;
+
+  return (
+    <main className="min-h-screen bg-slate-50 pt-0 pb-12">
+      {/* Top Banner/Header */}
+      <header className="w-full bg-[#101928] shadow-lg relative z-10">
+        <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col items-center text-center gap-2">
+          <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-lg">Loan Packaging Dashboard</h1>
+          <p className="text-lg md:text-xl text-white/80 font-medium">Complete all steps to generate your lender-ready loan package.</p>
+        </div>
+        <div className="absolute inset-0 pointer-events-none" style={{boxShadow:'0 8px 32px 0 rgba(16,25,40,0.25), 0 1.5px 0 0 #1a2233'}}></div>
+      </header>
+      {/* Progress Bar */}
+      <section className="w-full bg-white border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2">
+          <div className="flex flex-row items-center justify-between gap-4 w-full">
+            <div className="flex items-center gap-2 min-w-[180px]">
+              <span className="text-base font-semibold text-slate-800">Progress:</span>
+              <span className="font-bold text-slate-900">{progressPercentage}%</span>
+            </div>
+            <div className="flex-1">
+              <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
+                  style={{ width: `${progressPercentage}%` }}
+                  aria-valuenow={progressPercentage}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  role="progressbar"
+                ></div>
               </div>
             </div>
-            {/* Instructional text below progress bar */}
-            <div className="text-sm text-slate-600 pt-2 min-h-[24px]">
-              {(() => {
-                if (!isStep1Complete) return 'Next Step: Complete Loan Details';
-                if (!isStep2Complete) return 'Next Step: Upload Required Documents';
-                if (!isStep3Complete) return 'Next Step: Generate Cover Letter';
-                return 'All steps complete! You may finalize your package.';
-              })()}
-            </div>
           </div>
-        </section>
-        
-        {/* Step 1: Loan Details UI */}
+          {/* Instructional text below progress bar */}
+          <div className="text-sm text-slate-600 pt-2 min-h-[24px]">
+            {(() => {
+              if (!isStep1Complete) return 'Next Step: Complete Loan Details';
+              if (!isStep2Complete) return 'Next Step: Upload Required Documents';
+              if (!isStep3Complete) return 'Next Step: Generate Cover Letter';
+              return 'All steps complete! You may finalize your package.';
+            })()}
+          </div>
+        </div>
+      </section>
+      
+      {/* Step 1: Loan Details UI */}
     {showStep1Details ? (
       <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
         <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
@@ -712,11 +651,11 @@ export default function LoanPackagingPage() {
 );
 
 // Fallback view if no step is active (should not happen)
+// Fallback view if no step is active (should not happen)
 const validSteps: Step[] = ['dashboard', 'service_selection', 'payment'];
 if (!validSteps.includes(currentStep)) {
-  console.warn('[LoanPackagingPage] Fallback "Something went wrong" screen rendered with currentStep:', currentStep);
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <main className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong</h1>
         <p className="text-gray-600 mb-6">We couldn't determine your current step in the loan packaging process.</p>
@@ -730,8 +669,7 @@ if (!validSteps.includes(currentStep)) {
           Start Over
         </button>
       </div>
-    </div>
+    </main>
   );
-}
 }
 }
