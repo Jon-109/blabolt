@@ -37,7 +37,24 @@ const DEFAULT_DOCUMENTS: Document[] = [
 export default function LoanPackagingPage() {
   // Step 1: Loan Details state (must be top-level for progress logic)
   const [loanAmount, setLoanAmount] = useState<number | ''>('');
+  const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('');
   const [coverLetterApproved, setCoverLetterApproved] = useState(false); // Step 3 placeholder
+  
+  // --- Step 1 Condensing State ---
+  const [isLoanAmountBlurred, setIsLoanAmountBlurred] = useState(false);
+  const [isCondensed, setIsCondensed] = useState(false);
+
+  useEffect(() => {
+    if (
+      isLoanAmountBlurred &&
+      loanAmount !== '' &&
+      selectedLoanPurpose
+    ) {
+      setIsCondensed(true);
+    } else {
+      setIsCondensed(false);
+    }
+  }, [isLoanAmountBlurred, loanAmount, selectedLoanPurpose]);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -49,10 +66,9 @@ export default function LoanPackagingPage() {
   const [loadingUser, setLoadingUser] = useState(true)
   
   // Service selection and flow state
+  const [showStep1Details, setShowStep1Details] = useState(true)
   const [serviceType, setServiceType] = useState<ServiceType>(null)
   const [currentStep, setCurrentStep] = useState<Step>('service_selection')
-  const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('')
-  const [showStep1Details, setShowStep1Details] = useState(true)
 
   // Log currentStep on every render (must come after currentStep is declared)
   useEffect(() => {
@@ -490,8 +506,8 @@ export default function LoanPackagingPage() {
       
       {/* Step 1: Loan Details UI */}
     {showStep1Details ? (
-      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
-        <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
+      <section className={`max-w-7xl mx-auto px-4 md:px-6 ${isCondensed ? 'pt-2' : 'pt-10'}`}>
+        <div className={`bg-white border border-gray-200 rounded-xl ${isCondensed ? 'shadow-sm py-3 px-3 space-y-2' : 'shadow-md py-4 px-4 space-y-4'}`}> 
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-3">Step 1: Loan Details</h2>
           </div>
@@ -520,6 +536,8 @@ export default function LoanPackagingPage() {
                       setLoanAmount(Number(raw));
                     }
                   }}
+                  onBlur={() => setIsLoanAmountBlurred(true)}
+                  onFocus={() => setIsLoanAmountBlurred(false)}
                   required
                 />
               </div>
