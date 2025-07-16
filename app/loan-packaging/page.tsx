@@ -493,10 +493,10 @@ export default function LoanPackagingPage() {
       <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
         <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-1">Step 1: Loan Details</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-3">Step 1: Loan Details</h2>
           </div>
-            <p className="text-slate-600 text-base mb-6">Enter your loan details to begin packaging your application.</p>
-            <div className="mb-6">
+            <p className="text-slate-600 text-base mb-4">Enter your loan details to begin packaging your application.</p>
+            <div className="mb-4">
               <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
                 Loan Amount <span className="text-red-500">*</span>
               </label>
@@ -526,7 +526,7 @@ export default function LoanPackagingPage() {
             </div>
 
             {/* Loan Purpose Selector - two-level */}
-            <div className="mb-6">
+            <div className="mb-4">
               <label className="block text-lg font-semibold text-gray-900 mb-2">
                 Loan Purpose <span className="text-red-500">*</span>
               </label>

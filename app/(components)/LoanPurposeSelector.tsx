@@ -165,24 +165,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
         </div>
       )}
       
-      {/* Collapsed summary view after level2 selected */}
-      {level2 && (
-        <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4" aria-label="Selected Loan Purpose">
-          <div>
-            <span className="font-semibold text-slate-900">{(level1 ? LEVEL2_OPTIONS[level1]?.find(o => o.key === level2)?.label : '')}</span>
-          </div>
-          <button
-            type="button"
-            className="text-blue-600 hover:underline text-sm font-medium"
-            onClick={() => {
-              setLevel2(null);
-              setLevel1(null);
-            }}
-          >
-            Change
-          </button>
-        </div>
-      )}
+
       
     </div>
   );
