@@ -64,17 +64,23 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   }, [level2, onChange]);
 
   useEffect(() => {
-    if (!value) {
-      setLevel1(null);
-      setLevel2(null);
-    } else {
-      const found = Object.entries(LEVEL2_OPTIONS).find(([cat, arr]) =>
-        arr.some(opt => opt.key === value),
+    if (value) {
+      const found = Object.entries(LEVEL2_OPTIONS).find(([_, arr]) =>
+        arr.some(opt => opt.key === value)
       );
       if (found) {
         setLevel1(found[0]);
         setLevel2(value);
+      } else {
+        // This case can happen if the value is invalid or cleared.
+        // We reset the state to avoid inconsistencies.
+        setLevel1(null);
+        setLevel2(null);
       }
+    } else {
+      // When value is empty, reset everything.
+      setLevel1(null);
+      setLevel2(null);
     }
   }, [value]);
 

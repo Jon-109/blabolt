@@ -474,27 +474,33 @@ export default function LoanPackagingPage() {
       {/* Progress Bar */}
       <section className="w-full bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2">
-          <div className="flex flex-row items-center justify-between gap-4 w-full">
-            <div className="flex items-center gap-2 min-w-[180px]">
-              <span className="text-base font-semibold text-slate-800">Progress:</span>
-              <span className="font-bold text-slate-900">{progressPercentage}%</span>
+          <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-lg">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Step 1: Loan Details</h3>
+              <p className="text-slate-600">Loan Amount: ${loanAmount.toLocaleString()}</p>
+              <p className="text-slate-600">Purpose: {selectedLoanPurpose.replace(/-/g, ' ')}</p>
             </div>
-            <div className="flex-1">
-              <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
-                  style={{ width: `${progressPercentage}%` }}
-                  aria-valuenow={progressPercentage}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  role="progressbar"
-                ></div>
-              </div>
+            <button 
+              onClick={() => setIsCondensed(false)} 
+              className="text-blue-600 hover:underline font-medium text-sm">
+              Edit
+            </button>
+          </div>
+          <div className="flex-1">
+            <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
+                style={{ width: `${progressPercentage}%` }}
+                aria-valuenow={progressPercentage}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                role="progressbar"
+              ></div>
             </div>
           </div>
           {/* Instructional text below progress bar */}
-          <div className="flex justify-center pt-4">
-            <div className="flex items-center gap-3 px-6 py-3 rounded-full shadow-md bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 min-h-[40px]">
+          <div className="flex justify-center pt-2">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full shadow-md bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 min-h-[36px]">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-500 text-white text-lg font-bold shadow-sm">
                 {(() => {
                   if (!isStep1Complete) return <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" /></svg>;
@@ -503,7 +509,7 @@ export default function LoanPackagingPage() {
                   return <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>;
                 })()}
               </span>
-              <span className="text-base md:text-lg font-semibold text-blue-900 tracking-tight">
+              <span className="text-sm md:text-base font-semibold text-blue-900 tracking-tight">
                 {(() => {
                   if (!isStep1Complete) return 'Next Step: Complete Loan Details';
                   if (!isStep2Complete) return 'Next Step: Upload Required Documents';
@@ -524,8 +530,13 @@ export default function LoanPackagingPage() {
             <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-3">Step 1: Loan Details</h2>
           </div>
           {isCondensed ? (
-            <div className="flex items-center text-lg font-semibold text-slate-700">
+            <div className="flex items-center justify-between text-lg font-semibold text-slate-700">
               <span>{selectedLoanPurpose} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
+              <button 
+                onClick={() => setIsCondensed(false)} 
+                className="text-blue-600 hover:underline font-medium text-sm ml-4">
+                Edit
+              </button>
             </div>
           ) : (
             <>
@@ -582,7 +593,7 @@ export default function LoanPackagingPage() {
 
     {/* Step 2: Upload Required Documents - OUTSIDE Step 1 */}
     {isStep1Complete && (
-      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
+      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-4">
         <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6 border-l-4 border-blue-600">
           <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Step 2: Upload Required Documents</h2>
           <p className="text-slate-600 text-base">Upload each document below to complete your loan package.</p>
@@ -666,7 +677,7 @@ export default function LoanPackagingPage() {
 
     {/* Step 3: Cover Letter Generator (Dashboard Box) */}
     {isStep1Complete && (
-      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10">
+      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-4">
         <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6 border-l-4 border-blue-600">
           <h2 className="text-2xl md:text-3xl font-bold text-blue-700 mb-1">Step 3: Generate Your Cover Letter</h2>
           <p className="text-slate-700 text-base mb-4">
