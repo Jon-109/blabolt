@@ -146,7 +146,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
           >
             ← Back
           </button>
-          <div className="flex flex-col divide-y divide-slate-200 bg-white rounded-xl border border-slate-200 max-w-2xl mx-auto">
+          <div className="flex flex-col divide-y divide-slate-200 bg-white rounded-xl border border-slate-200 w-full">
             {LEVEL2_OPTIONS[level1]?.map(opt => (
               <button
                 key={opt.key}
