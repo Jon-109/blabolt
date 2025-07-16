@@ -8,7 +8,7 @@ import { supabase } from '@/supabase/helpers/client'
 import { loanPurposes } from '@/lib/loanPurposes'
 import Image from 'next/image'
 import Testimonials from '@/app/(components)/shared/Testimonials'
-import LoanPurposeSelector from '@/app/(components)/LoanPurposeSelector'
+import LoanPurposeSelector, { LEVEL2_OPTIONS } from '@/app/(components)/LoanPurposeSelector'
 
 // Define types for the Loan Packaging process
 type ServiceType = 'loan_packaging' | 'loan_brokering' | null;
@@ -43,6 +43,17 @@ export default function LoanPackagingPage() {
   // --- Step 1 Condensing State ---
   const [isLoanAmountBlurred, setIsLoanAmountBlurred] = useState(false);
   const [isCondensed, setIsCondensed] = useState(false);
+
+  // Helper function to get the label for a given loan purpose key
+  const getLoanPurposeLabel = (key: string) => {
+    for (const optionsArray of Object.values(LEVEL2_OPTIONS)) {
+      const option = optionsArray.find(opt => opt.key === key);
+      if (option) {
+        return option.label;
+      }
+    }
+    return key; // Fallback to key if not found
+  };
 
   useEffect(() => {
     if (
@@ -474,18 +485,7 @@ export default function LoanPackagingPage() {
       {/* Progress Bar */}
       <section className="w-full bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2">
-          <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-lg">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">Step 1: Loan Details</h3>
-              <p className="text-slate-600">Loan Amount: ${loanAmount.toLocaleString()}</p>
-              <p className="text-slate-600">Purpose: {selectedLoanPurpose.replace(/-/g, ' ')}</p>
-            </div>
-            <button 
-              onClick={() => setIsCondensed(false)} 
-              className="text-blue-600 hover:underline font-medium text-sm">
-              Edit
-            </button>
-          </div>
+
           <div className="flex-1">
             <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
               <div
@@ -531,7 +531,7 @@ export default function LoanPackagingPage() {
           </div>
           {isCondensed ? (
             <div className="flex items-center justify-between text-lg font-semibold text-slate-700">
-              <span>{selectedLoanPurpose} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
+              <span>{getLoanPurposeLabel(selectedLoanPurpose)} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
               <button 
                 onClick={() => setIsCondensed(false)} 
                 className="text-blue-600 hover:underline font-medium text-sm ml-4">

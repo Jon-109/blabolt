@@ -23,7 +23,7 @@ const LEVEL1_OPTIONS = [
   },
 ];
 
-const LEVEL2_OPTIONS: Record<string, { key: string; label: string; description: string; term: string; amortization: string; downPayment: string; interestRate: string; }[]> = {
+export const LEVEL2_OPTIONS: Record<string, { key: string; label: string; description: string; term: string; amortization: string; downPayment: string; interestRate: string; }[]> = {
   purchase: [
     { key: 'vehicle-purchase', label: 'Vehicle Purchase', description: 'Buying a car, truck, or commercial vehicle to support or expand your business operations.', term: '5 years', amortization: '5 years', downPayment: '15%', interestRate: '7%' },
     { key: 'equipment-purchase', label: 'Equipment Purchase', description: 'Acquiring tools, machinery, or technology essential for your business to operate or grow.', term: '7 years', amortization: '7 years', downPayment: '10%', interestRate: '8%' },
@@ -60,8 +60,12 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   useEffect(() => {
     if (level2) {
       onChange(level2);
+    } else if (level1 === null) {
+      // Also notify parent when the selection is completely cleared
+      onChange('');
     }
-  }, [level2, onChange]);
+    // This effect should NOT run when only level1 changes.
+  }, [level2, level1, onChange]);
 
   useEffect(() => {
     if (value) {
