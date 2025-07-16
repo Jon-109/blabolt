@@ -485,45 +485,47 @@ export default function LoanPackagingPage() {
       </header>
       {/* Progress Bar */}
       <section className="w-full bg-white border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2">
-  {/* Progress bar, label, percentage, and next step all on one row for md+ screens */}
-  <div className="flex flex-col md:flex-row md:items-center md:gap-6 w-full">
-    {/* Progress bar */}
-    <div className="flex-1 min-w-[160px] md:max-w-[400px]">
-      <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
-          style={{ width: `${progressPercentage}%` }}
-          aria-valuenow={progressPercentage}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          role="progressbar"
-        ></div>
-      </div>
-    </div>
-    {/* Progress label and percentage */}
-    <div className="flex items-center mt-2 md:mt-0 md:mb-0 mb-2 md:ml-4">
-      <span className="text-base font-semibold text-slate-800 mr-2">Progress:</span>
-      <span className="font-bold text-slate-900">{progressPercentage}%</span>
-    </div>
-    {/* Next step instruction/button */}
-    <div className="flex justify-center md:justify-start md:ml-auto pt-2 md:pt-0">
-      <div className="flex items-center gap-2 px-4 py-2 rounded-full shadow-md bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 min-h-[36px]">
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-500 text-white text-lg font-bold shadow-sm">
-          {/* Right arrow icon for clarity */}
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-        </span>
-        <span className="text-sm md:text-base font-semibold text-blue-900 tracking-tight">
-          {(() => {
-            if (!isStep1Complete) return 'Next Step: Complete Loan Details';
-            if (!isStep2Complete) return 'Next Step: Upload Required Documents';
-            if (!isStep3Complete) return 'Next Step: Generate Cover Letter';
-            return 'All steps complete! You may finalize your package.';
-          })()}
-        </span>
-      </div>
-    </div>
-  </div>
+        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-4">
+          {/* Progress bar - full width */}
+          <div className="w-full">
+            <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-4 bg-blue-700 rounded-full transition-all duration-700 shadow-md"
+                style={{ width: `${progressPercentage}%` }}
+                aria-valuenow={progressPercentage}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                role="progressbar"
+              ></div>
+            </div>
+          </div>
+
+          {/* Row for progress label and next step */}
+          <div className="flex justify-between items-center w-full">
+            {/* Progress label and percentage - left aligned */}
+            <div className="flex items-center">
+              <span className="text-base font-semibold text-slate-800 mr-2">Progress:</span>
+              <span className="font-bold text-slate-900">{progressPercentage}%</span>
+            </div>
+
+            {/* Next step instruction/button - right aligned */}
+            <div className="flex justify-end">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full shadow-md bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 min-h-[36px]">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-500 text-white text-lg font-bold shadow-sm">
+                  {/* Right arrow icon for clarity */}
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </span>
+                <span className="text-sm md:text-base font-semibold text-blue-900 tracking-tight">
+                  {(() => {
+                    if (!isStep1Complete) return 'Next Step: Complete Loan Details';
+                    if (!isStep2Complete) return 'Next Step: Upload Required Documents';
+                    if (!isStep3Complete) return 'Next Step: Generate Cover Letter';
+                    return 'All steps complete! You may finalize your package.';
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
       
