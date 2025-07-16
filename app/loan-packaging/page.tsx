@@ -42,6 +42,7 @@ export default function LoanPackagingPage() {
   
   // --- Step 1 Condensing State ---
   const [isLoanAmountBlurred, setIsLoanAmountBlurred] = useState(false);
+  const [isLoanAmountMax, setIsLoanAmountMax] = useState(false);
   const [isCondensed, setIsCondensed] = useState(false);
 
   // Helper function to get the label for a given loan purpose key
@@ -498,16 +499,19 @@ export default function LoanPackagingPage() {
               ></div>
             </div>
           </div>
+
+          {/* Progress label and percentage below the progress bar */}
+          <div className="flex items-center mt-2 mb-2">
+            <span className="text-base font-semibold text-slate-800 mr-2">Progress:</span>
+            <span className="font-bold text-slate-900">{progressPercentage}%</span>
+          </div>
+
           {/* Instructional text below progress bar */}
           <div className="flex justify-center pt-2">
             <div className="flex items-center gap-2 px-4 py-2 rounded-full shadow-md bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 min-h-[36px]">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-500 text-white text-lg font-bold shadow-sm">
-                {(() => {
-                  if (!isStep1Complete) return <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" /></svg>;
-                  if (!isStep2Complete) return <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10V6a5 5 0 0110 0v4" /></svg>;
-                  if (!isStep3Complete) return <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.121 2.121 0 113 3L7 19.5l-4 1 1-4L16.5 3.5z" /></svg>;
-                  return <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>;
-                })()}
+                {/* Right arrow icon for clarity */}
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
               </span>
               <span className="text-sm md:text-base font-semibold text-blue-900 tracking-tight">
                 {(() => {
@@ -539,57 +543,69 @@ export default function LoanPackagingPage() {
               </button>
             </div>
           ) : (
-            <>
+            <div>
               <p className="text-slate-600 text-base mb-4">Enter your loan details to begin packaging your application.</p>
               <div className="mb-4">
-              <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
-                Loan Amount <span className="text-red-500">*</span>
-              </label>
-              <div className="flex items-center max-w-md">
-                <span className="px-3 py-2 text-xl font-bold text-gray-700 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg select-none">$</span>
-                <input
-                  id="loan-amount"
-                  name="loan-amount"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9,]*"
-                  className="w-full px-3 py-2 text-xl font-semibold border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50"
-                  placeholder="50,000"
-                  value={typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}
-                  onChange={e => {
-                    // Remove non-digits, format with commas
-                    const raw = e.target.value.replace(/[^\d]/g, '');
-                    if (raw === '') {
-                      setLoanAmount('');
-                    } else {
-                      setLoanAmount(Number(raw));
-                    }
-                  }}
-                  onBlur={() => setIsLoanAmountBlurred(true)}
-                  onFocus={() => setIsLoanAmountBlurred(false)}
-                  required
+                <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
+                  Loan Amount <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center max-w-md">
+                  <span className="px-3 py-2 text-xl font-bold text-gray-700 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg select-none">$</span>
+                  <input
+                    id="loan-amount"
+                    name="loan-amount"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9,]*"
+                    className="w-full px-3 py-2 text-xl font-semibold border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50"
+                    placeholder="50,000"
+                    value={typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}
+                    onChange={e => {
+                      // Remove non-digits, format with commas
+                      const raw = e.target.value.replace(/[^\d]/g, '');
+                      if (raw === '') {
+                        setLoanAmount('');
+                        setIsLoanAmountMax(false);
+                      } else {
+                        let value = Number(raw);
+                        if (value > 10000000) {
+                          value = 10000000;
+                          setIsLoanAmountMax(true);
+                        } else {
+                          setIsLoanAmountMax(false);
+                        }
+                        setLoanAmount(value);
+                      }
+                    }}
+                    onBlur={() => setIsLoanAmountBlurred(true)}
+                    onFocus={() => setIsLoanAmountBlurred(false)}
+                    required
+                  />
+                  {isLoanAmountMax && (
+                    <p className="text-red-500 text-sm mt-1">$10,000,000 is the maximum allowed loan amount.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Loan Purpose Selector - two-level */}
+              <div className="mb-4">
+                <label className="block text-lg font-semibold text-gray-900 mb-2">
+                  Loan Purpose <span className="text-red-500">*</span>
+                </label>
+                <LoanPurposeSelector
+                  value={selectedLoanPurpose}
+                  onChange={setSelectedLoanPurpose}
                 />
               </div>
+              {error && (
+                <p className="text-red-600 mb-2">{error}</p>
+              )}
             </div>
-
-            {/* Loan Purpose Selector - two-level */}
-            <div className="mb-4">
-              <label className="block text-lg font-semibold text-gray-900 mb-2">
-                Loan Purpose <span className="text-red-500">*</span>
-              </label>
-              <LoanPurposeSelector
-                value={selectedLoanPurpose}
-                onChange={setSelectedLoanPurpose}
-              />
-            </div>
-            {error && (
-              <p className="text-red-600 mb-2">{error}</p>
-            )}
-          </>
-        )}
-      </div>
-    </section>
+          )}
+        </div>
+      </section>
     ) : null}
+
 
     {/* Step 2: Upload Required Documents - OUTSIDE Step 1 */}
     {isStep1Complete && (
