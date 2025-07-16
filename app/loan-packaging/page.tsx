@@ -68,9 +68,6 @@ export default function LoanPackagingPage() {
     }
   }, [isLoanAmountBlurred, loanAmount, selectedLoanPurpose]);
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
   const [showIncludedModal, setShowIncludedModal] = useState(false);
   // User authentication state
   const [userEmail, setUserEmail] = useState<string | null>(null)
