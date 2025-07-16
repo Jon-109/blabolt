@@ -500,16 +500,15 @@ export default function LoanPackagingPage() {
             </div>
           </div>
 
-          {/* Row for progress label and next step */}
-          <div className="flex justify-between items-center w-full">
-            {/* Progress label and percentage - left aligned */}
-            <div className="flex items-center">
+          {/* Progress label left, next step centered, right empty */}
+          <div className="flex items-center w-full mt-4">
+            {/* Left: Progress label and percentage */}
+            <div className="flex items-center flex-1">
               <span className="text-base font-semibold text-slate-800 mr-2">Progress:</span>
               <span className="font-bold text-slate-900">{progressPercentage}%</span>
             </div>
-
-            {/* Next step instruction/button - right aligned */}
-            <div className="flex justify-end">
+            {/* Center: Next step instruction/button */}
+            <div className="flex justify-center flex-1">
               <div className="flex items-center gap-2 px-4 py-2 rounded-full shadow-md bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 min-h-[36px]">
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-500 text-white text-lg font-bold shadow-sm">
                   {/* Right arrow icon for clarity */}
@@ -525,6 +524,8 @@ export default function LoanPackagingPage() {
                 </span>
               </div>
             </div>
+            {/* Right: empty for spacing */}
+            <div className="flex-1"></div>
           </div>
         </div>
       </section>
