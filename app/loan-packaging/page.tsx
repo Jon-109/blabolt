@@ -89,16 +89,7 @@ export default function LoanPackagingPage() {
     console.log('[LoanPackagingPage] Rendered with currentStep:', currentStep);
   }, [currentStep]);
 
-  // On mount, check for ?purpose= in URL and set dropdown
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const purpose = params.get('purpose')
-      if (purpose && Object.keys(loanPurposes).includes(purpose)) {
-        setSelectedLoanPurpose(purpose)
-      }
-    }
-  }, [])
+
 
   // Skipping payment verification for now – always allow user to proceed manually after selecting a service.
   // Previously this hook checked Stripe `session_id` in the URL and verified payment against the `purchases` table.
@@ -539,68 +530,44 @@ export default function LoanPackagingPage() {
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-3">Step 1: Loan Details</h2>
           </div>
-          {isCondensed ? (
-            <div className="flex items-center justify-between text-lg font-semibold text-slate-700">
-              <span>{getLoanPurposeLabel(selectedLoanPurpose)} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
-              <button 
-                onClick={() => setIsCondensed(false)} 
-                className="text-blue-600 hover:underline font-medium text-sm ml-4">
-                Edit
-              </button>
-            </div>
-          ) : (
-            <div>
-              <p className="text-slate-600 text-base mb-4">Enter your loan details to begin packaging your application.</p>
-              {/* Loan Purpose Selector first */}
-              <div className="mb-4">
-                <label className="block text-lg font-semibold text-gray-900 mb-2">
-                  Loan Purpose <span className="text-red-500">*</span>
-                </label>
-                <LoanPurposeSelector
-                  value={selectedLoanPurpose}
-                  onChange={setSelectedLoanPurpose}
-                  disabled={loadingUser}
-                />
-              </div>
-              {/* Show Loan Amount input only after L2 is selected (first fill), or always in edit mode */}
-              {(!isCondensed || isValidLevel2Purpose(selectedLoanPurpose)) && (
-                <div className="mb-4">
-                  <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
-                    Loan Amount <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative max-w-xs">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
-                    <input
-                      id="loan-amount"
-                      type="text"
-                      value={loanAmount === '' ? '' : loanAmount.toLocaleString()}
-                      onBlur={() => setIsLoanAmountBlurred(true)}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/[^0-9]/g, '');
-                        const numValue = value ? parseInt(value, 10) : '';
-                        if (numValue === '' || numValue <= 10000000) {
-                          setLoanAmount(numValue);
-                          setIsLoanAmountMax(false);
-                        } else {
-                          setIsLoanAmountMax(true);
-                        }
-                      }}
-                      placeholder="50,000"
-                      className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 max-w-xs"
-                      aria-describedby="loan-amount-max"
-                    />
-                  </div>
-                  {isLoanAmountMax && (
-                    <p className="text-red-500 text-sm mt-1">$10,000,000 is the maximum allowed loan amount.</p>
-                  )}
-                </div>
-              )}
-              {/* Show error below Loan Amount */}
-              {error && (
-                <p className="text-red-600 mb-2">{error}</p>
-              )}
-            </div>
-          )}
+           {isCondensed ? (
+             <div className="flex items-center justify-between text-lg font-semibold text-slate-700">
+               <span>{getLoanPurposeLabel(selectedLoanPurpose)} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
+               <button 
+                 onClick={() => setIsCondensed(false)} 
+                 className="text-blue-600 hover:underline font-medium text-sm ml-4">
+                 Edit
+               </button>
+             </div>
+           ) : (
+             <>
+               {/* Condensed summary for Loan Purpose with Edit button */}
+               <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+                 <div>
+                   <span className="font-semibold text-slate-900">{getLoanPurposeLabel(selectedLoanPurpose)}</span>
+                 </div>
+                 <button
+                   type="button"
+                   className="text-blue-600 hover:underline text-sm font-medium"
+                   onClick={() => {
+                     setSelectedLoanPurpose('');
+                     setLoanAmount('');
+                   }}
+                 >
+                 </button>
+               </div>
+               <div className="flex flex-col gap-4">
+                 <label className="text-lg font-semibold text-slate-900">Loan Amount:</label>
+                 <input
+                   type="number"
+                   value={loanAmount}
+                   onChange={(e) => setLoanAmount(parseFloat(e.target.value))}
+                   className="w-full p-4 pl-10 text-lg border border-gray-200 rounded-lg focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                 />
+                 {error && <p className="text-red-500">{error}</p>}
+               </div>
+             </>
+           )}
         </div>
       </section>
     ) : null}
