@@ -546,7 +546,19 @@ export default function LoanPackagingPage() {
           ) : (
             <div>
               <p className="text-slate-600 text-base mb-4">Enter your loan details to begin packaging your application.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Loan Purpose Selector first */}
+              <div className="mb-4">
+                <label className="block text-lg font-semibold text-gray-900 mb-2">
+                  Loan Purpose <span className="text-red-500">*</span>
+                </label>
+                <LoanPurposeSelector
+                  value={selectedLoanPurpose}
+                  onChange={setSelectedLoanPurpose}
+                  disabled={loadingUser}
+                />
+              </div>
+              {/* Only show Loan Amount after purpose is selected */}
+              {selectedLoanPurpose && (
                 <div className="mb-4">
                   <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
                     Loan Amount <span className="text-red-500">*</span>
@@ -577,22 +589,11 @@ export default function LoanPackagingPage() {
                     <p className="text-red-500 text-sm mt-1">$10,000,000 is the maximum allowed loan amount.</p>
                   )}
                 </div>
-
-                {/* Loan Purpose Selector - two-level */}
-                <div className="mb-4">
-                  <label className="block text-lg font-semibold text-gray-900 mb-2">
-                    Loan Purpose <span className="text-red-500">*</span>
-                  </label>
-                  <LoanPurposeSelector
-                    value={selectedLoanPurpose}
-                    onChange={setSelectedLoanPurpose}
-                    disabled={loadingUser}
-                  />
-                </div>
-                {error && (
-                  <p className="text-red-600 mb-2">{error}</p>
-                )}
-              </div>
+              )}
+              {/* Show error below Loan Amount */}
+              {error && (
+                <p className="text-red-600 mb-2">{error}</p>
+              )}
             </div>
           )}
         </div>
