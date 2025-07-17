@@ -529,19 +529,52 @@ export default function LoanPackagingPage() {
       
       {/* Step 1: Loan Details UI */}
     {showStep1Details ? (
-      <section className={`max-w-7xl mx-auto px-4 md:px-6 ${isCondensed ? 'pt-2' : 'pt-10'}`}>
+      <section className={`max-w-7xl mx-auto px-4 md:px-6 ${isCondensed ? 'pt-0' : 'pt-4'}`}>
         <div className={`bg-white border border-gray-200 rounded-xl border-l-4 border-green-600 ${isCondensed ? 'shadow-sm py-3 px-3 space-y-2' : 'shadow-md py-4 px-4 space-y-4'}`}>
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-green-700 mb-3">Step 1: Loan Details</h2>
           </div>
           {isCondensed ? (
-            <div className="flex items-center justify-between text-lg font-semibold text-slate-700">
-              <span>{getLoanPurposeLabel(selectedLoanPurpose)} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
-              <button 
-                onClick={() => setIsCondensed(false)} 
-                className="text-blue-600 hover:underline font-medium text-sm ml-4">
-                Edit
-              </button>
+            <div>
+              <div className="flex items-center justify-between text-lg font-semibold text-slate-700">
+                <span>{getLoanPurposeLabel(selectedLoanPurpose)} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
+                <button 
+                  onClick={() => setIsCondensed(false)} 
+                  className="text-blue-600 hover:underline font-medium text-sm ml-4">
+                  Edit
+                </button>
+              </div>
+              {/* Always show Loan Amount input when editing, even in condensed mode */}
+              <div className="mt-4 mb-2">
+                <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
+                  Loan Amount <span className="text-red-500">*</span>
+                </label>
+                <div className="relative max-w-xs">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                  <input
+                    id="loan-amount"
+                    type="text"
+                    value={loanAmount === '' ? '' : loanAmount.toLocaleString()}
+                    onBlur={() => setIsLoanAmountBlurred(true)}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      const numValue = value ? parseInt(value, 10) : '';
+                      if (numValue === '' || numValue <= 10000000) {
+                        setLoanAmount(numValue);
+                        setIsLoanAmountMax(false);
+                      } else {
+                        setIsLoanAmountMax(true);
+                      }
+                    }}
+                    placeholder="50,000"
+                    className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 max-w-xs"
+                    aria-describedby="loan-amount-max"
+                  />
+                </div>
+                {isLoanAmountMax && (
+                  <p className="text-red-500 text-sm mt-1">$10,000,000 is the maximum allowed loan amount.</p>
+                )}
+              </div>
             </div>
           ) : (
             <div>
@@ -563,7 +596,7 @@ export default function LoanPackagingPage() {
                   <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
                     Loan Amount <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
+                  <div className="relative max-w-xs">
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
                     <input
                       id="loan-amount"
@@ -581,7 +614,7 @@ export default function LoanPackagingPage() {
                         }
                       }}
                       placeholder="50,000"
-                      className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 max-w-xs"
                       aria-describedby="loan-amount-max"
                     />
                   </div>
