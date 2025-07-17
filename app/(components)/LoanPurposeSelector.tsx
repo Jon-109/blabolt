@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 interface LoanPurposeSelectorProps {
   value: string;
   onChange: (purpose: string) => void;
+  disabled?: boolean;
 }
 
 const LEVEL1_OPTIONS = [
@@ -43,7 +44,7 @@ export const LEVEL2_OPTIONS: Record<string, { key: string; label: string; descri
   ],
 };
 
-const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChange }) => {
+const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChange, disabled }) => {
   const [level1, setLevel1] = useState<string | null>(null);
   const [level2, setLevel2] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
@@ -97,11 +98,13 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
             <button
               key={opt.key}
               type="button"
+              disabled={disabled}
               className={`flex flex-col items-center px-8 py-6 rounded-xl border border-neutral-200 bg-white shadow-sm hover:shadow-md hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-150 min-w-[180px] max-w-[220px] mx-2 group
                 ${level1 === opt.key ? 'ring-2 ring-blue-500 border-blue-500 shadow-md' : ''}`}
               style={{ boxShadow: '0 2px 12px 0 rgba(16,25,40,0.06)' }}
               onClick={() => {
                 setAnimating(true);
+                setLevel2(null); // Defensively clear L2 state on L1 click
                 setTimeout(() => {
                   setLevel1(opt.key);
                   setAnimating(false);
@@ -131,6 +134,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
               setLevel2(null);
               onChange(''); // Notify parent to clear the value
             }}
+            disabled={disabled}
           >
             Change
           </button>
@@ -153,6 +157,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
             type="button"
             className="mb-4 text-blue-600 hover:underline flex items-center gap-1"
             onClick={() => setLevel1(null)}
+            disabled={disabled}
             aria-label="Back to category selection"
           >
             ← Back
@@ -166,6 +171,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
                   level2 === opt.key ? 'ring-2 ring-blue-500 border-blue-400 bg-blue-50' : ''
                 }`}
                 onClick={() => setLevel2(opt.key)}
+                disabled={disabled}
                 aria-pressed={level2 === opt.key}
               >
                 <span className="font-semibold text-slate-900 text-base">{opt.label}</span>

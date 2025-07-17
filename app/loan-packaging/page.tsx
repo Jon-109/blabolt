@@ -546,61 +546,53 @@ export default function LoanPackagingPage() {
           ) : (
             <div>
               <p className="text-slate-600 text-base mb-4">Enter your loan details to begin packaging your application.</p>
-              <div className="mb-4">
-                <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
-                  Loan Amount <span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center max-w-md">
-                  <span className="px-3 py-2 text-xl font-bold text-gray-700 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg select-none">$</span>
-                  <input
-                    id="loan-amount"
-                    name="loan-amount"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9,]*"
-                    className="w-full px-3 py-2 text-xl font-semibold border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50"
-                    placeholder="50,000"
-                    value={typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}
-                    onChange={e => {
-                      // Remove non-digits, format with commas
-                      const raw = e.target.value.replace(/[^\d]/g, '');
-                      if (raw === '') {
-                        setLoanAmount('');
-                        setIsLoanAmountMax(false);
-                      } else {
-                        let value = Number(raw);
-                        if (value > 10000000) {
-                          value = 10000000;
-                          setIsLoanAmountMax(true);
-                        } else {
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="mb-4">
+                  <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
+                    Loan Amount <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                    <input
+                      id="loan-amount"
+                      type="text"
+                      value={loanAmount === '' ? '' : loanAmount.toLocaleString()}
+                      onBlur={() => setIsLoanAmountBlurred(true)}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '');
+                        const numValue = value ? parseInt(value, 10) : '';
+                        if (numValue === '' || numValue <= 10000000) {
+                          setLoanAmount(numValue);
                           setIsLoanAmountMax(false);
+                        } else {
+                          setIsLoanAmountMax(true);
                         }
-                        setLoanAmount(value);
-                      }
-                    }}
-                    onBlur={() => setIsLoanAmountBlurred(true)}
-                    onFocus={() => setIsLoanAmountBlurred(false)}
-                    required
-                  />
+                      }}
+                      placeholder="50,000"
+                      className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      aria-describedby="loan-amount-max"
+                    />
+                  </div>
                   {isLoanAmountMax && (
                     <p className="text-red-500 text-sm mt-1">$10,000,000 is the maximum allowed loan amount.</p>
                   )}
                 </div>
-              </div>
 
-              {/* Loan Purpose Selector - two-level */}
-              <div className="mb-4">
-                <label className="block text-lg font-semibold text-gray-900 mb-2">
-                  Loan Purpose <span className="text-red-500">*</span>
-                </label>
-                <LoanPurposeSelector
-                  value={selectedLoanPurpose}
-                  onChange={setSelectedLoanPurpose}
-                />
+                {/* Loan Purpose Selector - two-level */}
+                <div className="mb-4">
+                  <label className="block text-lg font-semibold text-gray-900 mb-2">
+                    Loan Purpose <span className="text-red-500">*</span>
+                  </label>
+                  <LoanPurposeSelector
+                    value={selectedLoanPurpose}
+                    onChange={setSelectedLoanPurpose}
+                    disabled={loadingUser}
+                  />
+                </div>
+                {error && (
+                  <p className="text-red-600 mb-2">{error}</p>
+                )}
               </div>
-              {error && (
-                <p className="text-red-600 mb-2">{error}</p>
-              )}
             </div>
           )}
         </div>
