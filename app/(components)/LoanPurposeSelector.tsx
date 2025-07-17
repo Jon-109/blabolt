@@ -65,7 +65,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
       onChange('');
     }
     // This effect should NOT run when only level1 changes.
-  }, [level2, level1, onChange]);
+  }, [level2, onChange]);
 
   useEffect(() => {
     if (value) {
