@@ -127,8 +127,9 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
             type="button"
             className="text-blue-600 hover:underline text-sm font-medium"
             onClick={() => {
-              setLevel2(null);
               setLevel1(null);
+              setLevel2(null);
+              onChange(''); // Notify parent to clear the value
             }}
           >
             Change
