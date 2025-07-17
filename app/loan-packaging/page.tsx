@@ -10,6 +10,11 @@ import Image from 'next/image'
 import Testimonials from '@/app/(components)/shared/Testimonials'
 import LoanPurposeSelector, { LEVEL2_OPTIONS } from '@/app/(components)/LoanPurposeSelector'
 
+// Utility: is the selectedLoanPurpose a valid Level 2 key?
+function isValidLevel2Purpose(value: string) {
+  return Object.values(LEVEL2_OPTIONS).some(arr => arr.some(opt => opt.key === value));
+}
+
 // Define types for the Loan Packaging process
 type ServiceType = 'loan_packaging' | 'loan_brokering' | null;
 type Step = 'service_selection' | 'payment' | 'dashboard';
@@ -558,7 +563,7 @@ export default function LoanPackagingPage() {
                 />
               </div>
               {/* Show Loan Amount input only after L2 is selected (first fill), or always in edit mode */}
-              {(!isCondensed || selectedLoanPurpose) && (
+              {(!isCondensed || isValidLevel2Purpose(selectedLoanPurpose)) && (
                 <div className="mb-4">
                   <label htmlFor="loan-amount" className="block text-lg font-semibold text-gray-900 mb-2">
                     Loan Amount <span className="text-red-500">*</span>
