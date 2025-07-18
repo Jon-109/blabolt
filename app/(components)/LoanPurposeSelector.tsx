@@ -68,25 +68,25 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
     // This effect should NOT run when only level1 changes.
   }, [level2, onChange]);
 
+  // Always sync internal state with value prop (even if already set)
   useEffect(() => {
     if (value) {
       const found = Object.entries(LEVEL2_OPTIONS).find(([_, arr]) =>
         arr.some(opt => opt.key === value)
       );
       if (found) {
-        setLevel1(found[0]);
-        setLevel2(value);
+        if (level1 !== found[0]) setLevel1(found[0]);
+        if (level2 !== value) setLevel2(value);
       } else {
         // This case can happen if the value is invalid or cleared.
-        // We reset the state to avoid inconsistencies.
-        setLevel1(null);
-        setLevel2(null);
+        if (level1 !== null) setLevel1(null);
+        if (level2 !== null) setLevel2(null);
       }
     } else {
-      // When value is empty, reset everything.
-      setLevel1(null);
-      setLevel2(null);
+      if (level1 !== null) setLevel1(null);
+      if (level2 !== null) setLevel2(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   return (
