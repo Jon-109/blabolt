@@ -59,14 +59,14 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   }, [level1, level2]);
 
   useEffect(() => {
-    if (level2) {
+    if (level2 && level2 !== value) {
       onChange(level2);
-    } else if (level1 === null) {
+    } else if (level1 === null && value !== '') {
       // Also notify parent when the selection is completely cleared
       onChange('');
     }
     // This effect should NOT run when only level1 changes.
-  }, [level2, onChange]);
+  }, [level2, onChange, value]);
 
   // Always sync internal state with value prop (even if already set)
   useEffect(() => {
