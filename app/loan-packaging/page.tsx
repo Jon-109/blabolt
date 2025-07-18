@@ -41,9 +41,6 @@ export default function LoanPackagingPage() {
   // Core state
   const [loanAmount, setLoanAmount] = useState<number | ''>('');
   const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('');
-
-  // Log on every render
-  console.log('[Render] selectedLoanPurpose:', selectedLoanPurpose, 'loanAmount:', loanAmount);
   const [isCondensed, setIsCondensed] = useState(false);
   const [isLoanAmountBlurred, setIsLoanAmountBlurred] = useState(false);
   const [isLoanAmountMax, setIsLoanAmountMax] = useState(false);
@@ -76,6 +73,11 @@ export default function LoanPackagingPage() {
     }
     return key;
   }, []);
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log('[State Change] selectedLoanPurpose:', selectedLoanPurpose, 'loanAmount:', loanAmount);
+  }, [selectedLoanPurpose, loanAmount]);
 
   // Auto-condense when both fields are filled
   useEffect(() => {

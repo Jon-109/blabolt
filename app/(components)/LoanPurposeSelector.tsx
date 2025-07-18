@@ -49,6 +49,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   const [level2, setLevel2] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
   const level2Ref = useRef<HTMLDivElement>(null);
+  const syncingRef = useRef(false);
 
   useEffect(() => {
     if (level1 && !level2) {
@@ -59,6 +60,8 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   }, [level1, level2]);
 
   useEffect(() => {
+    if (syncingRef.current) return; // Don't call onChange during sync
+    
     if (level2 && level2 !== value) {
       onChange(level2);
     } else if (level1 === null && value !== '') {
@@ -70,6 +73,8 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
 
   // Always sync internal state with value prop (even if already set)
   useEffect(() => {
+    syncingRef.current = true;
+    
     if (value) {
       const found = Object.entries(LEVEL2_OPTIONS).find(([_, arr]) =>
         arr.some(opt => opt.key === value)
@@ -86,6 +91,11 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
       if (level1 !== null) setLevel1(null);
       if (level2 !== null) setLevel2(null);
     }
+    
+    // Reset sync flag after state updates
+    setTimeout(() => {
+      syncingRef.current = false;
+    }, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
