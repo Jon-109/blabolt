@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/app/(components)/ui/tooltip'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/app/(components)/ui/accordion'
 import { useRouter } from 'next/navigation'
@@ -10,12 +10,6 @@ import Image from 'next/image'
 import Testimonials from '@/app/(components)/shared/Testimonials'
 import LoanPurposeSelector, { LEVEL2_OPTIONS } from '@/app/(components)/LoanPurposeSelector'
 
-// Utility: is the selectedLoanPurpose a valid Level 2 key?
-function isValidLevel2Purpose(value: string) {
-  return Object.values(LEVEL2_OPTIONS).some(arr => arr.some(opt => opt.key === value));
-}
-
-// Define types for the Loan Packaging process
 type ServiceType = 'loan_packaging' | 'loan_brokering' | null;
 type Step = 'service_selection' | 'payment' | 'dashboard';
 type DocumentStatus = 'not_started' | 'uploaded' | 'generated' | 'completed';
@@ -30,87 +24,73 @@ interface Document {
   aiGenerated?: boolean;
 }
 
-// Default documents to initialize in the dashboard
+const isValidLevel2Purpose = (value: string): boolean => 
+  Object.values(LEVEL2_OPTIONS).some(arr => arr.some(opt => opt.key === value));
+
 const DEFAULT_DOCUMENTS: Document[] = [
   { id: 'personal-financial-statement', name: 'Personal Financial Statement', description: 'A summary of your personal assets, liabilities, and net worth.', status: 'not_started', required: true, template_url: '/templates/personal_financial_statement_template.xlsx' },
   { id: 'personal-debt-summary', name: 'Personal Debt Summary', description: 'A list of your personal debts and obligations.', status: 'not_started', required: true, template_url: '/templates/personal_debt_summary_template.xlsx' },
   { id: 'business-debt-summary', name: 'Business Debt Summary', description: 'A summary of all business debts and liabilities.', status: 'not_started', required: true, template_url: '/templates/business_debt_summary_template.xlsx' },
-  { id: 'balance-sheet', name: 'Balance Sheet', description: 'A statement of your company’s assets, liabilities, and equity.', status: 'not_started', required: true, template_url: '/templates/balance_sheet_template.xlsx' },
-  { id: 'profit-loss-statement', name: 'Profit & Loss Statement', description: 'A report of your company’s revenues, costs, and expenses.', status: 'not_started', required: true, template_url: '/templates/profit_loss_statement_template.xlsx' },
+  { id: 'balance-sheet', name: 'Balance Sheet', description: 'A statement of your company\'s assets, liabilities, and equity.', status: 'not_started', required: true, template_url: '/templates/balance_sheet_template.xlsx' },
+  { id: 'profit-loss-statement', name: 'Profit & Loss Statement', description: 'A report of your company\'s revenues, costs, and expenses.', status: 'not_started', required: true, template_url: '/templates/profit_loss_statement_template.xlsx' },
 ];
 
 export default function LoanPackagingPage() {
-  // Step 1: Loan Details state (must be top-level for progress logic)
+  const router = useRouter();
+  
+  // Core state
   const [loanAmount, setLoanAmount] = useState<number | ''>('');
   const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('');
-  const [coverLetterApproved, setCoverLetterApproved] = useState(false); // Step 3 placeholder
-  
-  // --- Step 1 Condensing State ---
+  const [isCondensed, setIsCondensed] = useState(false);
   const [isLoanAmountBlurred, setIsLoanAmountBlurred] = useState(false);
   const [isLoanAmountMax, setIsLoanAmountMax] = useState(false);
-  const [isCondensed, setIsCondensed] = useState(false);
+  
+  // UI state
+  const [showIncludedModal, setShowIncludedModal] = useState(false);
+  const [showStep1Details, setShowStep1Details] = useState(true);
+  const [coverLetterApproved, setCoverLetterApproved] = useState(false);
+  
+  // Auth state
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  
+  // Flow state
+  const [serviceType, setServiceType] = useState<ServiceType>(null);
+  const [currentStep, setCurrentStep] = useState<Step>('service_selection');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  
+  // Dashboard state
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [completedDocuments, setCompletedDocuments] = useState(0);
+  const [loanPackagingId, setLoanPackagingId] = useState<string | null>(null);
 
-  // Helper function to get the label for a given loan purpose key
-  const getLoanPurposeLabel = (key: string) => {
+  const getLoanPurposeLabel = useCallback((key: string): string => {
     for (const optionsArray of Object.values(LEVEL2_OPTIONS)) {
       const option = optionsArray.find(opt => opt.key === key);
-      if (option) {
-        return option.label;
-      }
+      if (option) return option.label;
     }
-    return key; // Fallback to key if not found
-  };
+    return key;
+  }, []);
 
-  // Auto-condense Step 1 AFTER the user has filled both fields, **but do NOT re-condense if the user has deliberately expanded (clicked Edit).**
+  // Auto-condense when both fields are filled
   useEffect(() => {
-    if (
-      !isCondensed && // only condense if not already condensed
-      isLoanAmountBlurred &&
-      loanAmount !== '' &&
-      selectedLoanPurpose
-    ) {
+    if (!isCondensed && isLoanAmountBlurred && loanAmount !== '' && selectedLoanPurpose) {
       setIsCondensed(true);
     }
-    // We purposely do NOT set isCondensed(false) here; the only way to expand is via the Edit button.
   }, [isCondensed, isLoanAmountBlurred, loanAmount, selectedLoanPurpose]);
 
-  const [showIncludedModal, setShowIncludedModal] = useState(false);
-  // User authentication state
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [loadingUser, setLoadingUser] = useState(true)
-  
-  // Service selection and flow state
-  const [showStep1Details, setShowStep1Details] = useState(true)
-  const [serviceType, setServiceType] = useState<ServiceType>(null)
-  const [currentStep, setCurrentStep] = useState<Step>('service_selection')
+  // Auto-save refs and state
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoadRef = useRef(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Log currentStep on every render (must come after currentStep is declared)
-  useEffect(() => {
-    console.log('[LoanPackagingPage] Rendered with currentStep:', currentStep);
-  }, [currentStep]);
-
-
-
-  // Skipping payment verification for now – always allow user to proceed manually after selecting a service.
-  // Previously this hook checked Stripe `session_id` in the URL and verified payment against the `purchases` table.
-  // It has been removed to simplify the flow while payments are disabled.
-
-
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState('')
-  
-  // Dashboard state (to be used after payment)
-  const [documents, setDocuments] = useState<Document[]>([])
-  const [completedDocuments, setCompletedDocuments] = useState(0)
-  const [loanPackagingId, setLoanPackagingId] = useState<string | null>(null)
-  
-  const router = useRouter()
-
-  // Authentication effect
+  // Authentication and data loading
   useEffect(() => {
     let mounted = true;
-    const fetchUser = async () => {
+    
+    const initializeUser = async () => {
       setLoadingUser(true);
       const { data, error } = await supabase.auth.getSession();
       
@@ -128,16 +108,96 @@ export default function LoanPackagingPage() {
         setUserEmail(data.session.user.email);
         setUserId(data.session.user.id);
         setLoadingUser(false);
-        
-        // Check if user already has an active loan packaging session
         checkExistingLoanPackaging(data.session.user.id);
       }
     };
     
-    fetchUser();
+    initializeUser();
     return () => { mounted = false };
   }, [router]);
-  
+
+  // Debounced auto-save function
+  const debouncedSave = useCallback(async (purpose: string, amount: number | '') => {
+    if (!userId || isInitialLoadRef.current) return;
+    
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        setIsSaving(true);
+        
+        const { data: existingData, error: selectError } = await supabase
+          .from('loan_packaging')
+          .select('id')
+          .eq('user_id', userId)
+          .in('status', ['active', 'pending'])
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        if (selectError) throw selectError;
+        
+        const updateData = {
+          loan_purpose: purpose || null,
+          loan_amount: amount === '' ? null : Number(amount),
+          updated_at: new Date().toISOString()
+        };
+        
+        if (existingData?.length > 0) {
+          const { error: updateError } = await supabase
+            .from('loan_packaging')
+            .update(updateData)
+            .eq('id', existingData[0].id);
+          
+          if (updateError) throw updateError;
+          if (!loanPackagingId) setLoanPackagingId(existingData[0].id);
+        } else if (purpose || amount !== '') {
+          const { data: insertData, error: insertError } = await supabase
+            .from('loan_packaging')
+            .insert({
+              user_id: userId,
+              service_type: 'loan_packaging',
+              ...updateData,
+              status: 'active'
+            })
+            .select('id')
+            .single();
+          
+          if (insertError) throw insertError;
+          if (insertData) setLoanPackagingId(insertData.id);
+        }
+      } catch (err) {
+        console.error('[Auto-save] Error:', err);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1000);
+  }, [userId]);
+
+  // Auto-save triggers and cleanup
+  useEffect(() => {
+    if (userId && (selectedLoanPurpose || loanAmount !== '')) {
+      debouncedSave(selectedLoanPurpose, loanAmount);
+    }
+  }, [selectedLoanPurpose, loanAmount, debouncedSave, userId]);
+
+  useEffect(() => {
+    if (userId && isInitialLoadRef.current) {
+      const timer = setTimeout(() => {
+        isInitialLoadRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   // Check if user has an existing loan packaging session
   const checkExistingLoanPackaging = async (userId: string) => {
     try {
@@ -152,10 +212,16 @@ export default function LoanPackagingPage() {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // User has an existing loan packaging session
+        // User has an existing loan packaging session - load saved data
         setLoanPackagingId(data[0].id);
         setServiceType(data[0].service_type as ServiceType);
         setSelectedLoanPurpose(data[0].loan_purpose || '');
+        
+        // Load saved loan amount if it exists
+        if (data[0].loan_amount) {
+          setLoanAmount(data[0].loan_amount);
+        }
+        
         setCurrentStep('dashboard');
         loadDocuments(data[0].id);
       } else {
@@ -164,6 +230,7 @@ export default function LoanPackagingPage() {
         setServiceType(null);
         setLoanPackagingId(null);
         setSelectedLoanPurpose('');
+        setLoanAmount('');
       }
     } catch (err) {
       console.error('Error checking existing loan packaging:', err);
