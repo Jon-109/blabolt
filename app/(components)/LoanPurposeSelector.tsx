@@ -73,9 +73,13 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   }, [level1, level2]);
 
   useEffect(() => {
-    if (syncingRef.current) return; // Don't call onChange during sync
+    if (syncingRef.current) {
+      console.log('[LoanPurposeSelector] Skipping onChange - currently syncing');
+      return; // Don't call onChange during sync
+    }
     
     // Only call onChange if level2 has a value and it's different from the current value
+    // AND we're not just reflecting what the parent already knows
     if (level2 && level2 !== value) {
       console.log('[LoanPurposeSelector] Calling onChange with level2:', level2);
       onChange(level2);
@@ -101,8 +105,10 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
           syncingRef.current = true;
           if (level1 !== found[0]) setLevel1(found[0]);
           if (level2 !== value) setLevel2(value);
-          // Use synchronous flag reset to prevent race conditions
-          syncingRef.current = false;
+          // Keep sync flag active for a bit longer to prevent onChange during sync
+          setTimeout(() => {
+            syncingRef.current = false;
+          }, 10);
         }
       } else {
         // Invalid value - clear state if needed
