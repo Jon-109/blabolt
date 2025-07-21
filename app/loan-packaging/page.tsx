@@ -85,6 +85,7 @@ export default function LoanPackagingPage() {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
   const [isSaving, setIsSaving] = useState(false);
+  const lastSavedValuesRef = useRef<{purpose: string, amount: number | ''}>({purpose: '', amount: ''});
 
   // Authentication and data loading
   useEffect(() => {
@@ -118,13 +119,22 @@ export default function LoanPackagingPage() {
 
   // Debounced auto-save function
   const debouncedSave = useCallback(async (purpose: string, amount: number | '') => {
-    if (!userId || isInitialLoadRef.current) return;
+    if (!userId || isInitialLoadRef.current || isSaving) return;
+    
+    // Prevent unnecessary saves if values haven't actually changed
+    const lastSaved = lastSavedValuesRef.current;
+    if (lastSaved.purpose === purpose && lastSaved.amount === amount) {
+      return;
+    }
     
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         setIsSaving(true);
+        
+        // Update the last saved values to prevent duplicate saves
+        lastSavedValuesRef.current = {purpose, amount};
         
         const { data: existingData, error: selectError } = await supabase
           .from('loan_packaging')
@@ -149,7 +159,9 @@ export default function LoanPackagingPage() {
             .eq('id', existingData[0].id);
           
           if (updateError) throw updateError;
-          if (!loanPackagingId) setLoanPackagingId(existingData[0].id);
+          if (!loanPackagingId) {
+            setLoanPackagingId(existingData[0].id);
+          }
         } else if (purpose || amount !== '') {
           const { data: insertData, error: insertError } = await supabase
             .from('loan_packaging')
@@ -163,15 +175,19 @@ export default function LoanPackagingPage() {
             .single();
           
           if (insertError) throw insertError;
-          if (insertData) setLoanPackagingId(insertData.id);
+          if (insertData && !loanPackagingId) {
+            setLoanPackagingId(insertData.id);
+          }
         }
       } catch (err) {
         console.error('[Auto-save] Error:', err);
+        // Reset last saved values on error so retry can happen
+        lastSavedValuesRef.current = {purpose: '', amount: ''};
       } finally {
         setIsSaving(false);
       }
     }, 1000);
-  }, [userId, loanPackagingId]);
+  }, [userId, loanPackagingId, isSaving]);
 
   // Auto-save triggers and cleanup
   useEffect(() => {
@@ -215,7 +231,13 @@ export default function LoanPackagingPage() {
         // User has an existing loan packaging session - load saved data
         setLoanPackagingId(data[0].id);
         setServiceType(data[0].service_type as ServiceType);
-        setSelectedLoanPurpose(data[0].loan_purpose || '');
+        
+        // Update last saved values to match loaded data to prevent auto-save conflicts
+        const loadedPurpose = data[0].loan_purpose || '';
+        const loadedAmount = data[0].loan_amount || '';
+        lastSavedValuesRef.current = {purpose: loadedPurpose, amount: loadedAmount};
+        
+        setSelectedLoanPurpose(loadedPurpose);
         
         // Load saved loan amount if it exists
         if (data[0].loan_amount) {
