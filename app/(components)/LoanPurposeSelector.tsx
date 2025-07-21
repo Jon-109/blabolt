@@ -50,6 +50,19 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   const [animating, setAnimating] = useState(false);
   const level2Ref = useRef<HTMLDivElement>(null);
   const syncingRef = useRef(false);
+  
+  // Debug logging for prop and state changes
+  useEffect(() => {
+    console.log('[LoanPurposeSelector] value prop changed to:', value, 'at', new Date().toISOString());
+  }, [value]);
+  
+  useEffect(() => {
+    console.log('[LoanPurposeSelector] level1 state changed to:', level1, 'at', new Date().toISOString());
+  }, [level1]);
+  
+  useEffect(() => {
+    console.log('[LoanPurposeSelector] level2 state changed to:', level2, 'at', new Date().toISOString());
+  }, [level2]);
 
   useEffect(() => {
     if (level1 && !level2) {
@@ -64,9 +77,11 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
     
     // Only call onChange if level2 has a value and it's different from the current value
     if (level2 && level2 !== value) {
+      console.log('[LoanPurposeSelector] Calling onChange with level2:', level2);
       onChange(level2);
     } else if (level1 === null && level2 === null && value !== '') {
       // Only clear when both levels are null and value is not empty
+      console.log('[LoanPurposeSelector] Calling onChange to clear value');
       onChange('');
     }
     // This effect should NOT run when only level1 changes.
@@ -82,6 +97,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
       if (found) {
         // Only sync if state is actually different
         if (level1 !== found[0] || level2 !== value) {
+          console.log('[LoanPurposeSelector] Syncing state - level1:', found[0], 'level2:', value);
           syncingRef.current = true;
           if (level1 !== found[0]) setLevel1(found[0]);
           if (level2 !== value) setLevel2(value);

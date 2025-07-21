@@ -41,6 +41,11 @@ export default function LoanPackagingPage() {
   // Core state
   const [loanAmount, setLoanAmount] = useState<number | ''>('');
   const [selectedLoanPurpose, setSelectedLoanPurpose] = useState('');
+  
+  // Debug logging for selectedLoanPurpose changes
+  useEffect(() => {
+    console.log('[DEBUG] selectedLoanPurpose changed to:', selectedLoanPurpose, 'at', new Date().toISOString());
+  }, [selectedLoanPurpose]);
   const [isCondensed, setIsCondensed] = useState(false);
   const [isLoanAmountBlurred, setIsLoanAmountBlurred] = useState(false);
   const [isLoanAmountMax, setIsLoanAmountMax] = useState(false);
@@ -193,6 +198,7 @@ export default function LoanPackagingPage() {
   // Auto-save triggers and cleanup
   useEffect(() => {
     if (userId && (selectedLoanPurpose || loanAmount !== '')) {
+      console.log('[DEBUG] Auto-save triggered with purpose:', selectedLoanPurpose, 'amount:', loanAmount);
       debouncedSave(selectedLoanPurpose, loanAmount);
     }
   }, [selectedLoanPurpose, loanAmount, debouncedSave, userId]);
@@ -239,6 +245,7 @@ export default function LoanPackagingPage() {
         const loadedAmount = data[0].loan_amount || '';
         lastSavedValuesRef.current = {purpose: loadedPurpose, amount: loadedAmount};
         
+        console.log('[DEBUG] Setting selectedLoanPurpose from database to:', loadedPurpose);
         setSelectedLoanPurpose(loadedPurpose);
         
         // Load saved loan amount if it exists
