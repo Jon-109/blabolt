@@ -54,6 +54,7 @@ export default function LoanPackagingPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   
   // Flow state
   const [serviceType, setServiceType] = useState<ServiceType>(null);
@@ -217,6 +218,7 @@ export default function LoanPackagingPage() {
   // Check if user has an existing loan packaging session
   const checkExistingLoanPackaging = async (userId: string) => {
     try {
+      setLoadingData(true); // Start loading
       const { data, error } = await supabase
         .from('loan_packaging')
         .select('*')
@@ -256,6 +258,8 @@ export default function LoanPackagingPage() {
       }
     } catch (err) {
       console.error('Error checking existing loan packaging:', err);
+    } finally {
+      setLoadingData(false); // End loading
     }
   };
   
@@ -637,11 +641,18 @@ export default function LoanPackagingPage() {
                 <label className="block text-lg font-semibold text-gray-900 mb-2">
                   Loan Purpose <span className="text-red-500">*</span>
                 </label>
-                <LoanPurposeSelector
-                  value={selectedLoanPurpose}
-                  onChange={setSelectedLoanPurpose}
-                  disabled={loadingUser}
-                />
+                {loadingData ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-600">Loading...</span>
+                  </div>
+                ) : (
+                  <LoanPurposeSelector
+                    value={selectedLoanPurpose}
+                    onChange={setSelectedLoanPurpose}
+                    disabled={loadingUser}
+                  />
+                )}
               </div>
               {/* Show Loan Amount input only after L2 is selected (first fill), or always in edit mode */}
               {(!isCondensed || isValidLevel2Purpose(selectedLoanPurpose)) && (
