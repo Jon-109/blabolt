@@ -139,6 +139,9 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
+  // Debug logging for render
+  console.log('[LoanPurposeSelector] RENDER - level1:', level1, 'level2:', level2, 'value:', value);
+  
   return (
     <div className="w-full">
       {/* Step 1: Level 1 Category Selection */}
