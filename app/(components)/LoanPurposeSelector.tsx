@@ -62,10 +62,11 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   useEffect(() => {
     if (syncingRef.current) return; // Don't call onChange during sync
     
+    // Only call onChange if level2 has a value and it's different from the current value
     if (level2 && level2 !== value) {
       onChange(level2);
-    } else if (level1 === null && value !== '') {
-      // Also notify parent when the selection is completely cleared
+    } else if (level1 === null && level2 === null && value !== '') {
+      // Only clear when both levels are null and value is not empty
       onChange('');
     }
     // This effect should NOT run when only level1 changes.
@@ -73,29 +74,38 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
 
   // Always sync internal state with value prop (even if already set)
   useEffect(() => {
-    syncingRef.current = true;
-    
+    // Prevent sync if we're already in the correct state
     if (value) {
       const found = Object.entries(LEVEL2_OPTIONS).find(([_, arr]) =>
         arr.some(opt => opt.key === value)
       );
       if (found) {
-        if (level1 !== found[0]) setLevel1(found[0]);
-        if (level2 !== value) setLevel2(value);
+        // Only sync if state is actually different
+        if (level1 !== found[0] || level2 !== value) {
+          syncingRef.current = true;
+          if (level1 !== found[0]) setLevel1(found[0]);
+          if (level2 !== value) setLevel2(value);
+          // Use synchronous flag reset to prevent race conditions
+          syncingRef.current = false;
+        }
       } else {
-        // This case can happen if the value is invalid or cleared.
-        if (level1 !== null) setLevel1(null);
-        if (level2 !== null) setLevel2(null);
+        // Invalid value - clear state if needed
+        if (level1 !== null || level2 !== null) {
+          syncingRef.current = true;
+          if (level1 !== null) setLevel1(null);
+          if (level2 !== null) setLevel2(null);
+          syncingRef.current = false;
+        }
       }
     } else {
-      if (level1 !== null) setLevel1(null);
-      if (level2 !== null) setLevel2(null);
+      // Empty value - clear state if needed
+      if (level1 !== null || level2 !== null) {
+        syncingRef.current = true;
+        if (level1 !== null) setLevel1(null);
+        if (level2 !== null) setLevel2(null);
+        syncingRef.current = false;
+      }
     }
-    
-    // Reset sync flag after state updates
-    setTimeout(() => {
-      syncingRef.current = false;
-    }, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
