@@ -74,11 +74,6 @@ export default function LoanPackagingPage() {
     return key;
   }, []);
 
-  // Log state changes for debugging
-  useEffect(() => {
-    console.log('[State Change] selectedLoanPurpose:', selectedLoanPurpose, 'loanAmount:', loanAmount);
-  }, [selectedLoanPurpose, loanAmount]);
-
   // Auto-condense when both fields are filled
   useEffect(() => {
     if (!isCondensed && isLoanAmountBlurred && loanAmount !== '' && selectedLoanPurpose) {
@@ -176,7 +171,7 @@ export default function LoanPackagingPage() {
         setIsSaving(false);
       }
     }, 1000);
-  }, [userId]);
+  }, [userId, loanPackagingId]);
 
   // Auto-save triggers and cleanup
   useEffect(() => {
@@ -220,7 +215,6 @@ export default function LoanPackagingPage() {
         // User has an existing loan packaging session - load saved data
         setLoanPackagingId(data[0].id);
         setServiceType(data[0].service_type as ServiceType);
-        console.log('[checkExistingLoanPackaging] Setting selectedLoanPurpose to:', data[0].loan_purpose || '');
         setSelectedLoanPurpose(data[0].loan_purpose || '');
         
         // Load saved loan amount if it exists
@@ -608,10 +602,7 @@ export default function LoanPackagingPage() {
             <div className="flex items-center justify-between text-lg font-semibold text-slate-700">
               <span>{getLoanPurposeLabel(selectedLoanPurpose)} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
               <button 
-                onClick={() => {
-                  console.log('[Edit Clicked] selectedLoanPurpose:', selectedLoanPurpose, 'loanAmount:', loanAmount);
-                  setIsCondensed(false);
-                }} 
+                onClick={() => setIsCondensed(false)} 
                 className="text-blue-600 hover:underline font-medium text-sm ml-4">
                 Edit
               </button>
@@ -626,10 +617,7 @@ export default function LoanPackagingPage() {
                 </label>
                 <LoanPurposeSelector
                   value={selectedLoanPurpose}
-                  onChange={(val) => {
-                    console.log('[LoanPurposeSelector onChange] new value:', val);
-                    setSelectedLoanPurpose(val);
-                  }}
+                  onChange={setSelectedLoanPurpose}
                   disabled={loadingUser}
                 />
               </div>
