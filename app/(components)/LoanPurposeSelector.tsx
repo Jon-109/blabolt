@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, startTransition } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, startTransition } from 'react';
 
 interface LoanPurposeSelectorProps {
   value: string;
@@ -92,8 +92,8 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
     // This effect should NOT run when only level1 changes.
   }, [level2, onChange, value]);
 
-  // Always sync internal state with value prop
-  useEffect(() => {
+  // Always sync internal state with value prop - use useLayoutEffect for immediate sync
+  useLayoutEffect(() => {
     console.log('[LoanPurposeSelector] Sync effect running with value:', value, 'current level1:', level1, 'level2:', level2);
     
     if (value) {
@@ -110,11 +110,11 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
           setLevel1(found[0]);
           setLevel2(value);
           
-          // Keep sync flag active longer to prevent onChange during sync
+          console.log('[LoanPurposeSelector] Sync complete, state should be - level1:', found[0], 'level2:', value);
+          // Reset sync flag after a brief delay to prevent onChange during this render cycle
           setTimeout(() => {
             syncingRef.current = false;
-            console.log('[LoanPurposeSelector] Sync complete, state should be - level1:', found[0], 'level2:', value);
-          }, 50); // Increased timeout to ensure onChange doesn't fire during sync
+          }, 10);
         } else {
           console.log('[LoanPurposeSelector] State already correct');
         }
@@ -125,7 +125,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
         setLevel2(null);
         setTimeout(() => {
           syncingRef.current = false;
-        }, 50);
+        }, 10);
       }
     } else {
       console.log('[LoanPurposeSelector] Empty value, clearing state');
@@ -134,7 +134,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
       setLevel2(null);
       setTimeout(() => {
         syncingRef.current = false;
-      }, 50);
+      }, 10);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
