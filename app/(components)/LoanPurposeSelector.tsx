@@ -48,6 +48,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   const [level1, setLevel1] = useState<string | null>(null);
   const [level2, setLevel2] = useState<string | null>(null);
   const [animating, setAnimating] = useState(false);
+  const [initialSyncComplete, setInitialSyncComplete] = useState(false);
   const level2Ref = useRef<HTMLDivElement>(null);
   const syncingRef = useRef(false);
   
@@ -108,7 +109,11 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
           // Keep sync flag active for a bit longer to prevent onChange during sync
           setTimeout(() => {
             syncingRef.current = false;
+            setInitialSyncComplete(true);
           }, 10);
+        } else if (!initialSyncComplete) {
+          // If no sync needed but initial sync not marked complete, mark it complete
+          setInitialSyncComplete(true);
         }
       } else {
         // Invalid value - clear state if needed
@@ -118,6 +123,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
           if (level2 !== null) setLevel2(null);
           syncingRef.current = false;
         }
+        if (!initialSyncComplete) setInitialSyncComplete(true);
       }
     } else {
       // Empty value - clear state if needed
@@ -127,6 +133,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
         if (level2 !== null) setLevel2(null);
         syncingRef.current = false;
       }
+      if (!initialSyncComplete) setInitialSyncComplete(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
@@ -134,7 +141,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
   return (
     <div className="w-full">
       {/* Step 1: Level 1 Category Selection */}
-      {!level1 && (
+      {!level1 && initialSyncComplete && (
         <div className="flex flex-row justify-center gap-4 mt-2 mb-2">
           {LEVEL1_OPTIONS.map(opt => (
             <button
