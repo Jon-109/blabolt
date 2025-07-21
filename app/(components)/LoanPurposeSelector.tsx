@@ -94,46 +94,51 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
 
   // Always sync internal state with value prop (even if already set)
   useEffect(() => {
-    // Prevent sync if we're already in the correct state
+    console.log('[LoanPurposeSelector] Sync effect running with value:', value, 'current level1:', level1, 'level2:', level2);
+    
     if (value) {
       const found = Object.entries(LEVEL2_OPTIONS).find(([_, arr]) =>
         arr.some(opt => opt.key === value)
       );
       if (found) {
-        // Only sync if state is actually different
+        console.log('[LoanPurposeSelector] Found matching option - level1 should be:', found[0], 'level2 should be:', value);
+        // Always sync if state is different
         if (level1 !== found[0] || level2 !== value) {
-          console.log('[LoanPurposeSelector] Syncing state - level1:', found[0], 'level2:', value);
+          console.log('[LoanPurposeSelector] Syncing state - setting level1 to:', found[0], 'level2 to:', value);
           syncingRef.current = true;
-          if (level1 !== found[0]) setLevel1(found[0]);
-          if (level2 !== value) setLevel2(value);
+          setLevel1(found[0]);
+          setLevel2(value);
           // Keep sync flag active for a bit longer to prevent onChange during sync
           setTimeout(() => {
             syncingRef.current = false;
             setInitialSyncComplete(true);
+            console.log('[LoanPurposeSelector] Sync complete, initialSyncComplete set to true');
           }, 10);
-        } else if (!initialSyncComplete) {
-          // If no sync needed but initial sync not marked complete, mark it complete
-          setInitialSyncComplete(true);
+        } else {
+          console.log('[LoanPurposeSelector] State already correct, marking sync complete');
+          if (!initialSyncComplete) setInitialSyncComplete(true);
         }
       } else {
+        console.log('[LoanPurposeSelector] Invalid value, clearing state');
         // Invalid value - clear state if needed
-        if (level1 !== null || level2 !== null) {
-          syncingRef.current = true;
-          if (level1 !== null) setLevel1(null);
-          if (level2 !== null) setLevel2(null);
+        syncingRef.current = true;
+        setLevel1(null);
+        setLevel2(null);
+        setTimeout(() => {
           syncingRef.current = false;
-        }
-        if (!initialSyncComplete) setInitialSyncComplete(true);
+          setInitialSyncComplete(true);
+        }, 10);
       }
     } else {
+      console.log('[LoanPurposeSelector] Empty value, clearing state');
       // Empty value - clear state if needed
-      if (level1 !== null || level2 !== null) {
-        syncingRef.current = true;
-        if (level1 !== null) setLevel1(null);
-        if (level2 !== null) setLevel2(null);
+      syncingRef.current = true;
+      setLevel1(null);
+      setLevel2(null);
+      setTimeout(() => {
         syncingRef.current = false;
-      }
-      if (!initialSyncComplete) setInitialSyncComplete(true);
+        setInitialSyncComplete(true);
+      }, 10);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
