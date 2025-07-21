@@ -80,7 +80,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
     }
     
     // Only call onChange if level2 has a value and it's different from the current value
-    // AND we're not just reflecting what the parent already knows
+    // This prevents feedback loops when syncing from parent
     if (level2 && level2 !== value) {
       console.log('[LoanPurposeSelector] Calling onChange with level2:', level2);
       onChange(level2);
@@ -110,11 +110,11 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
           setLevel1(found[0]);
           setLevel2(value);
           
-          // Reset sync flag after state updates
+          // Keep sync flag active longer to prevent onChange during sync
           setTimeout(() => {
             syncingRef.current = false;
             console.log('[LoanPurposeSelector] Sync complete, state should be - level1:', found[0], 'level2:', value);
-          }, 0);
+          }, 50); // Increased timeout to ensure onChange doesn't fire during sync
         } else {
           console.log('[LoanPurposeSelector] State already correct');
         }
@@ -125,7 +125,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
         setLevel2(null);
         setTimeout(() => {
           syncingRef.current = false;
-        }, 0);
+        }, 50);
       }
     } else {
       console.log('[LoanPurposeSelector] Empty value, clearing state');
@@ -134,7 +134,7 @@ const LoanPurposeSelector: React.FC<LoanPurposeSelectorProps> = ({ value, onChan
       setLevel2(null);
       setTimeout(() => {
         syncingRef.current = false;
-      }, 0);
+      }, 50);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
