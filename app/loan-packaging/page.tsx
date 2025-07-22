@@ -49,6 +49,7 @@ export default function LoanPackagingPage() {
   const [isCondensed, setIsCondensed] = useState(false);
   const [isLoanAmountBlurred, setIsLoanAmountBlurred] = useState(false);
   const [isLoanAmountMax, setIsLoanAmountMax] = useState(false);
+  const [userWantsToEdit, setUserWantsToEdit] = useState(false);
   
   // UI state
   const [showIncludedModal, setShowIncludedModal] = useState(false);
@@ -80,18 +81,19 @@ export default function LoanPackagingPage() {
     return key;
   }, []);
 
-  // Auto-condense when both fields are filled (either from user input or loaded data)
+  // Auto-condense when both fields are filled (but not if user wants to edit)
   useEffect(() => {
-    if (!isCondensed && loanAmount !== '' && selectedLoanPurpose) {
-      // Condense if both fields have values, regardless of how they were filled
+    if (!isCondensed && !userWantsToEdit && loanAmount !== '' && selectedLoanPurpose) {
+      // Condense if both fields have values and user hasn't explicitly chosen to edit
       console.log('[DEBUG] Auto-condensing Step 1 - loanAmount:', loanAmount, 'selectedLoanPurpose:', selectedLoanPurpose);
       setIsCondensed(true);
     } else if (isCondensed && (!selectedLoanPurpose || loanAmount === '')) {
       // Expand if either field is cleared (e.g., when user clicks "Change")
       console.log('[DEBUG] Auto-expanding Step 1 - missing field(s)');
       setIsCondensed(false);
+      setUserWantsToEdit(false); // Reset edit flag when fields are cleared
     }
-  }, [isCondensed, loanAmount, selectedLoanPurpose]);
+  }, [isCondensed, userWantsToEdit, loanAmount, selectedLoanPurpose]);
 
   // Auto-save refs and state
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -641,7 +643,11 @@ export default function LoanPackagingPage() {
             <div className="flex items-center justify-between text-lg font-semibold text-slate-700">
               <span>{getLoanPurposeLabel(selectedLoanPurpose)} - ${typeof loanAmount === 'number' ? loanAmount.toLocaleString() : ''}</span>
               <button 
-                onClick={() => setIsCondensed(false)} 
+                onClick={() => {
+                  console.log('[DEBUG] Edit button clicked - preventing auto-condense');
+                  setUserWantsToEdit(true);
+                  setIsCondensed(false);
+                }} 
                 className="text-blue-600 hover:underline font-medium text-sm ml-4">
                 Edit
               </button>
@@ -672,7 +678,10 @@ export default function LoanPackagingPage() {
                       id="loan-amount"
                       type="text"
                       value={loanAmount === '' ? '' : loanAmount.toLocaleString()}
-                      onBlur={() => setIsLoanAmountBlurred(true)}
+                      onBlur={() => {
+                        setIsLoanAmountBlurred(true);
+                        setUserWantsToEdit(false); // Allow auto-condense after user finishes editing
+                      }}
                       onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9]/g, '');
                         const numValue = value ? parseInt(value, 10) : '';
