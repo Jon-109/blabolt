@@ -9,6 +9,7 @@ import { loanPurposes } from '@/lib/loanPurposes'
 import Image from 'next/image'
 import Testimonials from '@/app/(components)/shared/Testimonials'
 import LoanPurposeSelector, { LEVEL2_OPTIONS } from '@/app/(components)/LoanPurposeSelector'
+import CoverLetterWizard from '@/app/(components)/CoverLetterWizard'
 
 type ServiceType = 'loan_packaging' | 'loan_brokering' | null;
 type Step = 'service_selection' | 'payment' | 'dashboard';
@@ -55,6 +56,7 @@ export default function LoanPackagingPage() {
   const [showIncludedModal, setShowIncludedModal] = useState(false);
   const [showStep1Details, setShowStep1Details] = useState(true);
   const [coverLetterApproved, setCoverLetterApproved] = useState(false);
+  const [showCoverLetterWizard, setShowCoverLetterWizard] = useState(false);
   
   // Auth state
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export default function LoanPackagingPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [completedDocuments, setCompletedDocuments] = useState(0);
   const [loanPackagingId, setLoanPackagingId] = useState<string | null>(null);
+  const [coverLetterCompleted, setCoverLetterCompleted] = useState(false);
 
   const getLoanPurposeLabel = useCallback((key: string): string => {
     for (const optionsArray of Object.values(LEVEL2_OPTIONS)) {
@@ -278,8 +281,56 @@ export default function LoanPackagingPage() {
     }
   };
   
+  // Load documents for the current loan packaging session
+  const loadDocuments = async (loanPackagingId: string) => {
+    try {
+      console.log('[loadDocuments] Loading documents for loanPackagingId:', loanPackagingId);
+      const { data, error } = await supabase
+        .from('loan_packaging_documents')
+        .select('*')
+        .eq('loan_packaging_id', loanPackagingId)
+        .order('created_at', { ascending: true });
+      if (error) {
+        console.error('[loadDocuments] Error loading documents:', error);
+        throw error;
+      }
+      console.log('[loadDocuments] Loaded documents:', data);
+      setDocuments(data || []);
+      const completed = data?.filter((doc: Document) => doc.status === 'completed').length || 0;
+      setCompletedDocuments(completed);
+      console.log('[loadDocuments] Set completedDocuments to:', completed);
+      
+      // Also load cover letter completion status
+      await loadCoverLetterStatus(loanPackagingId);
+    } catch (err) {
+      console.error('[loadDocuments] Exception:', err);
+      setError('Failed to load documents');
+    }
+  };
+
+  // Load cover letter completion status
+  const loadCoverLetterStatus = async (loanPackagingId: string) => {
+    try {
+      console.log('[loadCoverLetterStatus] Loading cover letter status for loanPackagingId:', loanPackagingId);
+      const { data, error } = await supabase
+        .from('loan_packaging')
+        .select('cover_letter_completed')
+        .eq('id', loanPackagingId)
+        .single();
+      if (error) {
+        console.error('[loadCoverLetterStatus] Error loading cover letter status:', error);
+        throw error;
+      }
+      console.log('[loadCoverLetterStatus] Loaded cover letter status:', data);
+      setCoverLetterCompleted(data?.cover_letter_completed || false);
+    } catch (err) {
+      console.error('[loadCoverLetterStatus] Exception:', err);
+      // Don't set error here as it's not critical
+    }
+  };
+
   // Load documents for an existing loan packaging session
-  const loadDocuments = async (packagingId: string) => {
+  const loadDocumentsOld = async (packagingId: string) => {
     try {
       const { data, error } = await supabase
         .from('loan_packaging_documents')
@@ -807,17 +858,36 @@ export default function LoanPackagingPage() {
           </p>
           <div className="flex flex-row items-center gap-4">
             <button
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow"
-              disabled
-              aria-disabled="true"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setShowCoverLetterWizard(true)}
+              disabled={!loanPackagingId || typeof loanAmount !== 'number'}
             >
-              Start Cover Letter
+              {coverLetterCompleted ? 'Edit Cover Letter' : 'Start Cover Letter'}
             </button>
-            <span className="text-sm text-gray-500">(Coming Soon)</span>
+            {coverLetterCompleted && (
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-green-600 font-medium">Completed</span>
+              </div>
+            )}
           </div>
         </div>
       </section>
     )}
+
+    {/* Cover Letter Wizard Modal */}
+    <CoverLetterWizard
+      isOpen={showCoverLetterWizard}
+      onClose={() => {
+        setShowCoverLetterWizard(false);
+        // Reload cover letter status when wizard closes
+        if (loanPackagingId) {
+          loadCoverLetterStatus(loanPackagingId);
+        }
+      }}
+      loanPackagingId={loanPackagingId}
+      loanAmount={typeof loanAmount === 'number' ? loanAmount : 0}
+    />
   </main>
 );
 
