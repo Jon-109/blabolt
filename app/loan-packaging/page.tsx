@@ -80,12 +80,18 @@ export default function LoanPackagingPage() {
     return key;
   }, []);
 
-  // Auto-condense when both fields are filled
+  // Auto-condense when both fields are filled (either from user input or loaded data)
   useEffect(() => {
-    if (!isCondensed && isLoanAmountBlurred && loanAmount !== '' && selectedLoanPurpose) {
+    if (!isCondensed && loanAmount !== '' && selectedLoanPurpose) {
+      // Condense if both fields have values, regardless of how they were filled
+      console.log('[DEBUG] Auto-condensing Step 1 - loanAmount:', loanAmount, 'selectedLoanPurpose:', selectedLoanPurpose);
       setIsCondensed(true);
+    } else if (isCondensed && (!selectedLoanPurpose || loanAmount === '')) {
+      // Expand if either field is cleared (e.g., when user clicks "Change")
+      console.log('[DEBUG] Auto-expanding Step 1 - missing field(s)');
+      setIsCondensed(false);
     }
-  }, [isCondensed, isLoanAmountBlurred, loanAmount, selectedLoanPurpose]);
+  }, [isCondensed, loanAmount, selectedLoanPurpose]);
 
   // Auto-save refs and state
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
