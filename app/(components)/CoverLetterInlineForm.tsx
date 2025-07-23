@@ -111,33 +111,42 @@ export default function CoverLetterInlineForm({
 
   // Auto-save form data with debouncing
   useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
-      // Only update if we have a valid change event and meaningful data
-      if (value && typeof value === 'object' && name && type) {
-        try {
-          // Check if the changed field has meaningful content
-          const fieldValue = value[name as keyof CoverLetterInputs];
-          let hasContent = false;
-          
-          if (typeof fieldValue === 'string') {
-            hasContent = fieldValue.trim().length > 0;
-          } else if (typeof fieldValue === 'number') {
-            hasContent = fieldValue > 0;
-          } else if (Array.isArray(fieldValue)) {
-            hasContent = fieldValue.length > 0;
-          } else {
-            hasContent = Boolean(fieldValue);
+    const subscription = form.watch((value, info) => {
+      // Safely handle the watch callback
+      try {
+        if (!value || typeof value !== 'object') return;
+        
+        // Check if we have meaningful form data
+        const hasAnyContent = Object.entries(value).some(([key, val]) => {
+          if (key === 'owners' || key === 'use_of_funds' || key === 'products_services' || key === 'collateral_items') {
+            return Array.isArray(val) && val.length > 0;
           }
-          
-          if (hasContent) {
-            updateData(value as Partial<CoverLetterInputs>);
+          if (typeof val === 'string') {
+            return val.trim().length > 0;
           }
-        } catch (error) {
-          console.warn('Form watch error:', error);
+          if (typeof val === 'number') {
+            return val > 0;
+          }
+          return Boolean(val);
+        });
+        
+        if (hasAnyContent) {
+          // Debounce the update to avoid excessive calls
+          updateData(value as Partial<CoverLetterInputs>);
         }
+      } catch (error) {
+        console.warn('Form watch error:', error);
+        // Continue gracefully without breaking the form
       }
     });
-    return () => subscription.unsubscribe();
+    
+    return () => {
+      try {
+        subscription.unsubscribe();
+      } catch (error) {
+        console.warn('Form watch cleanup error:', error);
+      }
+    };
   }, [form, updateData]);
 
   // Calculate progress
