@@ -286,14 +286,7 @@ export default function CoverLetterInlineForm({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Progress Bar */}
-      <div className="w-full bg-blue-100 rounded-full h-3 mb-6">
-        <div 
-          className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+    <div className="space-y-4">
 
       {/* Error Display */}
       {error && (

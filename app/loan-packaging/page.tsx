@@ -75,6 +75,7 @@ export default function LoanPackagingPage() {
   const [completedDocuments, setCompletedDocuments] = useState(0);
   const [loanPackagingId, setLoanPackagingId] = useState<string | null>(null);
   const [coverLetterCompleted, setCoverLetterCompleted] = useState(false);
+  const [coverLetterStarted, setCoverLetterStarted] = useState(false);
 
   const getLoanPurposeLabel = useCallback((key: string): string => {
     for (const optionsArray of Object.values(LEVEL2_OPTIONS)) {
@@ -314,7 +315,7 @@ export default function LoanPackagingPage() {
       console.log('[loadCoverLetterStatus] Loading cover letter status for loanPackagingId:', loanPackagingId);
       const { data, error } = await supabase
         .from('loan_packaging')
-        .select('cover_letter_completed')
+        .select('cover_letter_completed, cover_letter_inputs')
         .eq('id', loanPackagingId)
         .single();
       if (error) {
@@ -323,6 +324,12 @@ export default function LoanPackagingPage() {
       }
       console.log('[loadCoverLetterStatus] Loaded cover letter status:', data);
       setCoverLetterCompleted(data?.cover_letter_completed || false);
+      
+      // Check if form has been started (has any saved inputs)
+      const hasInputs = data?.cover_letter_inputs && 
+        typeof data.cover_letter_inputs === 'object' && 
+        Object.keys(data.cover_letter_inputs).length > 0;
+      setCoverLetterStarted(hasInputs || false);
     } catch (err) {
       console.error('[loadCoverLetterStatus] Exception:', err);
       // Don't set error here as it's not critical
@@ -856,73 +863,33 @@ export default function LoanPackagingPage() {
           
           {!showCoverLetterForm ? (
             <>
-              <div className="mb-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">Create Your Professional Cover Letter</h3>
-                    <p className="text-sm text-gray-600">Complete a 4-step guided form to generate a compelling loan application narrative</p>
-                  </div>
+              <div className="text-center py-8">
+                <p className="text-gray-600 text-base mb-6 max-w-2xl mx-auto">
+                  Create a professional cover letter that summarizes your loan request, business purpose, and qualifications to help your application stand out.
+                </p>
+                
+                <div className="flex items-center justify-center mb-6">
+                  <button
+                    className="inline-flex items-center px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setShowCoverLetterForm(true)}
+                    disabled={!loanPackagingId || typeof loanAmount !== 'number'}
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    {/* Dynamic button text based on whether form has been started */}
+                    {coverLetterStarted ? 'Continue' : (coverLetterCompleted ? 'Edit Cover Letter' : 'Start Cover Letter')}
+                  </button>
+                  
                   {coverLetterCompleted && (
-                    <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                    <div className="ml-4 flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       <span className="text-sm text-green-600 font-medium">Completed</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100 mb-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-2">Why a Cover Letter Matters</h4>
-                      <p className="text-gray-700 text-sm leading-relaxed mb-3">
-                        A strong cover letter is your opportunity to make a compelling case to lenders. It summarizes your loan request, business purpose, and qualifications in a professional narrative that helps your package stand out.
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
-                          <span className="text-gray-600">Business Overview</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
-                          <span className="text-gray-600">Loan Purpose & Impact</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
-                          <span className="text-gray-600">Financial Details</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="text-center">
-                <button
-                  className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105"
-                  onClick={() => setShowCoverLetterForm(true)}
-                  disabled={!loanPackagingId || typeof loanAmount !== 'number'}
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  {coverLetterCompleted ? 'Edit Cover Letter' : 'Start Cover Letter'}
-                </button>
-                
-                <div className="mt-3 text-sm text-gray-500">
+                <div className="text-sm text-gray-500">
                   <div className="flex items-center justify-center space-x-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
