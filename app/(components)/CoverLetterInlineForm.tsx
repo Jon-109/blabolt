@@ -111,18 +111,29 @@ export default function CoverLetterInlineForm({
 
   // Auto-save form data with debouncing
   useEffect(() => {
-    const subscription = form.watch((value) => {
-      // Only update if we have meaningful data and it's different from current data
-      if (value && typeof value === 'object') {
-        const hasContent = Object.values(value).some(val => {
-          if (typeof val === 'string') return val.trim().length > 0;
-          if (typeof val === 'number') return val > 0;
-          if (Array.isArray(val)) return val.length > 0;
-          return Boolean(val);
-        });
-        
-        if (hasContent) {
-          updateData(value as Partial<CoverLetterInputs>);
+    const subscription = form.watch((value, { name, type }) => {
+      // Only update if we have a valid change event and meaningful data
+      if (value && typeof value === 'object' && name && type) {
+        try {
+          // Check if the changed field has meaningful content
+          const fieldValue = value[name as keyof CoverLetterInputs];
+          let hasContent = false;
+          
+          if (typeof fieldValue === 'string') {
+            hasContent = fieldValue.trim().length > 0;
+          } else if (typeof fieldValue === 'number') {
+            hasContent = fieldValue > 0;
+          } else if (Array.isArray(fieldValue)) {
+            hasContent = fieldValue.length > 0;
+          } else {
+            hasContent = Boolean(fieldValue);
+          }
+          
+          if (hasContent) {
+            updateData(value as Partial<CoverLetterInputs>);
+          }
+        } catch (error) {
+          console.warn('Form watch error:', error);
         }
       }
     });

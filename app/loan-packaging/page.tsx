@@ -853,62 +853,72 @@ export default function LoanPackagingPage() {
       <section className="max-w-7xl mx-auto px-4 md:px-6 pt-4">
         <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6 border-l-4 border-blue-600">
           <h2 className="text-2xl md:text-3xl font-bold text-blue-700 mb-1">Step 3: Generate Your Cover Letter</h2>
-          <p className="text-slate-700 text-base mb-4">
-            A strong cover letter is your opportunity to make a compelling case to lenders. It summarizes your loan request, business purpose, and qualifications in a professional narrative. Completing this step will help your package stand out and improve your chances of approval.
-          </p>
-          <div className="flex flex-row items-center gap-4">
-            <button
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => setShowCoverLetterForm(true)}
-              disabled={!loanPackagingId || typeof loanAmount !== 'number'}
-            >
-              {coverLetterCompleted ? 'Edit Cover Letter' : 'Start Cover Letter'}
-            </button>
-            {coverLetterCompleted && (
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-green-600 font-medium">Completed</span>
+          
+          {!showCoverLetterForm ? (
+            <>
+              <p className="text-slate-700 text-base mb-4">
+                A strong cover letter is your opportunity to make a compelling case to lenders. It summarizes your loan request, business purpose, and qualifications in a professional narrative. Completing this step will help your package stand out and improve your chances of approval.
+              </p>
+              <div className="flex flex-row items-center gap-4">
+                <button
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setShowCoverLetterForm(true)}
+                  disabled={!loanPackagingId || typeof loanAmount !== 'number'}
+                >
+                  {coverLetterCompleted ? 'Edit Cover Letter' : 'Start Cover Letter'}
+                </button>
+                {coverLetterCompleted && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm text-green-600 font-medium">Completed</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  {coverLetterCompleted && (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-green-600 font-medium">Completed</span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCoverLetterForm(false);
+                    // Reload cover letter status when form closes
+                    if (loanPackagingId) {
+                      loadCoverLetterStatus(loanPackagingId);
+                    }
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold transition-colors"
+                  title="Close form"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <CoverLetterInlineForm
+                loanPackagingId={loanPackagingId}
+                loanAmount={typeof loanAmount === 'number' ? loanAmount : 0}
+                onComplete={() => {
+                  setShowCoverLetterForm(false);
+                  // Reload cover letter status when completed
+                  if (loanPackagingId) {
+                    loadCoverLetterStatus(loanPackagingId);
+                  }
+                }}
+              />
+            </>
+          )}
         </div>
       </section>
     )}
 
-    {/* Cover Letter Inline Form */}
-    {showCoverLetterForm && (
-      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-4">
-        <div className="bg-white rounded-xl shadow-md p-6 md:p-10 border-l-4 border-green-600">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-green-700">Cover Letter Form</h2>
-            <button
-              onClick={() => {
-                setShowCoverLetterForm(false);
-                // Reload cover letter status when form closes
-                if (loanPackagingId) {
-                  loadCoverLetterStatus(loanPackagingId);
-                }
-              }}
-              className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-            >
-              ×
-            </button>
-          </div>
-          
-          <CoverLetterInlineForm
-            loanPackagingId={loanPackagingId}
-            loanAmount={typeof loanAmount === 'number' ? loanAmount : 0}
-            onComplete={() => {
-              setShowCoverLetterForm(false);
-              // Reload cover letter status when completed
-              if (loanPackagingId) {
-                loadCoverLetterStatus(loanPackagingId);
-              }
-            }}
-          />
-        </div>
-      </section>
-    )}
+
   </main>
 );
 
