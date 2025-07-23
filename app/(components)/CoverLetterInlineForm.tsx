@@ -57,12 +57,13 @@ export default function CoverLetterInlineForm({
       owners: [{ name: '', percent: 100 }],
       origin_story: '',
       industry: '',
-      products_services: [],
+      products_services: '',
       differentiation: '',
       loan_purpose_explained: '',
       use_of_funds: [{ label: '', amount: 0 }],
       impact_statement: '',
-      collateral_items: []
+      collateral_items: undefined,
+      additional_context: ''
     }
   });
 
@@ -96,12 +97,13 @@ export default function CoverLetterInlineForm({
         owners: data.owners && data.owners.length > 0 ? data.owners : [{ name: '', percent: 100 }],
         origin_story: data.origin_story || '',
         industry: data.industry || '',
-        products_services: data.products_services || [],
+        products_services: data.products_services || '',
         differentiation: data.differentiation || '',
         loan_purpose_explained: data.loan_purpose_explained || '',
         use_of_funds: data.use_of_funds && data.use_of_funds.length > 0 ? data.use_of_funds : [{ label: '', amount: 0 }],
         impact_statement: data.impact_statement || '',
-        collateral_items: data.collateral_items || []
+        collateral_items: data.collateral_items || [],
+        additional_context: data.additional_context || ''
       };
       
       form.reset(formData);
@@ -252,17 +254,7 @@ export default function CoverLetterInlineForm({
     }
   };
 
-  const addProductService = (value: string) => {
-    if (value.trim()) {
-      const current = form.getValues('products_services') || [];
-      form.setValue('products_services', [...current, value.trim()]);
-    }
-  };
-
-  const removeProductService = (index: number) => {
-    const current = form.getValues('products_services') || [];
-    form.setValue('products_services', current.filter((_, i) => i !== index));
-  };
+  // Products/services is now a single string field
 
   const getStepTitle = (step: WizardStep) => {
     const titles = {
@@ -524,43 +516,16 @@ export default function CoverLetterInlineForm({
               {/* Products & Services */}
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700">Products & Services *</label>
-                <div className="flex items-center space-x-2 mb-3">
-                  <Input
-                    placeholder="Enter a product or service"
-                    className="bg-white"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addProductService(e.currentTarget.value);
-                        e.currentTarget.value = '';
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={(e) => {
-                      const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                      addProductService(input.value);
-                      input.value = '';
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                <Textarea
+                  {...form.register('products_services')}
+                  placeholder="Describe your primary products and services in detail. What do you offer to your customers?"
+                  maxLength={500}
+                  rows={4}
+                  className="bg-white resize-none"
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {form.watch('products_services')?.length || 0}/500 characters
                 </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {(form.watch('products_services') || []).map((service: string, index: number) => (
-                    <Badge key={index} variant="secondary" className="flex items-center space-x-1 bg-blue-100 text-blue-800">
-                      <span>{service}</span>
-                      <X
-                        className="h-3 w-3 cursor-pointer hover:text-blue-900"
-                        onClick={() => removeProductService(index)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-                
                 {form.formState.errors.products_services && (
                   <p className="text-red-500 text-sm mt-1">{form.formState.errors.products_services.message}</p>
                 )}
