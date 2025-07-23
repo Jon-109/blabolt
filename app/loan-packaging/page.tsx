@@ -862,36 +862,34 @@ export default function LoanPackagingPage() {
     {isStep1Complete && (
       <section className="max-w-7xl mx-auto px-4 md:px-6 pt-4">
         <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6 border-l-4 border-blue-600">
-          <h2 className="text-2xl md:text-3xl font-bold text-blue-700 mb-1">Step 3: Generate Your Cover Letter</h2>
-          
-          {!showCoverLetterForm ? (
-            <>
-              <div className="py-3">
-                <p className="text-gray-600 text-sm mb-3 text-left">
-                  Create a professional cover letter that summarizes your loan request, business purpose, and qualifications to help your application stand out.
-                </p>
-                
-                <div className="flex items-center justify-center">
-                  <button
-                    className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => setShowCoverLetterForm(true)}
-                    disabled={!loanPackagingId || typeof loanAmount !== 'number'}
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    {coverLetterStarted ? 'Continue' : (coverLetterCompleted ? 'Edit Cover Letter' : 'Start Cover Letter')}
-                  </button>
-                  
-                  {coverLetterCompleted && (
-                    <div className="ml-3 flex items-center space-x-2 bg-green-50 px-2 py-1 rounded border border-green-200">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                      <span className="text-xs text-green-600 font-medium">Completed</span>
-                    </div>
-                  )}
+          <div className="pb-2 pt-1 px-0 md:px-2">
+            <h2 className="text-2xl md:text-3xl font-bold text-blue-700 leading-tight mb-0">Step 3: Generate Your Cover Letter</h2>
+            <div className="mt-1 mb-1">
+              <p className="text-gray-600 text-sm text-left max-w-2xl">
+                Create a professional cover letter that summarizes your loan request, business purpose, and qualifications to help your application stand out.
+              </p>
+            </div>
+            <div className="flex items-center justify-center mt-2 mb-0">
+              <button
+                className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setShowCoverLetterForm(true)}
+                disabled={!loanPackagingId || typeof loanAmount !== 'number'}
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                {coverLetterStarted ? 'Continue' : (coverLetterCompleted ? 'Edit Cover Letter' : 'Start Cover Letter')}
+              </button>
+              {coverLetterCompleted && (
+                <div className="ml-3 flex items-center space-x-2 bg-green-50 px-2 py-1 rounded border border-green-200">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                  <span className="text-xs text-green-600 font-medium">Completed</span>
                 </div>
-              </div>
-            </>
+              )}
+            </div>
+          </div>
+          {!showCoverLetterForm ? (
+            <></>
           ) : (
             <>
               <div className="flex items-center justify-between mb-4">
