@@ -109,45 +109,67 @@ export default function CoverLetterInlineForm({
     }
   }, [data, form]);
 
-  // Auto-save form data with debouncing
+  // Auto-save form data with debouncing - only after form is properly initialized
   useEffect(() => {
-    const subscription = form.watch((value, info) => {
-      // Safely handle the watch callback
-      try {
-        if (!value || typeof value !== 'object') return;
-        
-        // Check if we have meaningful form data
-        const hasAnyContent = Object.entries(value).some(([key, val]) => {
-          if (key === 'owners' || key === 'use_of_funds' || key === 'products_services' || key === 'collateral_items') {
-            return Array.isArray(val) && val.length > 0;
-          }
-          if (typeof val === 'string') {
-            return val.trim().length > 0;
-          }
-          if (typeof val === 'number') {
-            return val > 0;
-          }
-          return Boolean(val);
-        });
-        
-        if (hasAnyContent) {
-          // Debounce the update to avoid excessive calls
-          updateData(value as Partial<CoverLetterInputs>);
-        }
-      } catch (error) {
-        console.warn('Form watch error:', error);
-        // Continue gracefully without breaking the form
+    // Don't set up watch until form is ready and has been reset with initial data
+    if (!form.formState.isValid && !form.formState.isDirty) {
+      return;
+    }
+
+    let timeoutId: NodeJS.Timeout;
+    
+    const subscription = form.watch((value) => {
+      // Clear any existing timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
+      
+      // Debounce the save operation
+      timeoutId = setTimeout(() => {
+        try {
+          if (!value || typeof value !== 'object') return;
+          
+          // Only save if form has been interacted with
+          if (!form.formState.isDirty) return;
+          
+          // Check if we have meaningful form data
+          const hasAnyContent = Object.entries(value).some(([key, val]) => {
+            if (key === 'owners' || key === 'use_of_funds' || key === 'products_services' || key === 'collateral_items') {
+              return Array.isArray(val) && val.length > 0 && val.some(item => 
+                item && typeof item === 'object' && Object.values(item).some(v => 
+                  typeof v === 'string' ? v.trim().length > 0 : Boolean(v)
+                )
+              );
+            }
+            if (typeof val === 'string') {
+              return val.trim().length > 0;
+            }
+            if (typeof val === 'number') {
+              return val > 0;
+            }
+            return Boolean(val);
+          });
+          
+          if (hasAnyContent) {
+            updateData(value as Partial<CoverLetterInputs>);
+          }
+        } catch (error) {
+          console.warn('Form watch error:', error);
+        }
+      }, 1000); // 1 second debounce
     });
     
     return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       try {
         subscription.unsubscribe();
       } catch (error) {
         console.warn('Form watch cleanup error:', error);
       }
     };
-  }, [form, updateData]);
+  }, [form, updateData, form.formState.isValid, form.formState.isDirty]);
 
   // Calculate progress
   const progress = (currentStep / 4) * 100;
