@@ -706,7 +706,10 @@ export default function LoanPackagingPage() {
                   setUserWantsToEdit(true);
                   setIsCondensed(false);
                 }} 
-                className="text-blue-600 hover:underline font-medium text-sm ml-4">
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
                 Edit
               </button>
             </div>
@@ -863,39 +866,29 @@ export default function LoanPackagingPage() {
           
           {!showCoverLetterForm ? (
             <>
-              <div className="text-center py-8">
-                <p className="text-gray-600 text-base mb-6 max-w-2xl mx-auto">
+              <div className="py-3">
+                <p className="text-gray-600 text-sm mb-3 text-left">
                   Create a professional cover letter that summarizes your loan request, business purpose, and qualifications to help your application stand out.
                 </p>
                 
-                <div className="flex items-center justify-center mb-6">
+                <div className="flex items-center justify-center">
                   <button
-                    className="inline-flex items-center px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => setShowCoverLetterForm(true)}
                     disabled={!loanPackagingId || typeof loanAmount !== 'number'}
                   >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
-                    {/* Dynamic button text based on whether form has been started */}
                     {coverLetterStarted ? 'Continue' : (coverLetterCompleted ? 'Edit Cover Letter' : 'Start Cover Letter')}
                   </button>
                   
                   {coverLetterCompleted && (
-                    <div className="ml-4 flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-green-600 font-medium">Completed</span>
+                    <div className="ml-3 flex items-center space-x-2 bg-green-50 px-2 py-1 rounded border border-green-200">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      <span className="text-xs text-green-600 font-medium">Completed</span>
                     </div>
                   )}
-                </div>
-                
-                <div className="text-sm text-gray-500">
-                  <div className="flex items-center justify-center space-x-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Takes 5-10 minutes</span>
-                  </div>
                 </div>
               </div>
             </>
