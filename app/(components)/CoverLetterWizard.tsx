@@ -37,7 +37,7 @@ interface CoverLetterWizardProps {
   loanAmount: number;
 }
 
-type WizardStep = 1 | 2 | 3 | 4;
+type WizardStep = 1 | 2 | 3 | 4 | 5;
 
 export default function CoverLetterWizard({ 
   isOpen, 
@@ -47,6 +47,7 @@ export default function CoverLetterWizard({
 }: CoverLetterWizardProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [showCollateral, setShowCollateral] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   
   const { data, isLoading, error, isCompleted, updateData, saveData, markCompleted } = useCoverLetter(loanPackagingId);
 
@@ -63,12 +64,13 @@ export default function CoverLetterWizard({
       owners: [{ name: '', percent: 100 }],
       origin_story: '',
       industry: '',
-      products_services: [],
+      products_services: '',
       differentiation: '',
       loan_purpose_explained: '',
       use_of_funds: [{ label: '', amount: 0 }],
       impact_statement: '',
-      collateral_items: []
+      collateral_items: undefined,
+      additional_context: ''
     },
     mode: 'onChange'
   });
@@ -107,7 +109,7 @@ export default function CoverLetterWizard({
   }, [form, updateData]);
 
   // Calculate progress
-  const progress = (currentStep / 4) * 100;
+  const progress = (currentStep / 5) * 100;
 
   // Calculate owners percentage total
   const ownersTotal = form.watch('owners')?.reduce((sum, owner) => sum + (owner.percent || 0), 0) || 0;
@@ -135,6 +137,9 @@ export default function CoverLetterWizard({
         case 4:
           step4Schema.parse(formData);
           return fundsValid;
+        case 5:
+          // Summary page - always valid if we got here
+          return isConfirmed;
         default:
           return false;
       }
@@ -146,7 +151,7 @@ export default function CoverLetterWizard({
   const canProceed = validateCurrentStep();
 
   const handleNext = () => {
-    if (canProceed && currentStep < 4) {
+    if (canProceed && currentStep < 5) {
       setCurrentStep((prev) => (prev + 1) as WizardStep);
     }
   };
@@ -193,17 +198,7 @@ export default function CoverLetterWizard({
     }
   };
 
-  const addProductService = (value: string) => {
-    if (value.trim()) {
-      const current = form.getValues('products_services') || [];
-      form.setValue('products_services', [...current, value.trim()]);
-    }
-  };
-
-  const removeProductService = (index: number) => {
-    const current = form.getValues('products_services') || [];
-    form.setValue('products_services', current.filter((_, i) => i !== index));
-  };
+  // Products/services is now a single string field
 
   if (isLoading) {
     return (
@@ -468,42 +463,15 @@ export default function CoverLetterWizard({
                 {/* Products & Services */}
                 <div>
                   <label className="block text-sm font-medium mb-2">Products & Services *</label>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Input
-                      placeholder="Enter a product or service"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addProductService(e.currentTarget.value);
-                          e.currentTarget.value = '';
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={(e) => {
-                        const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                        addProductService(input.value);
-                        input.value = '';
-                      }}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                  <Textarea
+                    {...form.register('products_services')}
+                    placeholder="Describe your primary products and services in detail. What do you offer to your customers?"
+                    maxLength={500}
+                    rows={4}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {form.watch('products_services')?.length || 0}/500 characters
                   </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {form.watch('products_services')?.map((service, index) => (
-                      <Badge key={index} variant="secondary" className="flex items-center space-x-1">
-                        <span>{service}</span>
-                        <X
-                          className="h-3 w-3 cursor-pointer"
-                          onClick={() => removeProductService(index)}
-                        />
-                      </Badge>
-                    ))}
-                  </div>
-                  
                   {form.formState.errors.products_services && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors.products_services.message}</p>
                   )}
@@ -718,6 +686,151 @@ export default function CoverLetterWizard({
               </div>
             </div>
           )}
+
+          {/* Review & Confirmation Page */}
+          {currentStep === 5 && (
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-xl p-8 border border-blue-100">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-full mb-4">
+                  <CheckCircle className="w-8 h-8" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Review Your Cover Letter</h3>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  Please review the information below and add any final details before completing your cover letter.
+                </p>
+              </div>
+              
+              <div className="space-y-8">
+                {/* Business Overview Card */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+                    <h4 className="text-white font-semibold text-lg">Business Overview</h4>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div>
+                            <span className="text-sm text-gray-500">Business Name</span>
+                            <p className="font-medium text-gray-900">{form.watch('legal_name')}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div>
+                            <span className="text-sm text-gray-500">Entity Type</span>
+                            <p className="font-medium text-gray-900">{form.watch('entity_type')}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div>
+                            <span className="text-sm text-gray-500">Industry</span>
+                            <p className="font-medium text-gray-900">{form.watch('industry')}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <div>
+                            <span className="text-sm text-gray-500">Year Founded</span>
+                            <p className="font-medium text-gray-900">{form.watch('year_founded')}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Loan Details Card */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+                    <h4 className="text-white font-semibold text-lg">Loan Request</h4>
+                  </div>
+                  <div className="p-6">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <div>
+                        <span className="text-sm text-gray-500">Requested Amount</span>
+                        <p className="text-2xl font-bold text-green-600">${loanAmount?.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    
+                    {form.watch('loan_purpose_explained') && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <span className="text-sm font-medium text-gray-700">Purpose</span>
+                        <p className="text-gray-900 mt-1 leading-relaxed">{form.watch('loan_purpose_explained')}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Products & Services Card */}
+                {form.watch('products_services') && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+                      <h4 className="text-white font-semibold text-lg">Products & Services</h4>
+                    </div>
+                    <div className="p-6">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="text-gray-900 leading-relaxed">{form.watch('products_services')}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Context */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4">
+                    <h4 className="text-white font-semibold text-lg">Additional Context</h4>
+                  </div>
+                  <div className="p-6">
+                    <p className="text-sm text-gray-600 mb-4">
+                      Share any additional details about your business, qualifications, or loan request that would help strengthen your application.
+                    </p>
+                    <Textarea
+                      {...form.register('additional_context')}
+                      placeholder="Optional: Any additional context you'd like to include in your cover letter..."
+                      maxLength={1000}
+                      rows={4}
+                      className="resize-none"
+                    />
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="text-xs text-gray-500">
+                        {form.watch('additional_context')?.length || 0}/1000 characters
+                      </div>
+                    </div>
+                    {form.formState.errors.additional_context && (
+                      <p className="text-red-500 text-sm mt-2">{form.formState.errors.additional_context.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Confirmation */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <div className="flex items-start space-x-4">
+                    <input
+                      type="checkbox"
+                      id="confirm-accuracy"
+                      checked={isConfirmed}
+                      onChange={(e) => setIsConfirmed(e.target.checked)}
+                      className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="confirm-accuracy" className="flex-1">
+                      <span className="font-semibold text-gray-900 block mb-1">
+                        I confirm that all information provided is accurate and complete.
+                      </span>
+                      <p className="text-sm text-gray-600">
+                        This information will be used to generate your professional cover letter for the loan application. You can always return to edit any details if needed.
+                      </p>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
 
         {/* Navigation */}
@@ -743,13 +856,13 @@ export default function CoverLetterWizard({
               </Button>
             )}
             
-            {currentStep < 4 ? (
+            {currentStep < 5 ? (
               <Button
                 type="button"
                 onClick={handleNext}
                 disabled={!canProceed}
               >
-                Next
+                {currentStep === 4 ? 'Review & Confirm' : 'Next'}
               </Button>
             ) : (
               <Button
@@ -758,7 +871,8 @@ export default function CoverLetterWizard({
                 disabled={!canProceed}
                 className="bg-green-600 hover:bg-green-700"
               >
-                Submit Cover Letter
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Complete Cover Letter
               </Button>
             )}
           </div>

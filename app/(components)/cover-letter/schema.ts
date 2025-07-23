@@ -12,12 +12,13 @@ export type CoverLetterInputs = {
   owners: { name: string; percent: number }[];
   origin_story?: string;
   industry: string;       // NAICS top-level / free text
-  products_services: string[];      // tags
+  products_services: string;        // paragraph description
   differentiation?: string;
   loan_purpose_explained: string;
   use_of_funds: { label: string; amount: number }[]; // dollars
   impact_statement: string;
   collateral_items?: { asset_type: 'Equipment' | 'Real Estate' | 'Vehicle' | 'Inventory' | 'A/R' | 'Other'; description: string; est_value: number }[];
+  additional_context?: string;      // extra details for lender
 };
 
 // US States for dropdown
@@ -149,7 +150,7 @@ export const coverLetterSchema = z.object({
   owners: z.array(ownerSchema).min(1, 'At least one owner is required'),
   origin_story: z.string().max(300, 'Origin story must be 300 characters or less').optional(),
   industry: z.string().min(1, 'Industry is required'),
-  products_services: z.array(z.string()).min(1, 'At least one product/service is required'),
+  products_services: z.string().min(1, 'Products/services description is required').max(500, 'Products/services description must be 500 characters or less'),
   differentiation: z.string().max(300, 'Differentiation must be 300 characters or less').optional(),
   loan_purpose_explained: z.string()
     .min(1, 'Loan purpose explanation is required')
@@ -158,7 +159,8 @@ export const coverLetterSchema = z.object({
   impact_statement: z.string()
     .min(1, 'Impact statement is required')
     .max(400, 'Impact statement must be 400 characters or less'),
-  collateral_items: z.array(collateralItemSchema).optional()
+  collateral_items: z.array(collateralItemSchema).optional(),
+  additional_context: z.string().max(1000, 'Additional context must be 1000 characters or less').optional(),
 });
 
 // Step-specific validation schemas
