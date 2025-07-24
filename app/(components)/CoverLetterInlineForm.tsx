@@ -31,7 +31,7 @@ interface CoverLetterInlineFormProps {
   onComplete: () => void;
 }
 
-type WizardStep = 1 | 2 | 3 | 4;
+type WizardStep = 1 | 2 | 3 | 4 | 5;
 
 export default function CoverLetterInlineForm({ 
   loanPackagingId, 
@@ -40,6 +40,7 @@ export default function CoverLetterInlineForm({
 }: CoverLetterInlineFormProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [showCollateral, setShowCollateral] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   
   const { data, isLoading, error, isCompleted, updateData, saveData, markCompleted } = useCoverLetter(loanPackagingId);
 
@@ -82,10 +83,10 @@ export default function CoverLetterInlineForm({
     name: 'collateral_items'
   });
 
-  // Load data into form when available
+  // Load data into form when available - including when data is empty but loading is complete
   useEffect(() => {
-    if (data && Object.keys(data).length > 0) {
-      // Reset form with proper defaults merged with saved data
+    // Only reset form after loading is complete to prevent race conditions
+    if (!isLoading) {
       const formData = {
         legal_name: data.legal_name || '',
         entity_type: data.entity_type || 'LLC',
@@ -106,75 +107,69 @@ export default function CoverLetterInlineForm({
         additional_context: data.additional_context || ''
       };
       
+      console.log('[CoverLetterInlineForm] Resetting form with data:', formData);
       form.reset(formData);
       setShowCollateral(Boolean(data.collateral_items && data.collateral_items.length > 0));
     }
-  }, [data, form]);
+  }, [data, form, isLoading]);
 
   // Auto-save form data with debouncing - only after form is properly initialized
   useEffect(() => {
-    // Don't set up watch until form is ready and has been reset with initial data
-    if (!form.formState.isValid && !form.formState.isDirty) {
+    // Don't set up watch until form is ready and data has been loaded
+    if (isLoading) {
       return;
     }
 
-    let timeoutId: NodeJS.Timeout;
-    
-    const subscription = form.watch((value) => {
-      // Clear any existing timeout
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      
-      // Debounce the save operation
-      timeoutId = setTimeout(() => {
-        try {
-          if (!value || typeof value !== 'object') return;
-          
-          // Only save if form has been interacted with
-          if (!form.formState.isDirty) return;
-          
-          // Check if we have meaningful form data
-          const hasAnyContent = Object.entries(value).some(([key, val]) => {
-            if (key === 'owners' || key === 'use_of_funds' || key === 'products_services' || key === 'collateral_items') {
-              return Array.isArray(val) && val.length > 0 && val.some(item => 
-                item && typeof item === 'object' && Object.values(item).some(v => 
-                  typeof v === 'string' ? v.trim().length > 0 : Boolean(v)
-                )
-              );
-            }
-            if (typeof val === 'string') {
-              return val.trim().length > 0;
-            }
-            if (typeof val === 'number') {
-              return val > 0;
-            }
-            return Boolean(val);
-          });
-          
-          if (hasAnyContent) {
-            updateData(value as Partial<CoverLetterInputs>);
+    const subscription = form.watch((value, info) => {
+      try {
+        if (!value || typeof value !== 'object') return;
+        
+        // Check if any meaningful field has content
+        const hasAnyContent = Object.entries(value).some(([key, val]) => {
+          if (key === 'owners' || key === 'use_of_funds') {
+            return Array.isArray(val) && val.length > 0 && val.some(item =>
+              item && typeof item === 'object' && Object.values(item).some(v =>
+                typeof v === 'string' ? v.trim().length > 0 : (typeof v === 'number' && v > 0)
+              )
+            );
           }
-        } catch (error) {
-          console.warn('Form watch error:', error);
+          if (key === 'collateral_items') {
+            return Array.isArray(val) && val.length > 0 && val.some(item =>
+              item && typeof item === 'object' && Object.values(item).some(v =>
+                typeof v === 'string' ? v.trim().length > 0 : (typeof v === 'number' && v > 0)
+              )
+            );
+          }
+          if (typeof val === 'string') {
+            return val.trim().length > 0;
+          }
+          if (typeof val === 'number') {
+            return val > 0;
+          }
+          return Boolean(val);
+        });
+        
+        // Only save if there's meaningful content and form has been modified
+        if (hasAnyContent && form.formState.isDirty) {
+          console.log('[CoverLetterInlineForm] Auto-saving form data:', value);
+          updateData(value as Partial<CoverLetterInputs>);
         }
-      }, 1000); // 1 second debounce
-    });
-    
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      } catch (error) {
+        console.warn('Form watch error:', error);
       }
+    });
+
+    return () => {
       try {
         subscription.unsubscribe();
       } catch (error) {
         console.warn('Form watch cleanup error:', error);
       }
     };
-  }, [form, updateData, form.formState.isValid, form.formState.isDirty]);
+  }, [form, updateData, isLoading]);
 
   // Calculate progress
-  const progress = (currentStep / 4) * 100;
+  const progress = (currentStep / 5) * 100;
 
   // Calculate owners percentage total
   const owners = form.watch('owners') || [];
@@ -204,6 +199,9 @@ export default function CoverLetterInlineForm({
         case 4:
           step4Schema.parse(formData);
           return fundsValid;
+        case 5:
+          // Review page - always valid if we got here
+          return isConfirmed;
         default:
           return false;
       }
@@ -215,7 +213,7 @@ export default function CoverLetterInlineForm({
   const canProceed = validateCurrentStep();
 
   const handleNext = () => {
-    if (canProceed && currentStep < 4) {
+    if (canProceed && currentStep < 5) {
       setCurrentStep((prev) => (prev + 1) as WizardStep);
     }
   };
@@ -261,9 +259,10 @@ export default function CoverLetterInlineForm({
       1: 'Business Basics',
       2: 'Ownership & Background', 
       3: 'What You Do & Why It Works',
-      4: 'Loan Details & Impact'
+      4: 'Loan Details & Impact',
+      5: 'Review & Confirm'
     };
-    return `Step ${step} of 4: ${titles[step]}`;
+    return step === 5 ? titles[step] : `Step ${step} of 4: ${titles[step]}`;
   };
 
   if (isLoading) {
@@ -750,6 +749,151 @@ export default function CoverLetterInlineForm({
             </div>
           </div>
         )}
+
+        {/* Step 5: Review & Confirmation Page */}
+        {currentStep === 5 && (
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl shadow-xl p-8 border border-blue-100">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-full mb-4">
+                <CheckCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Review Your Cover Letter</h3>
+              <p className="text-gray-600 max-w-md mx-auto">
+                Please review the information below and add any final details before completing your cover letter.
+              </p>
+            </div>
+            
+            <div className="space-y-8">
+              {/* Business Overview Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+                  <h4 className="text-white font-semibold text-lg">Business Overview</h4>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div>
+                          <span className="text-sm text-gray-500">Business Name</span>
+                          <p className="font-medium text-gray-900">{form.watch('legal_name')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div>
+                          <span className="text-sm text-gray-500">Entity Type</span>
+                          <p className="font-medium text-gray-900">{form.watch('entity_type')}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div>
+                          <span className="text-sm text-gray-500">Industry</span>
+                          <p className="font-medium text-gray-900">{form.watch('industry')}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div>
+                          <span className="text-sm text-gray-500">Year Founded</span>
+                          <p className="font-medium text-gray-900">{form.watch('year_founded')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Loan Details Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+                  <h4 className="text-white font-semibold text-lg">Loan Request</h4>
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div>
+                      <span className="text-sm text-gray-500">Requested Amount</span>
+                      <p className="text-2xl font-bold text-green-600">${loanAmount?.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  
+                  {form.watch('loan_purpose_explained') && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <span className="text-sm font-medium text-gray-700">Purpose</span>
+                      <p className="text-gray-900 mt-1 leading-relaxed">{form.watch('loan_purpose_explained')}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Products & Services Card */}
+              {form.watch('products_services') && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+                    <h4 className="text-white font-semibold text-lg">Products & Services</h4>
+                  </div>
+                  <div className="p-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-900 leading-relaxed">{form.watch('products_services')}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Context */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4">
+                  <h4 className="text-white font-semibold text-lg">Additional Context</h4>
+                </div>
+                <div className="p-6">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Share any additional details about your business, qualifications, or loan request that would help strengthen your application.
+                  </p>
+                  <Textarea
+                    {...form.register('additional_context')}
+                    placeholder="Optional: Any additional context you'd like to include in your cover letter..."
+                    maxLength={1000}
+                    rows={4}
+                    className="bg-white resize-none"
+                  />
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="text-xs text-gray-500">
+                      {form.watch('additional_context')?.length || 0}/1000 characters
+                    </div>
+                  </div>
+                  {form.formState.errors.additional_context && (
+                    <p className="text-red-500 text-sm mt-2">{form.formState.errors.additional_context.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Confirmation */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-start space-x-4">
+                  <input
+                    type="checkbox"
+                    id="confirm-accuracy"
+                    checked={isConfirmed}
+                    onChange={(e) => setIsConfirmed(e.target.checked)}
+                    className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="confirm-accuracy" className="flex-1">
+                    <span className="font-semibold text-gray-900 block mb-1">
+                      I confirm that all information provided is accurate and complete.
+                    </span>
+                    <p className="text-sm text-gray-600">
+                      This information will be used to generate your professional cover letter for the loan application. You can always return to edit any details if needed.
+                    </p>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
       </form>
 
@@ -770,14 +914,14 @@ export default function CoverLetterInlineForm({
         </div>
 
         <div className="flex items-center space-x-2">
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <Button
               type="button"
               onClick={handleNext}
               disabled={!canProceed}
               className="flex items-center space-x-2"
             >
-              <span>Next</span>
+              <span>{currentStep === 4 ? 'Review & Confirm' : 'Next'}</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
@@ -785,9 +929,10 @@ export default function CoverLetterInlineForm({
               type="button"
               onClick={handleSubmit}
               disabled={!canProceed}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center space-x-2"
             >
-              Complete Cover Letter
+              <CheckCircle className="h-4 w-4" />
+              <span>Complete Cover Letter</span>
             </Button>
           )}
         </div>
