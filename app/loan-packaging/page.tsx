@@ -10,6 +10,7 @@ import Image from 'next/image'
 import Testimonials from '@/app/(components)/shared/Testimonials'
 import LoanPurposeSelector, { LEVEL2_OPTIONS } from '@/app/(components)/LoanPurposeSelector'
 import CoverLetterInlineForm from '@/app/(components)/CoverLetterInlineForm'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type ServiceType = 'loan_packaging' | 'loan_brokering' | null;
 type Step = 'service_selection' | 'payment' | 'dashboard';
@@ -36,6 +37,117 @@ const DEFAULT_DOCUMENTS: Document[] = [
   { id: 'profit-loss-statement', name: 'Profit & Loss Statement', description: 'A report of your company\'s revenues, costs, and expenses.', status: 'not_started', required: true, template_url: '/templates/profit_loss_statement_template.xlsx' },
 ];
 
+// DocumentCard component for reusable document upload cards
+interface DocumentCardProps {
+  document: Document;
+  onFileUpload: (documentId: string, file: File) => void;
+  onStatusUpdate: (documentId: string, status: DocumentStatus) => void;
+}
+
+const DocumentCard: React.FC<DocumentCardProps> = ({ document, onFileUpload, onStatusUpdate }) => {
+  const getStatusBadge = (status: DocumentStatus) => {
+    switch (status) {
+      case 'not_started':
+        return (
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+            Not Started
+          </span>
+        );
+      case 'uploaded':
+        return (
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+            Uploaded
+          </span>
+        );
+      case 'completed':
+        return (
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+            Completed
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-4">
+      {/* Header with title and status */}
+      <div className="flex items-start justify-between mb-3">
+        <h3 className="text-lg font-semibold text-gray-900">{document.name}</h3>
+        {getStatusBadge(document.status)}
+      </div>
+      
+      {/* Description */}
+      <p className="text-gray-600 text-sm mb-4">{document.description}</p>
+      
+      {/* Action buttons */}
+      <div className="space-y-2">
+        {/* Upload button */}
+        {document.status !== 'completed' && (
+          <label className="block">
+            <input
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  onFileUpload(document.id, e.target.files[0]);
+                }
+              }}
+            />
+            <span className="flex items-center justify-center w-full py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors cursor-pointer">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload File
+            </span>
+          </label>
+        )}
+        
+        {/* View Template link */}
+        {document.template_url && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                href={document.template_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-full py-2 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                View Template
+              </a>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Preview a sample template</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+        
+        {/* Mark as completed button */}
+        {document.status === 'uploaded' && (
+          <button
+            className="w-full py-2 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+            onClick={() => onStatusUpdate(document.id, 'completed')}
+          >
+            Mark as Completed
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Helper function to get upload progress
+const getUploadProgress = (documents: Document[]) => {
+  const totalRequired = documents.filter(doc => doc.required).length;
+  const completed = documents.filter(doc => doc.required && (doc.status === 'uploaded' || doc.status === 'completed')).length;
+  return { completed, total: totalRequired };
+};
+
 export default function LoanPackagingPage() {
   const router = useRouter();
   
@@ -57,6 +169,7 @@ export default function LoanPackagingPage() {
   const [showStep1Details, setShowStep1Details] = useState(true);
   const [coverLetterApproved, setCoverLetterApproved] = useState(false);
   const [showCoverLetterForm, setShowCoverLetterForm] = useState(false);
+  const [showStep2Details, setShowStep2Details] = useState(false);
   
   // Auth state
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -776,86 +889,108 @@ export default function LoanPackagingPage() {
 
     {/* Step 2: Upload Required Documents - OUTSIDE Step 1 */}
     {isStep1Complete && (
-      <section className="max-w-7xl mx-auto px-4 md:px-6 pt-4">
-        <div className="bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col gap-6 border-l-4 border-blue-600">
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Step 2: Upload Required Documents</h2>
-          <p className="text-slate-600 text-base">Upload each document below to complete your loan package.</p>
-          {documents.length > 0 ? (
-            documents
-              .filter((doc: Document) => [
-                'balance-sheet',
-                'profit-loss-statement',
-                'tax-returns'
-              ].includes(doc.id))
-              .map((doc: Document) => (
-                <div
-                  key={doc.id}
-                  className={`flex flex-col rounded-2xl border bg-white shadow-md p-6 transition hover:shadow-lg hover:border-blue-200 ${doc.status === 'completed' || doc.status === 'uploaded' ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}
-                  tabIndex={0}
-                  aria-label={doc.name}
-                >
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">{doc.name}</h3>
-                  <p className="text-gray-600 text-sm mb-4">{doc.description}</p>
-                  <div className="flex-1"></div>
-                  <div className="flex items-center gap-2 mb-2">
-                    {doc.required && <span className="ml-2 text-xs text-red-500">*Required</span>}
-                    {/* Status badge */}
-                    {doc.status === 'not_started' && (
-                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">Not Started</span>
-                    )}
-                    {doc.status === 'uploaded' && (
-                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Uploaded</span>
-                    )}
-                    {doc.status === 'completed' && (
-                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">Completed</span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {/* Upload button */}
-                    {doc.status !== 'completed' && (
-                      <label className="w-full">
-                        <input
-                          type="file"
-                          className="hidden"
-                          onChange={e => {
-                            if (e.target.files && e.target.files[0]) {
-                              handleFileUpload(doc.id, e.target.files[0]);
-                            }
-                          }}
-                        />
-                        <span className="block w-full py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center cursor-pointer">Upload File</span>
-                      </label>
-                    )}
-                    {/* View Template button */}
-                    {doc.template_url && (
-                      <a
-                        href={doc.template_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-2 border border-blue-600 text-blue-700 bg-white rounded-lg font-semibold hover:bg-blue-50 transition-colors text-center text-sm"
-                      >
-                        View Template
-                      </a>
-                    )}
-                    {/* Mark as completed button */}
-                    {doc.status === 'uploaded' && (
-                      <button
-                        className="w-full py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
-                        onClick={() => updateDocumentStatus(doc.id, 'completed')}
-                      >
-                        Mark as Completed
-                      </button>
-                    )}
-                  </div>
+      <TooltipProvider>
+        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-4">
+          <div className="bg-white rounded-xl shadow-md border-l-4 border-blue-600">
+            {/* Collapsible Header */}
+            <div 
+              className="p-6 md:p-8 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => setShowStep2Details(!showStep2Details)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+                    Step 2: Upload Required Documents
+                  </h2>
+                  {!showStep2Details && (
+                    <p className="text-slate-600 text-base">
+                      Click to view and upload the required financial documents
+                    </p>
+                  )}
+                  {/* Progress indicator */}
+                  {documents.length > 0 && (
+                    <div className="mt-2">
+                      {(() => {
+                        const progress = getUploadProgress(documents);
+                        return (
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-600">
+                              {progress.completed} of {progress.total} Uploaded
+                            </span>
+                            <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${(progress.completed / progress.total) * 100}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })()} 
+                    </div>
+                  )}
                 </div>
-              ))
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-500">Loading documents...</p>
+                
+                {/* Toggle chevron */}
+                <motion.div
+                  animate={{ rotate: showStep2Details ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="ml-4"
+                >
+                  <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </motion.div>
+              </div>
             </div>
-          )}
-        </div>
-      </section>
+            
+            {/* Collapsible Content */}
+            <AnimatePresence>
+              {showStep2Details && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-6 md:px-8 pb-6 md:pb-8">
+                    <p className="text-slate-600 text-base mb-6">
+                      Upload each document below to complete your loan package.
+                    </p>
+                    
+                    {documents.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {documents
+                          .filter((doc: Document) => [
+                            'personal-financial-statement',
+                            'personal-debt-summary', 
+                            'business-debt-summary',
+                            'balance-sheet',
+                            'profit-loss-statement'
+                          ].includes(doc.id))
+                          .map((doc: Document) => (
+                            <DocumentCard
+                              key={doc.id}
+                              document={doc}
+                              onFileUpload={handleFileUpload}
+                              onStatusUpdate={updateDocumentStatus}
+                            />
+                          ))
+                        }
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-500">Loading documents...</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </section>
+      </TooltipProvider>
     )}
 
     {/* Step 3: Cover Letter Generator (Dashboard Box) */}
