@@ -409,8 +409,15 @@ export default function LoanPackagingPage() {
         throw error;
       }
       console.log('[loadDocuments] Loaded documents:', data);
-      setDocuments(data || []);
-      const completed = data?.filter((doc: Document) => doc.status === 'completed').length || 0;
+      
+      // Always merge with default documents to ensure they show up
+      const mergedDocuments = DEFAULT_DOCUMENTS.map(defaultDoc => {
+        const dbDoc = data?.find((d: any) => d.id === defaultDoc.id);
+        return dbDoc ? { ...defaultDoc, ...dbDoc } : defaultDoc;
+      });
+      
+      setDocuments(mergedDocuments);
+      const completed = mergedDocuments.filter((doc: Document) => doc.status === 'completed' || doc.status === 'uploaded').length;
       setCompletedDocuments(completed);
       console.log('[loadDocuments] Set completedDocuments to:', completed);
       
@@ -419,6 +426,8 @@ export default function LoanPackagingPage() {
     } catch (err) {
       console.error('[loadDocuments] Exception:', err);
       setError('Failed to load documents');
+      // Fallback to default documents if loading fails
+      setDocuments(DEFAULT_DOCUMENTS);
     }
   };
 
@@ -893,27 +902,19 @@ export default function LoanPackagingPage() {
         <section className="max-w-7xl mx-auto px-4 md:px-6 pt-4">
           <div className="bg-white rounded-xl shadow-md border-l-4 border-blue-600">
             {/* Collapsible Header */}
-            <div 
-              className="p-6 md:p-8 cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={() => setShowStep2Details(!showStep2Details)}
-            >
+            <div className="p-6 md:p-8">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+                  <h2 className="text-2xl md:text-3xl font-bold text-blue-700 mb-2">
                     Step 2: Upload Required Documents
                   </h2>
                   {!showStep2Details && (
-                    <p className="text-slate-600 text-base">
-                      Click to view and upload the required financial documents
-                    </p>
-                  )}
-                  {/* Progress indicator */}
-                  {documents.length > 0 && (
                     <div className="mt-2">
-                      {(() => {
+                      {/* Progress indicator */}
+                      {documents.length > 0 && (() => {
                         const progress = getUploadProgress(documents);
                         return (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 mb-4">
                             <span className="text-sm text-gray-600">
                               {progress.completed} of {progress.total} Uploaded
                             </span>
@@ -925,21 +926,36 @@ export default function LoanPackagingPage() {
                             </div>
                           </div>
                         );
-                      })()} 
+                      })()}
+                      {/* Centered View Documents button */}
+                      <div className="flex items-center justify-center">
+                        <button
+                          className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow"
+                          onClick={() => setShowStep2Details(true)}
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          View Documents
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
                 
-                {/* Toggle chevron */}
-                <motion.div
-                  animate={{ rotate: showStep2Details ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="ml-4"
-                >
-                  <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </motion.div>
+                {/* Toggle chevron - only show when expanded */}
+                {showStep2Details && (
+                  <motion.div
+                    animate={{ rotate: showStep2Details ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="ml-4 cursor-pointer"
+                    onClick={() => setShowStep2Details(false)}
+                  >
+                    <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </motion.div>
+                )}
               </div>
             </div>
             
@@ -996,16 +1012,16 @@ export default function LoanPackagingPage() {
     {/* Step 3: Cover Letter Generator (Dashboard Box) */}
     {isStep1Complete && (
       <section className="max-w-7xl mx-auto px-4 md:px-6 pt-4">
-        <div className={`bg-white rounded-xl shadow-md p-6 md:p-10 flex flex-col border-l-4 border-blue-600 ${showCoverLetterForm ? 'gap-2' : 'gap-6'}`}>
-          <div className="pb-2 pt-1 px-0 md:px-2">
-            <h2 className="text-2xl md:text-3xl font-bold text-blue-700 leading-tight mb-0">Step 3: Generate Your Cover Letter</h2>
-            <div className="mt-1 mb-1">
-              <p className="text-gray-600 text-sm text-left whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+        <div className={`bg-white rounded-xl shadow-md p-6 md:p-8 flex flex-col border-l-4 border-blue-600 ${showCoverLetterForm ? 'gap-2' : 'gap-4'}`}>
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 leading-tight mb-2">Step 3: Generate Your Cover Letter</h2>
+            <div className="mb-4">
+              <p className="text-gray-600 text-sm">
                 Create a professional cover letter that summarizes your loan request, business purpose, and qualifications to help your application stand out.
               </p>
             </div>
             {!showCoverLetterForm && (
-              <div className="flex items-center justify-center mt-2 mb-1">
+              <div className="flex items-center justify-center">
                 <button
                   className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => setShowCoverLetterForm(true)}
