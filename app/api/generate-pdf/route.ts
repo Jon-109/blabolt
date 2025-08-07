@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCashFlowAnalysisById } from '@/lib/getCashFlowAnalysisById';
 import { uploadPdfToSupabase } from '@/lib/uploadPdfToSupabase';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 
 // Helper to get absolute URL for print route
 function getPrintUrl(req: NextRequest, analysisId: string, type: string, accessToken?: string) {
@@ -14,12 +16,18 @@ function getPrintUrl(req: NextRequest, analysisId: string, type: string, accessT
   return url;
 }
 
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-
 export async function POST(req: NextRequest) {
   console.log('[generate-pdf] POST handler initiated.');
   try {
-    const { analysisId, type, accessToken } = await req.json();
+    const body = await req.json();
+    
+    // Branch: Templates system
+    if (body?.submissionId && body?.templateType) {
+      return await handleTemplatesPdfGeneration(req, body);
+    }
+    
+    // Legacy: Cash-flow analysis system
+    const { analysisId, type, accessToken } = body;
     console.log(`[generate-pdf] Received analysisId: ${analysisId}, type: ${type}, accessToken: ${!!accessToken}`);
 
     if (!analysisId || !type || !accessToken) {
@@ -131,4 +139,92 @@ export async function POST(req: NextRequest) {
     console.error('[generate-pdf] Overall PDF generation error:', err.message, err.stack);
     return NextResponse.json({ error: 'Failed to generate PDF', details: err?.message }, { status: 500 });
   }
+}
+
+// Handle PDF generation for templates system
+async function handleTemplatesPdfGeneration(req: NextRequest, body: any) {
+  const { submissionId, templateType } = body;
+  console.log(`[generate-pdf] Templates: submissionId: ${submissionId}, templateType: ${templateType}`);
+
+  // Create Supabase client using service role for server-side operations
+  const { NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+  const supabase = createSupabaseClient(
+    NEXT_PUBLIC_SUPABASE_URL!,
+    SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+
+  // Verify submission exists and get user_id for RLS check
+  const { data: submission, error: fetchError } = await supabase
+    .from('template_submissions')
+    .select('id,user_id,template_type')
+    .eq('id', submissionId)
+    .single();
+
+  if (fetchError || !submission) {
+    console.error('[generate-pdf] Templates: Submission not found:', fetchError);
+    return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
+  }
+
+  if (submission.template_type !== templateType) {
+    console.error('[generate-pdf] Templates: Template type mismatch');
+    return NextResponse.json({ error: 'Template type mismatch' }, { status: 400 });
+  }
+
+  // Build print URL
+  const origin = process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL || req.headers.get('origin') || 'http://localhost:3000';
+  const printUrl = `${origin}/report/print/${submissionId}/${templateType}`;
+  console.log(`[generate-pdf] Templates: Print URL: ${printUrl}`);
+
+  // Generate PDF using Browserless
+  console.log('[generate-pdf] Templates: Generating PDF via Browserless...');
+  const browserlessUrl = `https://chrome.browserless.io/pdf?token=${process.env.BROWSERLESS_API_KEY}`;
+  
+  const browserlessResponse = await fetch(browserlessUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      url: printUrl,
+      options: {
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }
+      }
+    })
+  });
+
+  if (!browserlessResponse.ok) {
+    const errorText = await browserlessResponse.text();
+    console.error('[generate-pdf] Templates: Browserless error:', errorText);
+    throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} ${errorText}`);
+  }
+
+  const pdfBuffer = Buffer.from(await browserlessResponse.arrayBuffer());
+  console.log('[generate-pdf] Templates: PDF generated successfully');
+
+  // Upload to Supabase Storage
+  console.log('[generate-pdf] Templates: Uploading to Supabase Storage...');
+  const filename = `template_${templateType}_${submissionId}_${randomUUID()}.pdf`;
+  const { data: uploaded, error: uploadErr } = await supabase.storage
+    .from('pdfs')
+    .upload(filename, pdfBuffer, { contentType: 'application/pdf', upsert: false });
+
+  if (uploadErr) {
+    console.error('[generate-pdf] Templates: Upload error:', uploadErr);
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+  }
+
+  // Create signed URL
+  const { data: signed } = await supabase
+    .storage
+    .from('pdfs')
+    .createSignedUrl(uploaded.path, 60 * 60 * 24 * 7); // 7 days
+
+  const pdfUrl = signed?.signedUrl || null;
+  console.log(`[generate-pdf] Templates: PDF uploaded, signed URL: ${pdfUrl}`);
+
+  // Return JSON response with PDF URL (different from legacy cash-flow which returns the PDF buffer)
+  return NextResponse.json({ pdfUrl });
 }
