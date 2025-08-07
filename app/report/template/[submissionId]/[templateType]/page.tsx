@@ -25,16 +25,16 @@ async function getSubmission(submissionId: string) {
   return data;
 }
 
-export default async function PrintPage({
-  params
-}: { params: { submissionId: string; templateType: TemplateType } }) {
-  const submission = await getSubmission(params.submissionId);
+export default async function PrintPage({ params }: {
+  params: Promise<{ submissionId: string; templateType: TemplateType }>
+}) {
+  const { submissionId, templateType } = await params;
+  const submission = await getSubmission(submissionId);
   if (!submission) return notFound();
-  if (submission.template_type !== params.templateType) return notFound();
+  if (submission.template_type !== templateType) return notFound();
 
   // Cast form_data to the appropriate type based on template_type
-  const templateType = submission.template_type as keyof SubmissionDataMap;
-  const data = submission.form_data as SubmissionDataMap[typeof templateType];
+  const data = submission.form_data as SubmissionDataMap[keyof SubmissionDataMap];
 
   // Render component by template type
   switch (submission.template_type) {

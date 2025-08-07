@@ -173,7 +173,7 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: any) {
 
   // Build print URL
   const origin = process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL || req.headers.get('origin') || 'http://localhost:3000';
-  const printUrl = `${origin}/report/print/${submissionId}/${templateType}`;
+  const printUrl = `${origin}/report/template/${submissionId}/${templateType}`;
   console.log(`[generate-pdf] Templates: Print URL: ${printUrl}`);
 
   // Generate PDF using Browserless
