@@ -49,12 +49,15 @@ const LoanPaymentCalculator = React.forwardRef<HTMLDivElement, LoanPaymentCalcul
       const term = loanTerm;
 
       if (!isNaN(principal) && principal > 0) {
-        const payment = (principal * rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
+        // Use interest-only calculation for Line of Credit
+        const payment = loanPurpose === 'Line of Credit'
+          ? principal * rate  // Interest-only payment
+          : (principal * rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);  // Regular amortizing payment
         setMonthlyPayment(Math.round(payment));
       } else {
         setMonthlyPayment(null);
       }
-    }, [loanAmount, interestRate, loanTerm]);
+    }, [loanAmount, interestRate, loanTerm, loanPurpose]);
 
     useEffect(() => {
       calculateMonthlyPayment();

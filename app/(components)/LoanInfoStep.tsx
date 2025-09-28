@@ -295,6 +295,16 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ onNext, i
     return isFinite(payment) ? Math.round(payment) : 0;
   };
 
+  // Calculate interest-only payment for Line of Credit
+  const calculateInterestOnlyPayment = (amount: number, rate: number) => {
+    // rate is in percent, convert to decimal
+    const yearlyRate = rate / 100;
+    const monthlyRate = yearlyRate / 12;
+    if (!amount || !rate) return 0;
+    const payment = amount * monthlyRate;
+    return isFinite(payment) ? Math.round(payment) : 0;
+  };
+
   const initialPaymentString = initialData?.estimatedPayment;
   const initialPaymentNumber = initialPaymentString ? parseFloat(initialPaymentString) : null;
 
@@ -312,7 +322,11 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ onNext, i
         const downPaymentPctStr = (defaultDownPaymentPct * 100).toFixed(1) + '%';
         const down = Math.round(amount * defaultDownPaymentPct);
         const proposed = amount - down;
-        const payment = calculateMonthlyPayment(amount, defaultTerm, defaultRate * 100);
+        
+        // Use interest-only calculation for Line of Credit
+        const payment = formData.loanPurpose === 'Line of Credit' 
+          ? calculateInterestOnlyPayment(amount, defaultRate * 100)
+          : calculateMonthlyPayment(amount, defaultTerm, defaultRate * 100);
         const updated: LoanInfoData = {
           ...formData,
           desiredAmount: amount.toString(),

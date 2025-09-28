@@ -216,9 +216,17 @@ const InputField: React.FC<{
   );
 };
 
-function calculateMonthlyLoanPayment(principal: number, annualRate: number, termMonths: number) {
-  if (!principal || !annualRate || !termMonths) return 0;
+function calculateMonthlyLoanPayment(principal: number, annualRate: number, termMonths: number, isInterestOnly: boolean = false) {
+  if (!principal || !annualRate) return 0;
   const monthlyRate = annualRate / 12;
+  
+  if (isInterestOnly) {
+    // Interest-only payment calculation
+    return principal * monthlyRate;
+  }
+  
+  if (!termMonths) return 0;
+  // Regular amortizing payment calculation
   return (
     principal * monthlyRate * Math.pow(1 + monthlyRate, termMonths)
   ) / (Math.pow(1 + monthlyRate, termMonths) - 1);
@@ -278,7 +286,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
   const selectedPurpose = loanPurposes[loanPurpose] || loanPurposes['Working Capital'];
   const principal = parseInt(loanAmount.replace(/[$,]/g, '')) || 0;
   const estimatedPayment = principal && selectedPurpose
-    ? Math.round(calculateMonthlyLoanPayment(principal, FIXED_RATE, selectedPurpose.defaultTerm))
+    ? Math.round(calculateMonthlyLoanPayment(principal, FIXED_RATE, selectedPurpose.defaultTerm, loanPurpose === 'Line of Credit'))
     : 0;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -40,7 +40,7 @@ export const LEVEL2_OPTIONS: Record<string, { key: string; label: string; descri
   ],
   'working-capital': [
     { key: 'working-capital-loan', label: 'Working Capital Loan', description: 'Short-term funding to cover daily business expenses like payroll, rent, or utilities—ideal for managing cash flow.', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '9%' },
-    { key: 'line-of-credit', label: 'Line of Credit', description: 'Flexible access to funds you can draw from as needed to manage expenses or seize business opportunities.', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '10%' },
+    { key: 'line-of-credit', label: 'Line of Credit', description: 'Flexible access to funds with interest-only payments. Draw from as needed to manage expenses or seize business opportunities.', term: '1 year', amortization: 'Interest Only', downPayment: '0%', interestRate: '10%' },
   ],
 };
 

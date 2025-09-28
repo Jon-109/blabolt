@@ -53,5 +53,11 @@ export const loanPurposes: Record<string, LoanPurpose> = {
     description: 'To cover unforeseen business costs or emergency situations.',
     defaultTerm: 36,
     defaultRate: 0.09
+  },
+  'Line of Credit': {
+    title: 'Line of Credit',
+    description: 'Flexible access to funds with interest-only payments. Draw from as needed to manage expenses or seize business opportunities.',
+    defaultTerm: 12,
+    defaultRate: 0.10
   }
 }
