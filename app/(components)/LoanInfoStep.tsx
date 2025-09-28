@@ -317,7 +317,7 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ onNext, i
       const amount = parseInt(amountString.replace(/[^\d]/g, ''), 10);
       const selectedPurpose = loanPurposes[formData.loanPurpose];
       if (!isNaN(amount) && amount > 0 && selectedPurpose) {
-        const { defaultTerm, defaultRate, defaultDownPaymentPct = 0.1 } = selectedPurpose as any;
+        const { defaultTerm, defaultRate, defaultDownPaymentPct = 0.1 } = selectedPurpose;
         // downPaymentPct as percentage string
         const downPaymentPctStr = (defaultDownPaymentPct * 100).toFixed(1) + '%';
         const down = Math.round(amount * defaultDownPaymentPct);
