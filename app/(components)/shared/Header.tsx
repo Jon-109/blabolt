@@ -22,7 +22,7 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
-  const [hasPaidForCashFlowAnalysis, setHasPaidForCashFlowAnalysis] = useState(false);
+  // Removed payment verification since comprehensive analysis is now free
 
   useEffect(() => {
     const checkUser = async () => {
@@ -38,8 +38,7 @@ const Header = () => {
         setUserEmail(data.session.user.email || null);
         setUserId(data.session.user.id);
         
-        // Check if user has paid for cash flow analysis
-        await checkCashFlowAnalysisPurchase(data.session.user.id);
+        // No longer need to check payment since comprehensive analysis is now free
       } else {
         setIsLoggedIn(false);
         setUserEmail(null);
@@ -57,12 +56,12 @@ const Header = () => {
           setIsLoggedIn(true);
           setUserEmail(session.user.email || null);
           setUserId(session.user.id);
-          checkCashFlowAnalysisPurchase(session.user.id);
+          // No longer need to check payment since comprehensive analysis is now free
         } else if (event === 'SIGNED_OUT') {
           setIsLoggedIn(false);
           setUserEmail(null);
           setUserId(null);
-          setHasPaidForCashFlowAnalysis(false);
+          // No longer tracking payment status
         }
       }
     );
@@ -72,29 +71,7 @@ const Header = () => {
     };
   }, []);
 
-  // Check if user has paid for cash flow analysis
-  const checkCashFlowAnalysisPurchase = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('purchases')
-        .select('paid')
-        .eq('user_id', userId)
-        .eq('product_type', 'cash_flow_analysis')
-        .eq('product_id', 'prod_RPjWBW6yTN629z')
-        .eq('paid', true)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error checking purchase status:', error);
-        setHasPaidForCashFlowAnalysis(false);
-      } else {
-        setHasPaidForCashFlowAnalysis(!!data);
-      }
-    } catch (err) {
-      console.error('Error in payment verification:', err);
-      setHasPaidForCashFlowAnalysis(false);
-    }
-  };
+  // Removed payment verification function since comprehensive analysis is now free
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
@@ -179,17 +156,15 @@ const Header = () => {
                   onBlur={closeDropdown}
                 >
                   <div className="py-1" role="menu" aria-orientation="vertical">
-                    {hasPaidForCashFlowAnalysis && (
-                      <Link 
-                        href="/comprehensive-cash-flow-analysis" 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                        onClick={closeDropdown}
-                        role="menuitem"
-                        id="header-dropdown-link-cash-flow-analysis-dscr"
-                      >
-                        Cash Flow Analysis (DSCR)
-                      </Link>
-                    )}
+                    <Link 
+                      href="/comprehensive-cash-flow-analysis" 
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      onClick={closeDropdown}
+                      role="menuitem"
+                      id="header-dropdown-link-cash-flow-analysis-dscr"
+                    >
+                      Cash Flow Analysis (DSCR)
+                    </Link>
 
                     <button 
                       onClick={async () => {
@@ -287,7 +262,6 @@ const Header = () => {
                 <MyServicesDropdown
                   setIsMobileMenuOpen={setIsMobileMenuOpen}
                   router={router}
-                  hasPaidForCashFlowAnalysis={hasPaidForCashFlowAnalysis}
                 />
               ) : null}
 
@@ -344,12 +318,10 @@ const MenuItem = ({ href, label, onClick, small, large, id }: MenuItemProps & { 
 // MyServicesDropdown for mobile menu
 const MyServicesDropdown = ({ 
   setIsMobileMenuOpen, 
-  router,
-  hasPaidForCashFlowAnalysis 
+  router
 }: { 
   setIsMobileMenuOpen: (open: boolean) => void; 
   router: any;
-  hasPaidForCashFlowAnalysis: boolean;
 }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -366,15 +338,13 @@ const MyServicesDropdown = ({
       </button>
       {open && (
         <div id="my-services-dropdown" className="flex flex-col gap-1 pb-2">
-          {hasPaidForCashFlowAnalysis && (
-            <MenuItem
-              href="/comprehensive-cash-flow-analysis"
-              label="Cash Flow Analysis (DSCR)"
-              onClick={() => setIsMobileMenuOpen(false)}
-              small
-              id="header-mobile-dropdown-link-cash-flow-analysis-dscr"
-            />
-          )}
+          <MenuItem
+            href="/comprehensive-cash-flow-analysis"
+            label="Cash Flow Analysis (DSCR)"
+            onClick={() => setIsMobileMenuOpen(false)}
+            small
+            id="header-mobile-dropdown-link-cash-flow-analysis-dscr"
+          />
 
           <button
             onClick={async () => {

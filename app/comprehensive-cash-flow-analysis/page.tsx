@@ -120,18 +120,8 @@ export default function Page() {
         return;
       }
 
-      // Check if user has a paid purchase for the cash flow analysis
-      try {
-        const { hasUserPurchasedCashFlowAnalysis } = await import('./purchase-check');
-        const hasPurchased = await hasUserPurchasedCashFlowAnalysis(user.id);
-        if (hasPurchased) {
-          // User has paid, redirect to the comprehensive form page
-          router.replace('/comprehensive-cash-flow-analysis');
-          return;
-        }
-      } catch (err) {
-        console.error('Error checking purchase status:', err);
-      }
+      // No longer need to check payment since comprehensive analysis is now free
+      // User is authenticated, they can access the comprehensive form
 
       // If not purchased, check if user has a submitted analysis (legacy logic)
       const { data: submittedAnalyses, error: analysesError } = await supabase

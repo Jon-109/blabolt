@@ -1,14 +1,18 @@
-'use client';
+ 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
+ import { useEffect, useRef, useState } from 'react';
+ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+ import { useRouter, usePathname } from 'next/navigation';
 import type { IncomeStatementData } from '@/lib/templates/types';
 import { IncomeStatementSchema } from '@/lib/templates/validate';
 import { checkUserTemplateAccess } from '@/lib/templates/access';
+import { Input } from '@/app/(components)/ui/input';
+import { Textarea } from '@/app/(components)/ui/textarea';
+import { FormField } from '@/app/(components)/templates/shared/FormField';
 
 export default function IncomeStatementFormPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClientComponentClient();
   const [user, setUser] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -32,7 +36,7 @@ export default function IncomeStatementFormPage() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push(`/login?redirectTo=${encodeURIComponent(pathname)}`); return; }
       const access = await checkUserTemplateAccess(user.id, 'income_statement');
       if (!access.allowed) { if (access.redirectUrl) router.push(access.redirectUrl); return; }
       setUser(user);
@@ -196,20 +200,31 @@ export default function IncomeStatementFormPage() {
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Period Start Date *</label>
-              <input type="date" className={`w-full border-2 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
-                errors['periodStart'] ? 'border-red-500' : 'border-gray-200'
-              }`} value={form.periodStart} onChange={(e) => updateForm('periodStart', e.target.value)} />
-              {errors['periodStart'] && <p className="text-red-600 text-sm mt-2">{errors['periodStart']}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Period End Date *</label>
-              <input type="date" className={`w-full border-2 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
-                errors['periodEnd'] ? 'border-red-500' : 'border-gray-200'
-              }`} value={form.periodEnd} onChange={(e) => updateForm('periodEnd', e.target.value)} />
-              {errors['periodEnd'] && <p className="text-red-600 text-sm mt-2">{errors['periodEnd']}</p>}
-            </div>
+            <FormField
+              label="Period Start Date"
+              required
+              help="The first day of the reporting period (e.g., 2025-01-01)."
+              error={errors['periodStart']}
+            >
+              <Input
+                type="date"
+                value={form.periodStart}
+                onChange={(e) => updateForm('periodStart', e.target.value)}
+              />
+            </FormField>
+
+            <FormField
+              label="Period End Date"
+              required
+              help="The last day of the reporting period (e.g., 2025-12-31)."
+              error={errors['periodEnd']}
+            >
+              <Input
+                type="date"
+                value={form.periodEnd}
+                onChange={(e) => updateForm('periodEnd', e.target.value)}
+              />
+            </FormField>
           </div>
         </div>
 
@@ -223,23 +238,48 @@ export default function IncomeStatementFormPage() {
             </div>
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Product Sales Revenue</label>
-              <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                value={form.revenue.grossSales || ''} onChange={(e) => updateForm('revenue.grossSales', Number(e.target.value) || undefined)} />
-              <p className="text-xs text-gray-500 mt-1">Revenue from selling products or goods</p>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Service Revenue</label>
-              <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                value={form.revenue.serviceRevenue || ''} onChange={(e) => updateForm('revenue.serviceRevenue', Number(e.target.value) || undefined)} />
-              <p className="text-xs text-gray-500 mt-1">Revenue from providing services</p>
-            </div>
+            <FormField
+              label="Product Sales Revenue"
+              help="Revenue from selling products or goods."
+              error={errors['revenue.grossSales']}
+            >
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="$0.00"
+                value={form.revenue.grossSales || ''}
+                onChange={(e) => updateForm('revenue.grossSales', Number(e.target.value) || undefined)}
+              />
+            </FormField>
+
+            <FormField
+              label="Service Revenue"
+              help="Revenue from providing services."
+              error={errors['revenue.serviceRevenue']}
+            >
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="$0.00"
+                value={form.revenue.serviceRevenue || ''}
+                onChange={(e) => updateForm('revenue.serviceRevenue', Number(e.target.value) || undefined)}
+              />
+            </FormField>
+
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Other Revenue</label>
-              <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                value={form.revenue.otherRevenue || ''} onChange={(e) => updateForm('revenue.otherRevenue', Number(e.target.value) || undefined)} />
-              <p className="text-xs text-gray-500 mt-1">Interest income, rental income, or other sources</p>
+              <FormField
+                label="Other Revenue"
+                help="Interest income, rental income, or other sources."
+                error={errors['revenue.otherRevenue']}
+              >
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="$0.00"
+                  value={form.revenue.otherRevenue || ''}
+                  onChange={(e) => updateForm('revenue.otherRevenue', Number(e.target.value) || undefined)}
+                />
+              </FormField>
             </div>
           </div>
         </div>
@@ -255,27 +295,45 @@ export default function IncomeStatementFormPage() {
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             {[
-              { key: 'costOfGoodsSold', label: 'Cost of Goods Sold (COGS)', desc: 'Direct costs to produce your products' },
-              { key: 'salariesWages', label: 'Salaries & Wages', desc: 'Employee compensation and benefits' },
-              { key: 'rent', label: 'Rent', desc: 'Office or facility rent payments' },
-              { key: 'utilities', label: 'Utilities', desc: 'Electricity, gas, water, phone, internet' },
-              { key: 'marketing', label: 'Marketing & Advertising', desc: 'Ads, promotions, website costs' },
-              { key: 'insurance', label: 'Insurance', desc: 'Business insurance premiums' },
-              { key: 'depreciation', label: 'Depreciation', desc: 'Equipment and asset depreciation' },
-              { key: 'interestExpense', label: 'Interest Expense', desc: 'Interest on loans and credit' }
-            ].map(({ key, label, desc }) => (
-              <div key={key}>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-                <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-                  value={(form.expenses as any)[key] || ''} onChange={(e) => updateForm(`expenses.${key}`, Number(e.target.value) || undefined)} />
-                <p className="text-xs text-gray-500 mt-1">{desc}</p>
-              </div>
+              { key: 'costOfGoodsSold', label: 'Cost of Goods Sold (COGS)', help: 'Direct costs to produce your products.' },
+              { key: 'salariesWages', label: 'Salaries & Wages', help: 'Employee compensation and benefits.' },
+              { key: 'rent', label: 'Rent', help: 'Office or facility rent payments.' },
+              { key: 'utilities', label: 'Utilities', help: 'Electricity, gas, water, phone, internet.' },
+              { key: 'marketing', label: 'Marketing & Advertising', help: 'Ads, promotions, website costs.' },
+              { key: 'insurance', label: 'Insurance', help: 'Business insurance premiums.' },
+              { key: 'depreciation', label: 'Depreciation', help: 'Equipment and asset depreciation.' },
+              { key: 'interestExpense', label: 'Interest Expense', help: 'Interest on loans and credit.' }
+            ].map(({ key, label, help }) => (
+              <FormField
+                key={key}
+                label={label}
+                help={help}
+                error={errors[`expenses.${key}` as keyof typeof errors] as any}
+              >
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="$0.00"
+                  value={(form.expenses as any)[key] || ''}
+                  onChange={(e) => updateForm(`expenses.${key}`, Number(e.target.value) || undefined)}
+                />
+              </FormField>
             ))}
+
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Other Expenses</label>
-              <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-                value={form.expenses.otherExpenses || ''} onChange={(e) => updateForm('expenses.otherExpenses', Number(e.target.value) || undefined)} />
-              <p className="text-xs text-gray-500 mt-1">Any other business expenses not listed above</p>
+              <FormField
+                label="Other Expenses"
+                help="Any other business expenses not listed above."
+                error={errors['expenses.otherExpenses']}
+              >
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="$0.00"
+                  value={form.expenses.otherExpenses || ''}
+                  onChange={(e) => updateForm('expenses.otherExpenses', Number(e.target.value) || undefined)}
+                />
+              </FormField>
             </div>
           </div>
         </div>
@@ -286,9 +344,18 @@ export default function IncomeStatementFormPage() {
             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">📝</div>
             Additional Notes (Optional)
           </h2>
-          <textarea className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors" rows={4}
-            placeholder="Add any additional context, explanations, or important details about your income statement..."
-            value={form.notes || ''} onChange={(e) => updateForm('notes', e.target.value)} />
+          <FormField
+            label="Notes"
+            help="Optional: add any context, assumptions, or clarifications."
+            error={errors['notes']}
+          >
+            <Textarea
+              rows={4}
+              placeholder="Add any additional context, explanations, or important details about your income statement..."
+              value={form.notes || ''}
+              onChange={(e) => updateForm('notes', e.target.value)}
+            />
+          </FormField>
         </div>
 
         {/* Summary & Actions */}

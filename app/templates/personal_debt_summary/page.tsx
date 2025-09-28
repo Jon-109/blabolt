@@ -1,14 +1,18 @@
-'use client';
+ 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
+ import { useEffect, useRef, useState } from 'react';
+ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+ import { useRouter, usePathname } from 'next/navigation';
 import type { PersonalDebtSummaryData } from '@/lib/templates/types';
 import { PersonalDebtSummarySchema } from '@/lib/templates/validate';
 import { checkUserTemplateAccess } from '@/lib/templates/access';
+import { Input } from '@/app/(components)/ui/input';
+import { Textarea } from '@/app/(components)/ui/textarea';
+import FormField from '@/app/(components)/templates/shared/FormField';
 
 export default function PersonalDebtSummaryFormPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClientComponentClient();
   const [user, setUser] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -26,7 +30,7 @@ export default function PersonalDebtSummaryFormPage() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push(`/login?redirectTo=${encodeURIComponent(pathname)}`); return; }
       const access = await checkUserTemplateAccess(user.id, 'personal_debt_summary');
       if (!access.allowed) { if (access.redirectUrl) router.push(access.redirectUrl); return; }
       setUser(user);
@@ -223,26 +227,45 @@ export default function PersonalDebtSummaryFormPage() {
             Personal Information
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
-              <input type="text" placeholder="Enter your full legal name" className={`w-full border-2 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
-                errors['personalInfo.name'] ? 'border-red-500' : 'border-gray-200'
-              }`} value={form.personalInfo.name} onChange={(e) => updateForm('personalInfo.name', e.target.value)} />
-              {errors['personalInfo.name'] && <p className="text-red-600 text-sm mt-2">{errors['personalInfo.name']}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">SSN (Optional)</label>
-              <input type="text" placeholder="XXX-XX-XXXX" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                value={form.personalInfo.ssn || ''} onChange={(e) => updateForm('personalInfo.ssn', e.target.value)} />
-              <p className="text-xs text-gray-500 mt-1">For lender verification purposes</p>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">As of Date *</label>
-              <input type="date" className={`w-full border-2 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
-                errors['asOfDate'] ? 'border-red-500' : 'border-gray-200'
-              }`} value={form.asOfDate} onChange={(e) => updateForm('asOfDate', e.target.value)} />
-              {errors['asOfDate'] && <p className="text-red-600 text-sm mt-2">{errors['asOfDate']}</p>}
-            </div>
+            <FormField
+              label="Full Name"
+              required
+              help="Enter your full legal name as it appears on official documents."
+              error={errors['personalInfo.name']}
+            >
+              <Input
+                type="text"
+                placeholder="Enter your full legal name"
+                className="w-full"
+                value={form.personalInfo.name}
+                onChange={(e) => updateForm('personalInfo.name', e.target.value)}
+              />
+            </FormField>
+            <FormField
+              label="SSN (Optional)"
+              help="Used for lender verification if needed. You can leave this blank."
+            >
+              <Input
+                type="text"
+                placeholder="XXX-XX-XXXX"
+                className="w-full"
+                value={form.personalInfo.ssn || ''}
+                onChange={(e) => updateForm('personalInfo.ssn', e.target.value)}
+              />
+            </FormField>
+            <FormField
+              label="As of Date"
+              required
+              help="The date your balances are accurate as of."
+              error={errors['asOfDate']}
+            >
+              <Input
+                type="date"
+                className="w-full"
+                value={form.asOfDate}
+                onChange={(e) => updateForm('asOfDate', e.target.value)}
+              />
+            </FormField>
           </div>
         </div>
 
@@ -282,45 +305,82 @@ export default function PersonalDebtSummaryFormPage() {
                   </button>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Debt #{index + 1}</h3>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Creditor Name *</label>
-                      <input type="text" placeholder="Bank, Credit Card, etc." className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        value={debt.creditor} onChange={(e) => updateDebt(index, 'creditor', e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Account Number</label>
-                      <input type="text" placeholder="Last 4 digits: ****1234" className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        value={debt.accountNumber || ''} onChange={(e) => updateDebt(index, 'accountNumber', e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Original Amount *</label>
-                      <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        value={debt.originalAmount || ''} onChange={(e) => updateDebt(index, 'originalAmount', Number(e.target.value) || 0)} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Current Balance *</label>
-                      <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        value={debt.currentBalance || ''} onChange={(e) => updateDebt(index, 'currentBalance', Number(e.target.value) || 0)} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Monthly Payment *</label>
-                      <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        value={debt.monthlyPayment || ''} onChange={(e) => updateDebt(index, 'monthlyPayment', Number(e.target.value) || 0)} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Interest Rate (%)</label>
-                      <input type="number" step="0.01" placeholder="5.25" className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        value={debt.interestRate || ''} onChange={(e) => updateDebt(index, 'interestRate', Number(e.target.value) || undefined)} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Maturity Date</label>
-                      <input type="date" className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        value={debt.maturityDate || ''} onChange={(e) => updateDebt(index, 'maturityDate', e.target.value)} />
-                    </div>
+                    <FormField label="Creditor Name" required help="Bank, credit card, lender, or other creditor.">
+                      <Input
+                        type="text"
+                        placeholder="Bank, Credit Card, etc."
+                        className="w-full"
+                        value={debt.creditor}
+                        onChange={(e) => updateDebt(index, 'creditor', e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="Account Number" help="You may enter only the last 4 digits for privacy.">
+                      <Input
+                        type="text"
+                        placeholder="Last 4 digits: ****1234"
+                        className="w-full"
+                        value={debt.accountNumber || ''}
+                        onChange={(e) => updateDebt(index, 'accountNumber', e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="Original Amount" required help="The amount originally borrowed or charged.">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="$0.00"
+                        className="w-full"
+                        value={debt.originalAmount || ''}
+                        onChange={(e) => updateDebt(index, 'originalAmount', Number(e.target.value) || 0)}
+                      />
+                    </FormField>
+                    <FormField label="Current Balance" required help="What you owe today.">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="$0.00"
+                        className="w-full"
+                        value={debt.currentBalance || ''}
+                        onChange={(e) => updateDebt(index, 'currentBalance', Number(e.target.value) || 0)}
+                      />
+                    </FormField>
+                    <FormField label="Monthly Payment" required help="Your usual monthly payment amount.">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="$0.00"
+                        className="w-full"
+                        value={debt.monthlyPayment || ''}
+                        onChange={(e) => updateDebt(index, 'monthlyPayment', Number(e.target.value) || 0)}
+                      />
+                    </FormField>
+                    <FormField label="Interest Rate (%)" help="Annual interest rate; leave blank if unknown.">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="5.25"
+                        className="w-full"
+                        value={debt.interestRate || ''}
+                        onChange={(e) => updateDebt(index, 'interestRate', Number(e.target.value) || undefined)}
+                      />
+                    </FormField>
+                    <FormField label="Maturity Date" help="If this debt has an end date.">
+                      <Input
+                        type="date"
+                        className="w-full"
+                        value={debt.maturityDate || ''}
+                        onChange={(e) => updateDebt(index, 'maturityDate', e.target.value)}
+                      />
+                    </FormField>
                     <div className="lg:col-span-2">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Collateral</label>
-                      <input type="text" placeholder="House, car, or other secured asset" className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        value={debt.collateral || ''} onChange={(e) => updateDebt(index, 'collateral', e.target.value)} />
+                      <FormField label="Collateral" help="If this debt is secured by property (house, car, etc.).">
+                        <Input
+                          type="text"
+                          placeholder="House, car, or other secured asset"
+                          className="w-full"
+                          value={debt.collateral || ''}
+                          onChange={(e) => updateDebt(index, 'collateral', e.target.value)}
+                        />
+                      </FormField>
                     </div>
                   </div>
                 </div>
@@ -335,9 +395,15 @@ export default function PersonalDebtSummaryFormPage() {
             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">📝</div>
             Additional Notes (Optional)
           </h2>
-          <textarea className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors" rows={4}
-            placeholder="Add any additional context about your debts, payment history, or other relevant information..."
-            value={form.notes || ''} onChange={(e) => updateForm('notes', e.target.value)} />
+          <FormField label="Notes" help="Add context about your debts, payment history, or anything else helpful for reviewers.">
+            <Textarea
+              rows={4}
+              placeholder="Add any additional context about your debts, payment history, or other relevant information..."
+              className="w-full"
+              value={form.notes || ''}
+              onChange={(e) => updateForm('notes', e.target.value)}
+            />
+          </FormField>
         </div>
 
         {/* Summary & Actions */}

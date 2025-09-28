@@ -69,10 +69,10 @@ export default function TemplatesHub() {
               Transform your financial data into professional documents that banks and lenders trust. 
               No accounting experience required – our guided forms make it simple.
             </p>
-            <div className="flex items-center justify-center space-x-8 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-600">
               <div className="flex items-center">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                Auto-saves your progress
+                Auto-saves progress
               </div>
               <div className="flex items-center">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
@@ -87,22 +87,47 @@ export default function TemplatesHub() {
         </div>
       </div>
 
+      {/* Category Nav */}
+      <div className="max-w-7xl mx-auto px-6 pb-4">
+        <div className="sticky top-0 z-10 -mx-6 px-6 py-3 bg-gradient-to-br from-slate-50/80 via-blue-50/80 to-indigo-50/80 backdrop-blur supports-[backdrop-filter]:backdrop-blur rounded-b-xl border-b border-blue-100/30">
+          <nav className="overflow-x-auto" aria-label="Template categories">
+            <ul className="flex gap-2 md:gap-3">
+              {categories.map((c) => {
+                const id = c.toLowerCase().replace(/\s+/g, '-');
+                return (
+                  <li key={c}>
+                    <a
+                      href={`#${id}`}
+                      className="inline-flex items-center rounded-full border border-blue-200 bg-white/70 px-3 py-1.5 text-sm text-blue-700 hover:bg-white hover:border-blue-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      {c}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </div>
+      </div>
+
       {/* Templates Grid */}
       <div className="max-w-7xl mx-auto px-6 pb-16">
         {categories.map(category => {
           const categoryTemplates = templates.filter(t => t.category === category);
+          const id = category.toLowerCase().replace(/\s+/g, '-');
           return (
-            <div key={category} className="mb-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+            <section key={category} id={id} className="scroll-mt-20 mb-12" aria-labelledby={`${id}-heading`}>
+              <h2 id={`${id}-heading`} className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                 <div className="w-1 h-8 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-full mr-4"></div>
                 {category}
               </h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {categoryTemplates.map(template => (
-                  <Link 
-                    key={template.slug} 
-                    href={`/templates/${template.slug}`} 
-                    className="group relative bg-white rounded-2xl border border-gray-200 p-8 hover:shadow-2xl hover:shadow-blue-500/10 hover:border-blue-200 transition-all duration-300 transform hover:-translate-y-1"
+                  <Link
+                    key={template.slug}
+                    href={`/templates/${template.slug}`}
+                    aria-label={`Start ${template.title}`}
+                    className="group relative h-full flex flex-col bg-white rounded-2xl border border-gray-200 p-8 hover:shadow-2xl hover:shadow-blue-500/10 hover:border-blue-200 transition-all duration-300 motion-safe:hover:-translate-y-[2px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                   >
                     {/* Template Icon */}
                     <div className="absolute -top-4 left-8">
@@ -110,45 +135,49 @@ export default function TemplatesHub() {
                         {template.icon}
                       </div>
                     </div>
-                    
+
                     {/* Content */}
-                    <div className="mt-6">
+                    <div className="mt-8 flex-1 flex flex-col">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors">
                           {template.title}
                         </h3>
                         <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            template.difficulty === 'Beginner' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              template.difficulty === 'Beginner'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}
+                          >
                             {template.difficulty}
                           </span>
                         </div>
                       </div>
-                      
+
                       <p className="text-gray-600 leading-relaxed mb-6 text-sm">
                         {template.desc}
                       </p>
-                      
-                      <div className="flex items-center justify-between">
+
+                      <div className="mt-auto flex items-center justify-between">
                         <div className="flex items-center text-sm text-gray-500">
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           {template.time}
                         </div>
-                        <div className="flex items-center text-blue-600 font-semibold text-sm group-hover:text-blue-700">
+                        <span className="inline-flex items-center text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1.5 rounded-full shadow hover:from-blue-700 hover:to-indigo-700 group-focus:from-blue-700 group-focus:to-indigo-700">
                           Start Now
-                          <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                           </svg>
-                        </div>
+                        </span>
                       </div>
                     </div>
                   </Link>
                 ))}
               </div>
-            </div>
+            </section>
           );
         })}
       </div>

@@ -1,14 +1,18 @@
-'use client';
+ 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
+ import { useEffect, useRef, useState } from 'react';
+ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+ import { useRouter, usePathname } from 'next/navigation';
 import type { PersonalFinancialStatementData } from '@/lib/templates/types';
 import { PersonalFinancialStatementSchema } from '@/lib/templates/validate';
 import { checkUserTemplateAccess } from '@/lib/templates/access';
+import { Input } from '@/app/(components)/ui/input';
+import { Textarea } from '@/app/(components)/ui/textarea';
+import FormField from '@/app/(components)/templates/shared/FormField';
 
 export default function PersonalFinancialStatementFormPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClientComponentClient();
   const [user, setUser] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -34,7 +38,7 @@ export default function PersonalFinancialStatementFormPage() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push(`/login?redirectTo=${encodeURIComponent(pathname)}`); return; }
       const access = await checkUserTemplateAccess(user.id, 'personal_financial_statement');
       if (!access.allowed) { if (access.redirectUrl) router.push(access.redirectUrl); return; }
       setUser(user);
@@ -202,34 +206,70 @@ export default function PersonalFinancialStatementFormPage() {
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
-              <input type="text" placeholder="Enter your full legal name" className={`w-full border-2 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                errors['personalInfo.name'] ? 'border-red-500' : 'border-gray-200'
-              }`} value={form.personalInfo.name} onChange={(e) => updateForm('personalInfo.name', e.target.value)} />
-              {errors['personalInfo.name'] && <p className="text-red-600 text-sm mt-2">{errors['personalInfo.name']}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-              <input type="tel" placeholder="(555) 123-4567" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                value={form.personalInfo.phone || ''} onChange={(e) => updateForm('personalInfo.phone', e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-              <input type="email" placeholder="your@email.com" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                value={form.personalInfo.email || ''} onChange={(e) => updateForm('personalInfo.email', e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">As of Date *</label>
-              <input type="date" className={`w-full border-2 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                errors['asOfDate'] ? 'border-red-500' : 'border-gray-200'
-              }`} value={form.asOfDate} onChange={(e) => updateForm('asOfDate', e.target.value)} />
-              {errors['asOfDate'] && <p className="text-red-600 text-sm mt-2">{errors['asOfDate']}</p>}
-            </div>
+            <FormField
+              label="Full Name"
+              required
+              help="Enter your full legal name as it appears on official documents."
+              error={errors['personalInfo.name']}
+            >
+              <Input
+                type="text"
+                placeholder="Enter your full legal name"
+                className="w-full"
+                value={form.personalInfo.name}
+                onChange={(e) => updateForm('personalInfo.name', e.target.value)}
+              />
+            </FormField>
+            <FormField
+              label="Phone Number"
+              help="Best number to reach you if we need clarification."
+            >
+              <Input
+                type="tel"
+                placeholder="(555) 123-4567"
+                className="w-full"
+                value={form.personalInfo.phone || ''}
+                onChange={(e) => updateForm('personalInfo.phone', e.target.value)}
+              />
+            </FormField>
+            <FormField
+              label="Email Address"
+              help="We use this to share your generated statement and updates."
+            >
+              <Input
+                type="email"
+                placeholder="your@email.com"
+                className="w-full"
+                value={form.personalInfo.email || ''}
+                onChange={(e) => updateForm('personalInfo.email', e.target.value)}
+              />
+            </FormField>
+            <FormField
+              label="As of Date"
+              required
+              help="The date your numbers are accurate as of."
+              error={errors['asOfDate']}
+            >
+              <Input
+                type="date"
+                className="w-full"
+                value={form.asOfDate}
+                onChange={(e) => updateForm('asOfDate', e.target.value)}
+              />
+            </FormField>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Home Address</label>
-              <textarea className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" rows={2}
-                placeholder="Street address, city, state, zip code" value={form.personalInfo.address || ''} onChange={(e) => updateForm('personalInfo.address', e.target.value)} />
+              <FormField
+                label="Home Address"
+                help="Street address, city, state, and ZIP."
+              >
+                <Textarea
+                  rows={2}
+                  placeholder="Street address, city, state, zip code"
+                  className="w-full"
+                  value={form.personalInfo.address || ''}
+                  onChange={(e) => updateForm('personalInfo.address', e.target.value)}
+                />
+              </FormField>
             </div>
           </div>
         </div>
@@ -258,17 +298,29 @@ export default function PersonalFinancialStatementFormPage() {
               { key: 'personalProperty', label: 'Personal Property', desc: 'Jewelry, furniture, electronics, collectibles' }
             ].map(({ key, label, desc }) => (
               <div key={key}>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-                <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                  value={(form.assets as any)[key] || ''} onChange={(e) => updateForm(`assets.${key}`, Number(e.target.value) || undefined)} />
-                <p className="text-xs text-gray-500 mt-1">{desc}</p>
+                <FormField label={label} help={desc}>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="$0.00"
+                    className="w-full"
+                    value={(form.assets as any)[key] || ''}
+                    onChange={(e) => updateForm(`assets.${key}`, Number(e.target.value) || undefined)}
+                  />
+                </FormField>
               </div>
             ))}
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Other Assets</label>
-              <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-                value={form.assets.otherAssets || ''} onChange={(e) => updateForm('assets.otherAssets', Number(e.target.value) || undefined)} />
-              <p className="text-xs text-gray-500 mt-1">Any other valuable assets not listed above</p>
+              <FormField label="Other Assets" help="Any other valuable assets not listed above">
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="$0.00"
+                  className="w-full"
+                  value={form.assets.otherAssets || ''}
+                  onChange={(e) => updateForm('assets.otherAssets', Number(e.target.value) || undefined)}
+                />
+              </FormField>
             </div>
           </div>
         </div>
@@ -295,17 +347,29 @@ export default function PersonalFinancialStatementFormPage() {
               { key: 'studentLoans', label: 'Student Loans', desc: 'Outstanding balance on education loans' }
             ].map(({ key, label, desc }) => (
               <div key={key}>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-                <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-                  value={(form.liabilities as any)[key] || ''} onChange={(e) => updateForm(`liabilities.${key}`, Number(e.target.value) || undefined)} />
-                <p className="text-xs text-gray-500 mt-1">{desc}</p>
+                <FormField label={label} help={desc}>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="$0.00"
+                    className="w-full"
+                    value={(form.liabilities as any)[key] || ''}
+                    onChange={(e) => updateForm(`liabilities.${key}`, Number(e.target.value) || undefined)}
+                  />
+                </FormField>
               </div>
             ))}
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Other Debts</label>
-              <input type="number" step="0.01" placeholder="$0.00" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-                value={form.liabilities.otherDebts || ''} onChange={(e) => updateForm('liabilities.otherDebts', Number(e.target.value) || undefined)} />
-              <p className="text-xs text-gray-500 mt-1">Personal loans, family loans, or other debts not listed above</p>
+              <FormField label="Other Debts" help="Personal loans, family loans, or other debts not listed above">
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="$0.00"
+                  className="w-full"
+                  value={form.liabilities.otherDebts || ''}
+                  onChange={(e) => updateForm('liabilities.otherDebts', Number(e.target.value) || undefined)}
+                />
+              </FormField>
             </div>
           </div>
         </div>
@@ -316,9 +380,15 @@ export default function PersonalFinancialStatementFormPage() {
             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">📝</div>
             Additional Notes (Optional)
           </h2>
-          <textarea className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors" rows={4}
-            placeholder="Add any additional context about your financial situation, pending transactions, or other relevant information..."
-            value={form.notes || ''} onChange={(e) => updateForm('notes', e.target.value)} />
+          <FormField label="Notes" help="Add any context about your financial situation, pending transactions, or other relevant information.">
+            <Textarea
+              rows={4}
+              placeholder="Add any additional context about your financial situation, pending transactions, or other relevant information..."
+              className="w-full"
+              value={form.notes || ''}
+              onChange={(e) => updateForm('notes', e.target.value)}
+            />
+          </FormField>
         </div>
 
         {/* Summary & Actions */}

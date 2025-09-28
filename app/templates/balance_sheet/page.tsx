@@ -1,14 +1,19 @@
-'use client';
+ 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
+ import { useEffect, useRef, useState } from 'react';
+ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+ import { useRouter, usePathname } from 'next/navigation';
 import type { BalanceSheetData } from '@/lib/templates/types';
 import { BalanceSheetSchema } from '@/lib/templates/validate';
 import { checkUserTemplateAccess } from '@/lib/templates/access';
+import { Input } from '@/app/(components)/ui/input';
+import { Textarea } from '@/app/(components)/ui/textarea';
+import { FormField } from '@/app/(components)/templates/shared/FormField';
+import { FormSection } from '@/app/(components)/templates/shared/FormSection';
 
 export default function BalanceSheetFormPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClientComponentClient();
   const [user, setUser] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -47,7 +52,7 @@ export default function BalanceSheetFormPage() {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        router.push(`/login?redirectTo=${encodeURIComponent(pathname)}`);
         return;
       }
       
@@ -231,203 +236,235 @@ export default function BalanceSheetFormPage() {
 
       <div className="grid gap-8">
         <div className="space-y-4">
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700 mb-1 block">As of Date *</span>
-            <input
+          <FormField
+            label="As of Date"
+            required
+            labelHint="Snapshot date"
+            help="Pick the date this balance sheet represents (usually today or the end of the month)."
+            error={errors['asOfDate']}
+          >
+            <Input
               type="date"
-              className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors['asOfDate'] ? 'border-red-500' : 'border-gray-300'
-              }`}
               value={form.asOfDate}
               onChange={(e) => updateForm('asOfDate', e.target.value)}
             />
-            {errors['asOfDate'] && <p className="text-red-600 text-sm mt-1">{errors['asOfDate']}</p>}
-          </label>
+          </FormField>
         </div>
 
-        <fieldset className="border border-gray-200 rounded-lg p-6">
-          <legend className="text-lg font-semibold px-2">Assets</legend>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Cash *</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors['assets.cash'] ? 'border-red-500' : 'border-gray-300'
-                }`}
-                value={form.assets.cash || ''}
-                onChange={(e) => updateForm('assets.cash', Number(e.target.value) || 0)}
-              />
-              {errors['assets.cash'] && <p className="text-red-600 text-sm mt-1">{errors['assets.cash']}</p>}
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Accounts Receivable</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.assets.accountsReceivable || ''}
-                onChange={(e) => updateForm('assets.accountsReceivable', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Inventory</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.assets.inventory || ''}
-                onChange={(e) => updateForm('assets.inventory', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Other Current Assets</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.assets.otherCurrentAssets || ''}
-                onChange={(e) => updateForm('assets.otherCurrentAssets', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Fixed Assets</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.assets.fixedAssets || ''}
-                onChange={(e) => updateForm('assets.fixedAssets', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Accumulated Depreciation</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.assets.accumulatedDepreciation || ''}
-                onChange={(e) => updateForm('assets.accumulatedDepreciation', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Other Assets</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.assets.otherAssets || ''}
-                onChange={(e) => updateForm('assets.otherAssets', Number(e.target.value) || undefined)}
-              />
-            </label>
-          </div>
-        </fieldset>
+        <FormSection
+          title="Assets"
+          description="What the business owns. Use cost values where applicable."
+        >
+          <FormField
+            label="Cash"
+            required
+            help="Money in checking/savings as of the selected date."
+            error={errors['assets.cash']}
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.assets.cash || ''}
+              onChange={(e) => updateForm('assets.cash', Number(e.target.value) || 0)}
+            />
+          </FormField>
 
-        <fieldset className="border border-gray-200 rounded-lg p-6">
-          <legend className="text-lg font-semibold px-2">Liabilities</legend>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Accounts Payable</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.liabilities.accountsPayable || ''}
-                onChange={(e) => updateForm('liabilities.accountsPayable', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Credit Cards</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.liabilities.creditCards || ''}
-                onChange={(e) => updateForm('liabilities.creditCards', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Short-Term Loans</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.liabilities.shortTermLoans || ''}
-                onChange={(e) => updateForm('liabilities.shortTermLoans', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Long-Term Debt</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.liabilities.longTermDebt || ''}
-                onChange={(e) => updateForm('liabilities.longTermDebt', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Other Liabilities</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.liabilities.otherLiabilities || ''}
-                onChange={(e) => updateForm('liabilities.otherLiabilities', Number(e.target.value) || undefined)}
-              />
-            </label>
-          </div>
-        </fieldset>
+          <FormField
+            label="Accounts Receivable"
+            help="Unpaid customer invoices you expect to collect soon."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.assets.accountsReceivable || ''}
+              onChange={(e) =>
+                updateForm('assets.accountsReceivable', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
 
-        <fieldset className="border border-gray-200 rounded-lg p-6">
-          <legend className="text-lg font-semibold px-2">Equity</legend>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Owner's Equity</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.equity.ownersEquity || ''}
-                onChange={(e) => updateForm('equity.ownersEquity', Number(e.target.value) || undefined)}
-              />
-            </label>
-            
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700 mb-1 block">Retained Earnings</span>
-              <input 
-                type="number" 
-                step="0.01"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={form.equity.retainedEarnings || ''}
-                onChange={(e) => updateForm('equity.retainedEarnings', Number(e.target.value) || undefined)}
-              />
-            </label>
-          </div>
-        </fieldset>
+          <FormField
+            label="Inventory"
+            help="Cost value of items held for sale or use."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.assets.inventory || ''}
+              onChange={(e) => updateForm('assets.inventory', Number(e.target.value) || undefined)}
+            />
+          </FormField>
+
+          <FormField
+            label="Other Current Assets"
+            help="Short-term assets convertible to cash within 12 months."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.assets.otherCurrentAssets || ''}
+              onChange={(e) =>
+                updateForm('assets.otherCurrentAssets', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Fixed Assets"
+            help="Long-term assets like equipment or property at purchase cost."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.assets.fixedAssets || ''}
+              onChange={(e) => updateForm('assets.fixedAssets', Number(e.target.value) || undefined)}
+            />
+          </FormField>
+
+          <FormField
+            label="Accumulated Depreciation"
+            help="Total depreciation taken on fixed assets (enter as a positive number)."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.assets.accumulatedDepreciation || ''}
+              onChange={(e) =>
+                updateForm('assets.accumulatedDepreciation', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Other Assets"
+            help="Any long-term assets not listed above."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.assets.otherAssets || ''}
+              onChange={(e) => updateForm('assets.otherAssets', Number(e.target.value) || undefined)}
+            />
+          </FormField>
+        </FormSection>
+
+        <FormSection
+          title="Liabilities"
+          description="What the business owes."
+        >
+          <FormField
+            label="Accounts Payable"
+            help="Bills you owe to vendors/suppliers that are not yet paid."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.liabilities.accountsPayable || ''}
+              onChange={(e) =>
+                updateForm('liabilities.accountsPayable', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Credit Cards"
+            help="Outstanding balances on business credit cards."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.liabilities.creditCards || ''}
+              onChange={(e) =>
+                updateForm('liabilities.creditCards', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Short-Term Loans"
+            help="Loans due within 12 months (lines of credit, etc.)."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.liabilities.shortTermLoans || ''}
+              onChange={(e) =>
+                updateForm('liabilities.shortTermLoans', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Long-Term Debt"
+            help="Loans due beyond 12 months."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.liabilities.longTermDebt || ''}
+              onChange={(e) =>
+                updateForm('liabilities.longTermDebt', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Other Liabilities"
+            help="Any other amounts owed not listed above."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.liabilities.otherLiabilities || ''}
+              onChange={(e) =>
+                updateForm('liabilities.otherLiabilities', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Equity" description="Owner value after liabilities are subtracted from assets.">
+          <FormField
+            label="Owner's Equity"
+            help="Initial investment plus additional contributions."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.equity.ownersEquity || ''}
+              onChange={(e) =>
+                updateForm('equity.ownersEquity', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
+
+          <FormField
+            label="Retained Earnings"
+            help="Cumulative profits kept in the business."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              value={form.equity.retainedEarnings || ''}
+              onChange={(e) =>
+                updateForm('equity.retainedEarnings', Number(e.target.value) || undefined)
+              }
+            />
+          </FormField>
+        </FormSection>
 
         <div className="space-y-4">
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700 mb-1 block">Notes</span>
-            <textarea
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          <FormField
+            label="Notes"
+            help="Optional: add any context, assumptions, or clarifications."
+          >
+            <Textarea
               rows={3}
               placeholder="Add any additional notes or explanations..."
               value={form.notes || ''}
               onChange={(e) => updateForm('notes', e.target.value)}
             />
-          </label>
+          </FormField>
         </div>
       </div>
 

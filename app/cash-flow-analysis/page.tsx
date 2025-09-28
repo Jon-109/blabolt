@@ -21,7 +21,7 @@ import DscrQuickCalculator, { DscrFormValues } from '@/app/(components)/cash-flo
 
 const ComparisonTable = () => {
   const features = [
-    { name: 'Cost', quick: 'Free', comprehensive: '$99' },
+    { name: 'Cost', quick: 'Free', comprehensive: 'FREE (Limited Time)' },
     { name: 'Time to Complete', quick: 'Less than 5 minutes', comprehensive: '~30 minutes' },
     { name: 'Level of Detail', quick: 'High-level overview', comprehensive: 'Deep dive with bank-level accuracy' },
     { name: 'Analysis Period', quick: 'Most recent full year', comprehensive: 'Last 2 years + Year-to-date (bank standard)' },
@@ -81,20 +81,20 @@ function CashFlowAnalysisInner() {
       }, 100);
     }
     
-    // Check if we need to start the checkout flow after login
-    const handleCheckoutAfterLogin = async () => {
-      if (searchParams.get('checkout') === 'true') {
+    // Check if we need to redirect to comprehensive form after login
+    const handleComprehensiveAfterLogin = async () => {
+      if (searchParams.get('comprehensive') === 'true') {
         // Remove the query param to prevent infinite loops
         const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('checkout');
+        newUrl.searchParams.delete('comprehensive');
         window.history.replaceState({}, '', newUrl.toString());
         
-        // Start the checkout process
-        await handleStartCheckout();
+        // Redirect to comprehensive form
+        router.push('/comprehensive-cash-flow-analysis');
       }
     };
     
-    handleCheckoutAfterLogin();
+    handleComprehensiveAfterLogin();
   }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,10 +120,10 @@ function CashFlowAnalysisInner() {
     }, 100);
   };
 
-  // Handler for the $99 CTA button (triggers login if needed, then checkout)
-  const handleStartCheckout = async () => {
+  // Handler for the FREE comprehensive analysis CTA (triggers login if needed, then redirects to form)
+  const handleStartFreeAnalysis = async () => {
     try {
-      console.log("[DEBUG] Starting checkout process");
+      console.log("[DEBUG] Starting free comprehensive analysis process");
       
       // Check Supabase session first
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -131,82 +131,23 @@ function CashFlowAnalysisInner() {
       
       if (sessionError || !session) {
         console.error("[DEBUG] No valid session found, redirecting to login");
-        // Store in sessionStorage that we want to checkout after login
-        sessionStorage.setItem('returnToCheckout', 'true');
+        // Store in sessionStorage that we want to access comprehensive form after login
+        sessionStorage.setItem('returnToComprehensive', 'true');
         
-        // Redirect to login with a return URL that includes checkout=true
-        const redirectTo = encodeURIComponent('/cash-flow-analysis?checkout=true');
+        // Redirect to login with a return URL that includes comprehensive=true
+        const redirectTo = encodeURIComponent('/cash-flow-analysis?comprehensive=true');
         router.push(`/login?redirectTo=${redirectTo}`);
         return;
       }
       
-      console.log("[DEBUG] User ID from session:", session.user?.id);
-      console.log("[DEBUG] Is token present:", !!session.access_token);
-      // Log first few chars of token for debugging
-      if (session.access_token) {
-        console.log("[DEBUG] Token prefix:", session.access_token.substring(0, 10) + "...");
-      }
+      console.log("[DEBUG] User logged in, redirecting to comprehensive form");
+      // User is logged in, redirect directly to comprehensive form
+      router.push('/comprehensive-cash-flow-analysis');
       
-      // Check if user has already purchased the comprehensive analysis
-      try {
-        const { hasUserPurchasedCashFlowAnalysis } = await import('./purchase-check');
-        const hasPurchased = await hasUserPurchasedCashFlowAnalysis(session.user.id);
-        if (hasPurchased) {
-          // User has already purchased, redirect to the comprehensive form page
-          router.replace('/comprehensive-cash-flow-analysis');
-          return;
-        }
-      } catch (purchaseCheckError) {
-        console.error('Error checking purchase status:', purchaseCheckError);
-        // Optionally, allow fallback to checkout if purchase check fails
-        // alert('Could not verify purchase status. Please try again later.');
-        // return;
-      }
-      
-      // Get the JWT token from the session
-      const token = session.access_token;
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
-      
-      // If we get here, user is logged in and has not purchased - proceed to checkout
-      console.log("[DEBUG] Starting fetch to /api/create-checkout-session");
-      const res = await fetch('/api/create-checkout-session', { 
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Include JWT token
-        },
-        body: JSON.stringify({
-          productType: 'cash_flow_analysis' // Required by the API route
-        }),
-      });
-      
-      console.log("[DEBUG] Request made with productType: cash_flow_analysis");
-      
-      console.log("[DEBUG] Checkout response status:", res.status, res.statusText);
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({
-          error: "Failed to parse error response"
-        }));
-        console.error("[DEBUG] Checkout error response:", errorData);
-        throw new Error(errorData.error || 'Failed to create checkout session');
-      }
-      
-      const data = await res.json();
-      
-      if (data.url) {
-        // Clear the checkout flag since we're proceeding to payment
-        sessionStorage.removeItem('returnToCheckout');
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL received');
-      }
     } catch (error) {
-      console.error('Checkout error:', error);
+      console.error('Free analysis error:', error);
       // Show a more specific error message if available
-      const errorMessage = error instanceof Error ? error.message : 'Unable to start checkout';
+      const errorMessage = error instanceof Error ? error.message : 'Unable to access comprehensive analysis';
       alert(`Error: ${errorMessage}. Please try again.`);
     }
   };
@@ -335,12 +276,28 @@ function CashFlowAnalysisInner() {
             </div>
 
             {/* Comprehensive Analysis */}
-            <div className="bg-white rounded-xl shadow-lg p-8 border-2 border-primary-blue">
-              <div className="bg-primary-blue text-white px-4 py-1 rounded-full inline-block mb-4">
-                RECOMMENDED
+            <div className="bg-white rounded-xl shadow-lg p-8 border-2 border-green-500 relative overflow-hidden">
+              {/* Limited Time Banner */}
+              <div className="absolute top-0 right-0 bg-gradient-to-l from-red-500 to-red-600 text-white px-6 py-2 transform rotate-12 translate-x-4 -translate-y-2 shadow-lg">
+                <span className="text-sm font-bold tracking-wide">LIMITED TIME!</span>
+              </div>
+              
+              <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-1 rounded-full inline-block mb-4">
+                🎉 NOW FREE!
               </div>
               <h3 className="text-2xl font-bold mb-2">Comprehensive Cash Flow Analysis</h3>
-              <p className="text-lg text-primary-blue mb-6">Bank-Level Analysis with a Detailed PDF Report</p>
+              <p className="text-lg text-green-600 mb-4">Bank-Level Analysis with a Detailed PDF Report</p>
+              
+              {/* Pricing highlight */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-center space-x-3">
+                  <span className="text-2xl text-gray-400 line-through font-bold">$99</span>
+                  <span className="text-4xl font-extrabold text-green-600">FREE</span>
+                </div>
+                <p className="text-center text-sm text-green-700 font-semibold mt-2">
+                  🔥 Limited time offer - Save $99!
+                </p>
+              </div>
               
               <div className="space-y-6 mb-8">
                 <div>
@@ -358,11 +315,11 @@ function CashFlowAnalysisInner() {
               </div>
               
               <button 
-                onClick={handleStartCheckout}
-                className="w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors"
+                onClick={handleStartFreeAnalysis}
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-lg font-bold text-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 id="cashflow-page-comprehensive-get-started"
               >
-                Get Started at $99
+                🚀 Get Started FREE - Limited Time!
               </button>
             </div>
           </div>
@@ -418,11 +375,12 @@ function CashFlowAnalysisInner() {
           Start Quick Analysis for Free
         </button>
         <button
-          onClick={handleStartCheckout}
-          className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-700 to-primary-blue text-white font-semibold rounded-xl border-2 border-white/30 shadow-lg hover:from-blue-800 hover:to-primary-blue hover:scale-[1.03] hover:shadow-2xl active:scale-100 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-150"
+          onClick={handleStartFreeAnalysis}
+          className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-xl border-2 border-white/30 shadow-lg hover:from-green-600 hover:to-green-700 hover:scale-[1.03] hover:shadow-2xl active:scale-100 focus:outline-none focus:ring-2 focus:ring-green-300 transition-all duration-150 relative overflow-hidden"
           id="cashflow-page-cta-comprehensive-analysis"
         >
-          Get Comprehensive Analysis ($99)
+          <span className="relative z-10">🎉 Get FREE Analysis (Was $99!)</span>
+          <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 opacity-0 hover:opacity-20 transition-opacity duration-150"></div>
         </button>
       </div>
     </div>

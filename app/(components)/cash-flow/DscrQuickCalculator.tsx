@@ -229,59 +229,27 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
   const [loading, setLoading] = React.useState(false);
   const router = useRouter();
 
-  // --- handleStartCheckout copied/adapted from cash-flow-analysis/page.tsx ---
-  const handleStartCheckout = async () => {
+  // --- handleStartFreeAnalysis for free comprehensive analysis ---
+  const handleStartFreeAnalysis = async () => {
     setError('');
     setLoading(true);
     try {
       // Check Supabase session first
       const { data: { session }, error: supabaseSessionError } = await supabase.auth.getSession();
       if (supabaseSessionError || !session) {
-        // Store in sessionStorage that we want to checkout after login
-        sessionStorage.setItem('returnToCheckout', 'true');
-        // Redirect to login with a return URL that includes checkout=true
-        const redirectTo = encodeURIComponent('/cash-flow-analysis?checkout=true');
+        // Store in sessionStorage that we want to access comprehensive form after login
+        sessionStorage.setItem('returnToComprehensive', 'true');
+        // Redirect to login with a return URL that includes comprehensive=true
+        const redirectTo = encodeURIComponent('/cash-flow-analysis?comprehensive=true');
         router.push(`/login?redirectTo=${redirectTo}`);
         setLoading(false);
         return;
       }
-      // Check if user has already purchased the comprehensive analysis
-      try {
-        const { hasUserPurchasedCashFlowAnalysis } = await import('@/app/cash-flow-analysis/purchase-check');
-        const hasPurchased = await hasUserPurchasedCashFlowAnalysis(session.user.id);
-        if (hasPurchased) {
-          router.replace('/comprehensive-cash-flow-analysis');
-          setLoading(false);
-          return;
-        }
-      } catch (purchaseCheckError) {
-        // Optionally, allow fallback to checkout if purchase check fails
-        // console.error('Error checking purchase status:', purchaseCheckError);
-      }
-      // Get the JWT token from the session
-      const token = session.access_token;
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
-      // Proceed to Stripe checkout
-      const res = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to create checkout session');
-      }
-      const data = await res.json();
-      if (data.url) {
-        sessionStorage.removeItem('returnToCheckout');
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL received');
-      }
+      
+      console.log("[DEBUG] User logged in, redirecting to comprehensive form");
+      // User is logged in, redirect directly to comprehensive form
+      router.push('/comprehensive-cash-flow-analysis');
+      
     } catch (err: any) {
       setError(err?.message || 'An unexpected error occurred.');
     } finally {
@@ -599,21 +567,35 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({ initialValues
                     While this calculator provides a basic DSCR estimate, our comprehensive cash flow analysis matches the exact standards banks use when evaluating your business.
                   </p>
                 </div>
-                <div className="bg-blue-100 p-5 rounded-lg mt-3 text-center border-l-4 border-blue-500">
-                  <h3 className="font-semibold text-blue-800 text-lg mb-1">Comprehensive Cash Flow Analysis - $99</h3>
-                  <p className="text-sm text-blue-700">Bank-Level Analysis with a Detailed PDF Report</p>
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-5 rounded-lg mt-3 text-center border-l-4 border-green-500 relative overflow-hidden">
+                  {/* Limited Time Badge */}
+                  <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                    LIMITED TIME!
+                  </div>
+                  
+                  <div className="mb-3">
+                    <div className="flex items-center justify-center space-x-2 mb-1">
+                      <span className="text-lg text-gray-400 line-through font-semibold">$99</span>
+                      <span className="text-2xl font-extrabold text-green-600">FREE</span>
+                    </div>
+                    <h3 className="font-bold text-green-800 text-lg">Comprehensive Cash Flow Analysis</h3>
+                  </div>
+                  <p className="text-sm text-green-700 mb-3">Bank-Level Analysis with a Detailed PDF Report</p>
                   <Button
-                    className="mt-3 w-full bg-primary-blue text-white py-3 rounded-lg font-semibold hover:bg-primary-blue/80 transition-colors shadow-lg max-w-xs mx-auto text-lg"
+                    className="mt-3 w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg font-bold hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] max-w-xs mx-auto text-lg"
                     size="lg"
-                    onClick={handleStartCheckout}
+                    onClick={handleStartFreeAnalysis}
                     disabled={loading}
                     id="dscr-calc-cta-start-checkout"
                   >
-                    {loading ? 'Redirecting...' : 'Get Started Now!'}
+                    {loading ? 'Redirecting...' : '🎉 Get Started FREE!'}
                   </Button>
                   {error && (
                     <div className="mt-2 text-red-600 text-sm text-center font-medium">{error}</div>
                   )}
+                  <p className="text-xs text-green-600 font-semibold mt-2">
+                    🔥 Save $99 - Limited time offer!
+                  </p>
                 </div>
                 <div className="grid md:grid-cols-3 gap-4 mt-3">
                   <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
