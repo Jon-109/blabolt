@@ -73,7 +73,7 @@ const BusinessDebtSummary: React.FC<BusinessDebtSummaryProps> = ({ debts, busine
     { key: 'CREDIT_CARD', label: 'CREDIT CARD', columns: ['Name of Lender', 'Monthly Payment', 'Credit Limit', 'Outstanding Balance', 'Notes'] },
     { key: 'VEHICLE_EQUIPMENT', label: 'VEHICLE / EQUIPMENT', columns: ['Description', 'Monthly Payment', 'Original Loan Amount', 'Outstanding Balance', 'Notes'] },
     { key: 'LINE_OF_CREDIT', label: 'LINE OF CREDIT', columns: ['Name of Lender', 'Monthly Payment', 'Credit Limit', 'Outstanding Balance', 'Notes'] },
-    { key: 'OTHER_DEBT', label: 'OTHER DEBT', columns: ['Description', 'Monthly Payment', 'Original Loan Amount', 'Outstanding Balance', 'Notes'] },
+    { key: 'OTHER', label: 'OTHER DEBT', columns: ['Description', 'Monthly Payment', 'Original Loan Amount', 'Outstanding Balance', 'Notes'] },
   ];
 
   return (

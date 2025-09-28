@@ -798,7 +798,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
             { key: 'CREDIT_CARD', label: 'CREDIT CARD', columns: ['Name of Lender', 'Monthly Payment', 'Credit Limit', 'Outstanding Balance', 'Notes'] },
             { key: 'VEHICLE_EQUIPMENT', label: 'VEHICLE / EQUIPMENT', columns: ['Description', 'Monthly Payment', 'Original Loan Amount', 'Outstanding Balance', 'Notes'] },
             { key: 'LINE_OF_CREDIT', label: 'LINE OF CREDIT', columns: ['Name of Lender', 'Monthly Payment', 'Credit Limit', 'Outstanding Balance', 'Notes'] },
-            { key: 'OTHER_DEBT', label: 'OTHER DEBT', columns: ['Description', 'Monthly Payment', 'Original Loan Amount', 'Outstanding Balance', 'Notes'] },
+            { key: 'OTHER', label: 'OTHER DEBT', columns: ['Description', 'Monthly Payment', 'Original Loan Amount', 'Outstanding Balance', 'Notes'] },
           ].map(({ key, label, columns }) => {
             const debtsInCat = groupedDebts[key] || [];
             if (debtsInCat.length === 0) return null;
@@ -872,7 +872,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                 { label: 'Total Credit Card', key: 'CREDIT_CARD' },
                 { label: 'Total Vehicle / Equipment', key: 'VEHICLE_EQUIPMENT' },
                 { label: 'Total Line of Credit', key: 'LINE_OF_CREDIT' },
-                { label: 'Total Other Debt', key: 'OTHER_DEBT' },
+                { label: 'Total Other Debt', key: 'OTHER' },
               ].map(({ label, key }) => {
                 const debtsInCat = groupedDebts[key] || [];
                 const monthly = debtsInCat.reduce((sum, d) => sum + Number(d.monthlyPayment ?? 0), 0);
