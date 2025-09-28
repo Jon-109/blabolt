@@ -25,9 +25,7 @@ export async function POST(req: NextRequest) {
       options: {
         format: 'A4',
         printBackground: true,
-        margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' },
-        waitUntil: 'networkidle0',
-        timeout: 10000
+        margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }
       }
     };
     

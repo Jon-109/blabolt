@@ -72,9 +72,7 @@ export async function POST(req: NextRequest) {
       options: {
         format: 'A4',
         printBackground: true,
-        margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' },
-        waitUntil: 'networkidle0',
-        timeout: 30000
+        margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }
       }
     };
     console.log('[generate-pdf] Request body:', JSON.stringify(requestBody, null, 2));
@@ -209,9 +207,7 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: any) {
     options: {
       format: 'A4',
       printBackground: true,
-      margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' },
-      waitUntil: 'networkidle0',
-      timeout: 30000
+      margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }
     }
   };
   console.log('[generate-pdf] Templates: Request body:', JSON.stringify(requestBody, null, 2));
