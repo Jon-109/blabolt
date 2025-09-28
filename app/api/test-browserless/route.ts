@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     
     // Test with a simple URL
     const testUrl = 'https://example.com';
-    const browserlessUrl = `https://chrome.browserless.io/pdf?token=${browserlessApiKey}`;
+    const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
     
     const requestBody = {
       url: testUrl,

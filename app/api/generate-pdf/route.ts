@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
 
     // Use Browserless.io API to generate PDF
     console.log('[generate-pdf] Step 3: Sending request to Browserless.io...');
-    const browserlessUrl = `https://chrome.browserless.io/pdf?token=${browserlessApiKey}`;
-    console.log(`[generate-pdf] Browserless URL (without token): https://chrome.browserless.io/pdf`);
+    const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
+    console.log(`[generate-pdf] Browserless URL (without token): https://production-sfo.browserless.io/pdf`);
     
     const requestBody = {
       url: printUrl,
@@ -202,7 +202,7 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: any) {
 
   // Generate PDF using Browserless
   console.log('[generate-pdf] Templates: Generating PDF via Browserless...');
-  const browserlessUrl = `https://chrome.browserless.io/pdf?token=${browserlessApiKey}`;
+  const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
   
   const requestBody = {
     url: printUrl,
