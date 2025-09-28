@@ -30,7 +30,21 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ analysisId, type, child
         credentials: 'include',
       });
       if (!res.ok) {
-        alert('Failed to generate PDF');
+        let errorMessage = 'Failed to generate PDF';
+        try {
+          const errorData = await res.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+          if (errorData.details) {
+            errorMessage += `: ${errorData.details}`;
+          }
+        } catch (e) {
+          // If we can't parse the error response, use the status text
+          errorMessage = `Failed to generate PDF (${res.status}: ${res.statusText})`;
+        }
+        console.error('PDF generation failed:', errorMessage);
+        alert(errorMessage);
         setLoading(false);
         return;
       }
@@ -45,7 +59,9 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ analysisId, type, child
       link.remove();
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (error) {
-      alert('Failed to generate PDF');
+      console.error('PDF generation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF';
+      alert(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

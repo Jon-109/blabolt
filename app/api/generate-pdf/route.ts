@@ -55,28 +55,45 @@ export async function POST(req: NextRequest) {
     const printUrl = getPrintUrl(req, analysisId, type, accessToken);
     console.log(`[generate-pdf] Using print URL: ${printUrl}`);
 
+    // Check if Browserless API key is available
+    const browserlessApiKey = process.env.BROWSERLESS_API_KEY;
+    if (!browserlessApiKey) {
+      console.error('[generate-pdf] Error: BROWSERLESS_API_KEY environment variable is not set');
+      throw new Error('PDF generation service is not configured. Please contact support.');
+    }
+
     // Use Browserless.io API to generate PDF
     console.log('[generate-pdf] Step 3: Sending request to Browserless.io...');
-    const browserlessUrl = `https://chrome.browserless.io/pdf?token=${process.env.BROWSERLESS_API_KEY}`;
+    const browserlessUrl = `https://chrome.browserless.io/pdf?token=${browserlessApiKey}`;
+    console.log(`[generate-pdf] Browserless URL (without token): https://chrome.browserless.io/pdf`);
+    
+    const requestBody = {
+      url: printUrl,
+      options: {
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' },
+        waitUntil: 'networkidle0',
+        timeout: 30000
+      }
+    };
+    console.log('[generate-pdf] Request body:', JSON.stringify(requestBody, null, 2));
     
     const browserlessResponse = await fetch(browserlessUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        url: printUrl,
-        options: {
-          format: 'A4',
-          printBackground: true,
-          margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }
-        }
-      })
+      body: JSON.stringify(requestBody)
     });
+
+    console.log(`[generate-pdf] Browserless response status: ${browserlessResponse.status}`);
+    console.log(`[generate-pdf] Browserless response headers:`, Object.fromEntries(browserlessResponse.headers.entries()));
 
     if (!browserlessResponse.ok) {
       const errorText = await browserlessResponse.text();
-      throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} ${errorText}`);
+      console.error(`[generate-pdf] Browserless error response: ${errorText}`);
+      throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} - ${errorText}`);
     }
 
     const pdfBuffer = Buffer.from(await browserlessResponse.arrayBuffer());
@@ -176,29 +193,43 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: any) {
   const printUrl = `${origin}/report/template/${submissionId}/${templateType}`;
   console.log(`[generate-pdf] Templates: Print URL: ${printUrl}`);
 
+  // Check if Browserless API key is available
+  const browserlessApiKey = process.env.BROWSERLESS_API_KEY;
+  if (!browserlessApiKey) {
+    console.error('[generate-pdf] Templates: BROWSERLESS_API_KEY environment variable is not set');
+    return NextResponse.json({ error: 'PDF generation service is not configured. Please contact support.' }, { status: 500 });
+  }
+
   // Generate PDF using Browserless
   console.log('[generate-pdf] Templates: Generating PDF via Browserless...');
-  const browserlessUrl = `https://chrome.browserless.io/pdf?token=${process.env.BROWSERLESS_API_KEY}`;
+  const browserlessUrl = `https://chrome.browserless.io/pdf?token=${browserlessApiKey}`;
+  
+  const requestBody = {
+    url: printUrl,
+    options: {
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' },
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    }
+  };
+  console.log('[generate-pdf] Templates: Request body:', JSON.stringify(requestBody, null, 2));
   
   const browserlessResponse = await fetch(browserlessUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      url: printUrl,
-      options: {
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }
-      }
-    })
+    body: JSON.stringify(requestBody)
   });
+
+  console.log(`[generate-pdf] Templates: Browserless response status: ${browserlessResponse.status}`);
 
   if (!browserlessResponse.ok) {
     const errorText = await browserlessResponse.text();
     console.error('[generate-pdf] Templates: Browserless error:', errorText);
-    throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} ${errorText}`);
+    throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} - ${errorText}`);
   }
 
   const pdfBuffer = Buffer.from(await browserlessResponse.arrayBuffer());
