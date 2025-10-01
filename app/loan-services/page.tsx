@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import ServiceCard from '@/app/(components)/analysis/ServiceCard';
 import {
   FileCheck,
@@ -12,12 +12,15 @@ import {
   Award,
   Building2,
   Shield,
-  ArrowRight
+  ArrowRight,
+  Rocket,
+  TrendingUp
 } from 'lucide-react';
 import Link from 'next/link';
 import LoanPaymentCalculator from '@/app/(components)/LoanPaymentCalculator';
 import Testimonials from '@/app/(components)/shared/Testimonials';
 import { Button } from '@/app/(components)/ui/button';
+import ContactFormModal from '@/app/(components)/shared/ContactFormModal';
 
 const PricingTable = () => {
   const services = [
@@ -63,6 +66,8 @@ const PricingTable = () => {
 };
 
 export default function LoanServices() {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  
   const scrollToCalculator = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const calculator = document.getElementById('loan-calculator');
@@ -296,6 +301,96 @@ export default function LoanServices() {
       <div id="loan-calculator">
         <LoanPaymentCalculator />
       </div>
+
+      {/* Interest Form Section */}
+      <section className="py-8 bg-gradient-to-br from-[#002c55] via-[#003d73] to-[#002c55] text-white relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="container mx-auto px-4 sm:px-6 relative z-10">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-full mb-4 backdrop-blur-sm">
+                <Rocket className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">
+                Ready to Get Your Business Funded?
+              </h2>
+              <p className="text-lg sm:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
+                Take the first step toward securing the capital you need. Share your information with us, and we'll guide you through every step of the process.
+              </p>
+            </div>
+
+            {/* Benefits Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-green-300" />
+                  </div>
+                  <h3 className="font-bold text-lg">Expert Guidance</h3>
+                </div>
+                <p className="text-blue-100 text-sm">
+                  Get personalized support from experienced lending professionals who understand your needs.
+                </p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-blue-300" />
+                  </div>
+                  <h3 className="font-bold text-lg">Fast Response</h3>
+                </div>
+                <p className="text-blue-100 text-sm">
+                  Receive a detailed response within 24 hours. We value your time and move quickly.
+                </p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-purple-300" />
+                  </div>
+                  <h3 className="font-bold text-lg">No Obligation</h3>
+                </div>
+                <p className="text-blue-100 text-sm">
+                  Free consultation with no strings attached. Learn your options without any commitment.
+                </p>
+              </div>
+            </div>
+
+            {/* CTA Button */}
+            <div className="text-center">
+              <button
+                onClick={() => setIsContactModalOpen(true)}
+                className="group relative inline-flex items-center gap-3 px-10 py-5 bg-white text-[#002c55] rounded-full font-bold text-xl shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300 overflow-hidden"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-50 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                <span className="relative flex items-center gap-3">
+                  <Rocket className="w-6 h-6" />
+                  Get Started Today
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </button>
+              <p className="mt-4 text-sm text-blue-200 whitespace-nowrap">
+                ✓ Free consultation • 24hr response • No credit check
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Form Modal */}
+      <ContactFormModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+      />
+
     </div>
   );
 }
