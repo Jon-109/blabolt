@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { track, getLeadSource } from '@/lib/analytics';
 
 interface ContactFormModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export default function ContactFormModal({ isOpen, onClose }: ContactFormModalPr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [formStarted, setFormStarted] = useState(false);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function ContactFormModal({ isOpen, onClose }: ContactFormModalPr
       setTimeout(() => {
         setIsSuccess(false);
         setError('');
+        setFormStarted(false);
         setFormData({
           businessName: '',
           firstName: '',
@@ -51,6 +54,17 @@ export default function ContactFormModal({ isOpen, onClose }: ContactFormModalPr
       }, 300);
     }
   }, [isOpen]);
+
+  // Track form start on first interaction
+  const handleFormStart = () => {
+    if (!formStarted) {
+      setFormStarted(true);
+      track('select_content', {
+        content_type: 'form_start',
+        link_text: 'loan_interest',
+      } as any);
+    }
+  };
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -80,16 +94,37 @@ export default function ContactFormModal({ isOpen, onClose }: ContactFormModalPr
     // Validation
     if (!formData.businessName || !formData.firstName || !formData.lastName) {
       setError('Please fill in all required fields');
+      
+      // Track validation error
+      track('lead_submission_error', {
+        form_id: 'loan_interest',
+        error_stage: 'validation',
+        message: 'Missing required fields',
+      });
       return;
     }
     
     if (formData.concerns.length === 0) {
       setError('Please select at least one concern');
+      
+      // Track validation error
+      track('lead_submission_error', {
+        form_id: 'loan_interest',
+        error_stage: 'validation',
+        message: 'No concerns selected',
+      });
       return;
     }
     
     if (!formData.message.trim()) {
       setError('Please provide details about your loan needs');
+      
+      // Track validation error
+      track('lead_submission_error', {
+        form_id: 'loan_interest',
+        error_stage: 'validation',
+        message: 'Missing message',
+      });
       return;
     }
 
@@ -108,10 +143,25 @@ export default function ContactFormModal({ isOpen, onClose }: ContactFormModalPr
         throw new Error('Failed to send message');
       }
 
+      // Track successful lead generation
+      track('generate_lead', {
+        form_id: 'loan_interest',
+        submission_method: 'resend',
+        lead_source: getLeadSource(),
+        status: 'success',
+      });
+
       setIsSuccess(true);
     } catch (err) {
       setError('Failed to send message. Please try again.');
       console.error('Error submitting form:', err);
+      
+      // Track submission error
+      track('lead_submission_error', {
+        form_id: 'loan_interest',
+        error_stage: 'network',
+        message: 'Network or server error',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -178,6 +228,7 @@ export default function ContactFormModal({ isOpen, onClose }: ContactFormModalPr
                         id="businessName"
                         value={formData.businessName}
                         onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                        onFocus={handleFormStart}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002c55] focus:border-transparent transition-shadow text-gray-900"
                         placeholder="Your Business Name"
                         required

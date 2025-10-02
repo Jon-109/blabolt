@@ -1,3 +1,10 @@
+/**
+ * @deprecated Use centralized analytics from @/lib/analytics instead
+ * This file is kept for backwards compatibility
+ */
+
+import { track } from '@/lib/analytics';
+
 type LoanPurposeEvent = {
   action: 'select_category' | 'select_subcategory' | 'enter_custom_purpose' | 'reset';
   category?: string;
@@ -5,21 +12,20 @@ type LoanPurposeEvent = {
   customPurpose?: string;
 };
 
+/**
+ * @deprecated Use track('select_item', {...}) from @/lib/analytics instead
+ */
 export const trackLoanPurposeEvent = (event: LoanPurposeEvent): void => {
-  // This can be connected to your analytics service (e.g., Google Analytics, Mixpanel)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Analytics Event:', event);
-  }
-
-  // Example implementation for production
-  try {
-    if (typeof window !== 'undefined' && 'gtag' in window) {
-      (window as any).gtag('event', event.action, {
-        event_category: 'loan_purpose',
-        event_label: event.category || event.subcategory || event.customPurpose,
-      });
-    }
-  } catch (error) {
-    console.error('Analytics Error:', error);
-  }
+  // Map to GA4 recommended event: select_item
+  const itemName = event.category || event.subcategory || event.customPurpose || 'unknown';
+  
+  track('select_item', {
+    item_list_id: 'loan_purpose',
+    item_list_name: 'Loan Purpose Selector',
+    items: [{
+      item_id: itemName.toLowerCase().replace(/\s+/g, '_'),
+      item_name: itemName,
+      item_category: 'loan_purpose',
+    }],
+  });
 };

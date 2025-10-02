@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import Header from '@/app/(components)/shared/Header';
 import Footer from '@/app/(components)/shared/Footer';
 import AnalyticsWrapper from '@/app/(components)/AnalyticsWrapper';
+import AnalyticsProvider from '@/app/(components)/AnalyticsProvider';
 import { Analytics } from "@vercel/analytics/next";
 import Script from 'next/script';
 
@@ -17,6 +18,8 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL('https://www.businesslendingadvocate.com'),
 };
+
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 export default function RootLayout({
   children,
@@ -41,6 +44,38 @@ export default function RootLayout({
           }}
         />
         {/* End Google Tag Manager */}
+
+        {/* Google Analytics 4 */}
+        {GA_MEASUREMENT_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script
+              id="ga4-init"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('consent', 'default', {
+                    'ad_storage': 'granted',
+                    'analytics_storage': 'granted',
+                    'ad_user_data': 'granted',
+                    'ad_personalization': 'granted'
+                  });
+                  gtag('config', '${GA_MEASUREMENT_ID}', {
+                    page_path: window.location.pathname,
+                    send_page_view: true
+                  });
+                `,
+              }}
+            />
+          </>
+        )}
+        {/* End Google Analytics 4 */}
       </head>
       <body className={inter.className}>
         {/* Google Tag Manager (noscript) */}
@@ -54,12 +89,14 @@ export default function RootLayout({
           />
         </noscript>
         {/* End Google Tag Manager (noscript) */}
-        <Header />
-        <main className="pt-16">
-          {children}
-        </main>
-        <Footer />
-        <AnalyticsWrapper />
+        <AnalyticsProvider enableScrollTracking enableEngagementTracking>
+          <Header />
+          <main className="pt-16">
+            {children}
+          </main>
+          <Footer />
+          <AnalyticsWrapper />
+        </AnalyticsProvider>
       </body>
     </html>
   );
