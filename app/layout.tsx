@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Suspense } from 'react';
 import Header from '@/app/(components)/shared/Header';
 import Footer from '@/app/(components)/shared/Footer';
 import AnalyticsWrapper from '@/app/(components)/AnalyticsWrapper';
@@ -89,14 +90,16 @@ export default function RootLayout({
           />
         </noscript>
         {/* End Google Tag Manager (noscript) */}
-        <AnalyticsProvider enableScrollTracking enableEngagementTracking>
-          <Header />
-          <main className="pt-16">
-            {children}
-          </main>
-          <Footer />
-          <AnalyticsWrapper />
-        </AnalyticsProvider>
+        <Suspense fallback={null}>
+          <AnalyticsProvider enableScrollTracking enableEngagementTracking>
+            <Header />
+            <main className="pt-16">
+              {children}
+            </main>
+            <Footer />
+            <AnalyticsWrapper />
+          </AnalyticsProvider>
+        </Suspense>
       </body>
     </html>
   );
