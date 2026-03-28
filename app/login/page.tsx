@@ -8,6 +8,7 @@ import { CheckCircle2, Lock, ShieldCheck, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/app/(components)/ui/button';
+import { TEMPLATES_CART_CHECKOUT_PATH } from '@/lib/stripe/checkout-paths';
 import { Input } from '@/app/(components)/ui/input';
 import { isTemplateType } from '@/lib/stripe/catalog';
 import { supabase } from '@/supabase/helpers/client';
@@ -53,6 +54,7 @@ function getLoginFlow(redirectTo: string | null): LoginFlow {
     pathWithoutQuery === '/templates' ||
     pathWithoutQuery.startsWith('/templates/') ||
     pathWithoutQuery.startsWith('/services/templates') ||
+    pathWithoutQuery === TEMPLATES_CART_CHECKOUT_PATH ||
     checkoutProductType === 'templates_bundle' ||
     (checkoutProductType ? isTemplateType(checkoutProductType) : false);
 
@@ -96,6 +98,7 @@ function getLoginFlow(redirectTo: string | null): LoginFlow {
 
   if (isTemplateFlow) {
     const isPaymentFlow =
+      pathWithoutQuery === TEMPLATES_CART_CHECKOUT_PATH ||
       checkoutProductType === 'templates_bundle' ||
       (checkoutProductType ? isTemplateType(checkoutProductType) : false);
 

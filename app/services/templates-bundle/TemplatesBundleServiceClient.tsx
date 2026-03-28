@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
-  ArrowRight,
   BadgeCheck,
   Banknote,
   BarChart3,
@@ -27,7 +26,10 @@ import {
   AccordionTrigger,
 } from '@/app/(components)/ui/accordion';
 import AuthAwareCheckoutButton from '@/app/services/components/AuthAwareCheckoutButton';
+import AuthAwareRouteButton from '@/app/services/components/AuthAwareRouteButton';
 import useServicePageMotion from '@/app/services/components/useServicePageMotion';
+import TemplatesWorkspacePreviewSvg from './TemplatesWorkspacePreviewSvg';
+import { buildTemplatesCartCheckoutPath } from '@/lib/stripe/checkout-paths';
 import {
   TEMPLATE_A_LA_CARTE_FULL_SET_CENTS,
   TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE,
@@ -42,23 +44,23 @@ import {
 const bundleFaqs = [
   {
     q: 'What is included in the Templates Bundle?',
-    a: 'You get access to all five templates: Business Debt Summary, Balance Sheet, Income Statement, Personal Financial Statement, and Personal Debt Summary.',
+    a: `You get access to all five core lender-facing templates in one workspace: Business Debt Summary, Balance Sheet, Income Statement, Personal Financial Statement, and Personal Debt Summary. Each template also includes room for up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate builds, so you are not limited to just one version of each document. That matters when you need multiple years, revised numbers, different owners or guarantors, or cleaner versions after lender feedback. It is designed for borrowers who want a more complete, lender-ready document stack instead of solving one document at a time.`,
   },
   {
-    q: 'How many outputs can I produce?',
-    a: `Bundle policy includes up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} outputs per template. That gives you room to create updated versions as your deal evolves.`,
+    q: 'How many versions can I create for each template?',
+    a: `Bundle policy includes up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} builds per template. In plain English, that means if you own a template, you can create up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate versions of that document. That gives you practical room for things like different reporting years, updated financials, multiple owners or guarantors, or revised lender-requested versions without feeling like one draft uses up your access. The goal is to support how real underwriting workflows actually work, where documents often evolve before the package is final.`,
   },
   {
     q: 'Can I still buy templates individually?',
-    a: `Yes. Each template is available a la carte for ${formatUsd(TEMPLATE_UNIT_PRICE_CENTS)} if you only need a few specific documents.`,
+    a: `Yes. Each template is still available a la carte for ${formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}. On this page, users can now select one template, two templates, or any mix they need and complete a single checkout with all selected items included. That gives you flexibility when you do not need the full five-template bundle yet, while still making it easy to upgrade to the bundle when the economics make more sense.`,
   },
   {
     q: 'Who should buy the bundle?',
-    a: 'Buy the bundle if you want a complete lender-ready document stack, expect multiple lender conversations, or want to avoid switching between one-off purchases.',
+    a: 'The bundle is the better fit if you expect to speak with multiple lenders, anticipate document requests on both the business and personal side, or simply want to build a complete package from the start. It is especially useful when you do not want to guess which template you will need next and would rather work inside one organized dashboard. If you only need one very specific document today, a la carte is fine; if you are building toward real financing readiness, the bundle usually creates less friction.',
   },
   {
     q: 'How does bundle checkout work?',
-    a: 'Users sign in first, then go to secure Stripe checkout for the live Templates Bundle product. After payment, they land in the Templates dashboard with all five templates unlocked.',
+    a: 'Users are prompted to sign in before purchase so the payment can be tied to the correct account. From there, checkout runs through Stripe, and after payment the user returns to the Templates dashboard with access applied to their account. The same auth-aware flow now also supports multi-template a la carte checkout, so selected templates are recorded properly and unlocked for the signed-in user after payment.',
   },
 ];
 
@@ -80,25 +82,17 @@ const workflow = [
   },
   {
     title: 'Iterate as needed with output limits included',
-    body: `Bundle policy supports up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} outputs per template so you can update and refine without friction.`,
+    body: `Each template includes up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate builds, so you can handle different years, owners, and revisions without friction.`,
     icon: Rocket,
   },
-];
-
-const dashboardPreview = [
-  { label: 'Business Debt Summary', status: 'Completed', generated: '3/5 outputs used' },
-  { label: 'Balance Sheet', status: 'In Progress', generated: '2/5 outputs used' },
-  { label: 'Income Statement', status: 'In Progress', generated: '2/5 outputs used' },
-  { label: 'Personal Financial Statement', status: 'Ready to Start', generated: '0/5 outputs used' },
-  { label: 'Personal Debt Summary', status: 'Completed', generated: '1/5 outputs used' },
 ];
 
 export default function TemplatesBundleServiceClient() {
   useServicePageMotion();
 
   const [selected, setSelected] = useState<Record<string, boolean>>(() =>
-    TEMPLATE_OFFERS.reduce<Record<string, boolean>>((acc, template, index) => {
-      acc[template.slug] = index < 2;
+    TEMPLATE_OFFERS.reduce<Record<string, boolean>>((acc, template) => {
+      acc[template.slug] = false;
       return acc;
     }, {}),
   );
@@ -113,6 +107,11 @@ export default function TemplatesBundleServiceClient() {
   const selectedSavingsCents = selectedAlaCarteTotalCents - TEMPLATE_BUNDLE_PRICE_CENTS;
   const bundleIsBetter = selectedSavingsCents > 0;
   const almostBreakEven = selectedSavingsCents >= -50 && selectedSavingsCents <= 0;
+  const selectedTemplatesCheckoutPath = useMemo(
+    () => buildTemplatesCartCheckoutPath(selectedTemplates.map((template) => template.slug)),
+    [selectedTemplates],
+  );
+  const canCheckoutSelectedTemplates = selectedCount > 0;
 
   const toggleTemplate = (slug: string) => {
     setSelected((prev) => ({ ...prev, [slug]: !prev[slug] }));
@@ -158,7 +157,7 @@ export default function TemplatesBundleServiceClient() {
 
               <ul className="mt-5 space-y-2 text-sm text-slate-100">
                 <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />All 5 lender-oriented templates included</li>
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Up to {TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} outputs per template (bundle policy)</li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Up to {TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate builds per template for different years, owners, or revisions</li>
                 <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Single workflow for business and personal supporting docs</li>
               </ul>
 
@@ -171,15 +170,20 @@ export default function TemplatesBundleServiceClient() {
                 >
                   Get Full Bundle Access
                 </AuthAwareCheckoutButton>
-                <Button asChild variant="outline" className="h-11 w-full rounded-xl border-teal-200/35 bg-transparent font-semibold text-teal-100 hover:bg-teal-300/10 hover:text-teal-50">
-                  <Link id="templates-bundle-hero-cta-dashboard-demo" href="/services/templates-bundle/dashboard-demo">
-                    View Dashboard Demo
-                  </Link>
-                </Button>
+                <AuthAwareRouteButton
+                  className="h-11 w-full rounded-xl border border-white/20 bg-white/10 font-semibold text-white hover:bg-white/15"
+                  disabled={!canCheckoutSelectedTemplates}
+                  id="templates-bundle-hero-cta-selected"
+                  route={selectedTemplatesCheckoutPath}
+                >
+                  {canCheckoutSelectedTemplates
+                    ? `Checkout ${selectedCount} selected for ${formatUsd(selectedAlaCarteTotalCents)}`
+                    : 'Select templates below for a la carte checkout'}
+                </AuthAwareRouteButton>
               </div>
 
               <p className="mt-4 text-xs text-slate-300">
-                Need only one template right now? A la carte starts at {formatUsd(TEMPLATE_UNIT_PRICE_CENTS)} each.
+                Need only one or two templates right now? A la carte starts at {formatUsd(TEMPLATE_UNIT_PRICE_CENTS)} each.
               </p>
             </div>
           </aside>
@@ -256,6 +260,34 @@ export default function TemplatesBundleServiceClient() {
                 </p>
               )}
             </div>
+
+            <div className="mt-4 grid gap-3">
+              <AuthAwareRouteButton
+                className="service-magnetic h-11 rounded-xl bg-white font-semibold text-slate-900 hover:bg-slate-100"
+                data-service-magnetic
+                disabled={!canCheckoutSelectedTemplates}
+                id="templates-bundle-comparison-cta-selected"
+                route={selectedTemplatesCheckoutPath}
+              >
+                {canCheckoutSelectedTemplates
+                  ? `Checkout selected templates for ${formatUsd(selectedAlaCarteTotalCents)}`
+                  : 'Select templates to enable a la carte checkout'}
+              </AuthAwareRouteButton>
+
+              <AuthAwareCheckoutButton
+                className="h-11 rounded-xl bg-teal-300 font-semibold text-slate-950 hover:bg-teal-200"
+                id="templates-bundle-comparison-cta-bundle"
+                productType="templates_bundle"
+              >
+                Get full bundle for {formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS)}
+              </AuthAwareCheckoutButton>
+            </div>
+
+            {selectedCount > 0 ? (
+              <p className="mt-3 text-xs text-slate-300">
+                Stripe checkout will include every selected template as its own line item so buyers can purchase only the documents they need.
+              </p>
+            ) : null}
           </article>
         </div>
       </section>
@@ -303,30 +335,15 @@ export default function TemplatesBundleServiceClient() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 md:pb-16" data-service-reveal>
-        <div className="service-reveal rounded-3xl border border-teal-200/20 bg-gradient-to-r from-slate-950/70 to-teal-950/35 p-6 md:p-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-teal-200">Dashboard Preview</p>
-              <h2 className="mt-2 text-2xl font-black text-white md:text-3xl">See what your templates workspace can look like</h2>
-              <p className="mt-2 max-w-2xl text-sm text-slate-200">Preview output counters, progress states, and template completion flow in the bundle dashboard mock.</p>
-            </div>
-            <Button asChild className="service-magnetic h-11 rounded-xl bg-white text-slate-900 hover:bg-slate-100" data-service-magnetic>
-              <Link id="templates-bundle-dashboard-demo-cta" href="/services/templates-bundle/dashboard-demo">
-                Open Dashboard Demo
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+      <section className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 md:pb-12" data-service-reveal>
+        <div className="service-reveal rounded-3xl border border-teal-200/20 bg-gradient-to-r from-slate-950/70 to-teal-950/35 p-5 md:p-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-teal-200">Templates Workspace Preview</p>
+            <h2 className="mt-2 text-2xl font-black text-white md:text-3xl">See what your templates workspace can look like</h2>
           </div>
 
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
-            {dashboardPreview.map((item) => (
-              <div key={item.label} className="service-lift rounded-xl border border-white/20 bg-slate-950/50 p-4">
-                <p className="text-sm font-semibold text-white">{item.label}</p>
-                <p className="mt-1 text-xs text-teal-200">{item.status}</p>
-                <p className="mt-1 text-xs text-slate-300">{item.generated}</p>
-              </div>
-            ))}
+          <div className="mt-4">
+            <TemplatesWorkspacePreviewSvg />
           </div>
         </div>
       </section>
@@ -371,6 +388,16 @@ export default function TemplatesBundleServiceClient() {
                 View Business Debt Summary
               </Link>
             </Button>
+            <AuthAwareRouteButton
+              className="h-11 rounded-xl border border-white/20 bg-white/10 font-semibold text-white hover:bg-white/15"
+              disabled={!canCheckoutSelectedTemplates}
+              id="templates-bundle-final-cta-selected"
+              route={selectedTemplatesCheckoutPath}
+            >
+              {canCheckoutSelectedTemplates
+                ? `Checkout ${selectedCount} selected`
+                : 'Select templates above for a la carte checkout'}
+            </AuthAwareRouteButton>
           </div>
         </div>
       </section>
@@ -380,7 +407,7 @@ export default function TemplatesBundleServiceClient() {
           <p className="flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-teal-200" />Complete 5-template workspace in one purchase.</p>
           <p className="flex items-center gap-1.5"><Boxes className="h-3.5 w-3.5 text-teal-200" />Business + personal coverage in one flow.</p>
           <p className="flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5 text-teal-200" />{formatUsd(TEMPLATE_BUNDLE_SAVINGS_CENTS)} savings vs full a la carte set.</p>
-          <p className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-teal-200" />Up to {TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} outputs per template.</p>
+          <p className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-teal-200" />Up to {TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} builds per template for extra years, owners, and revisions.</p>
           <p className="flex items-center gap-1.5"><BarChart3 className="h-3.5 w-3.5 text-teal-200" />Designed for financing file readiness.</p>
         </div>
       </section>

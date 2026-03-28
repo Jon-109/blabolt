@@ -5,16 +5,13 @@ import { useRouter } from 'next/navigation';
 
 import { Button, type ButtonProps } from '@/app/(components)/ui/button';
 import type { StripeCheckoutProductType } from '@/lib/stripe/catalog';
+import { getCheckoutPath } from '@/lib/stripe/checkout-paths';
 import { supabase } from '@/supabase/helpers/client';
 
 type AuthAwareCheckoutButtonProps = Omit<ButtonProps, 'asChild'> & {
   pendingLabel?: React.ReactNode;
   productType: StripeCheckoutProductType;
 };
-
-function getCheckoutPath(productType: StripeCheckoutProductType): string {
-  return `/checkout/${productType}`;
-}
 
 export default function AuthAwareCheckoutButton({
   children,

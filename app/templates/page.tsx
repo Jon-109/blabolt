@@ -292,6 +292,17 @@ export default function TemplatesHub() {
             break;
           }
 
+          if (!accessPayload?.canAccessTemplates && pendingCheckoutSessionId) {
+            await fetch('/api/checkout/confirm-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ sessionId: pendingCheckoutSessionId }),
+            }).catch(() => null);
+          }
+
           if (accessPayload?.canAccessTemplates) {
             break;
           }

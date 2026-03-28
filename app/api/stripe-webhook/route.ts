@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import {
+  getCheckoutPurchasesFromMetadata,
+  upsertCheckoutPurchases,
+} from '@/lib/stripe/checkout-session-purchases';
 
 export async function POST(req: NextRequest) {
   const sig = req.headers.get('stripe-signature');
@@ -39,24 +43,17 @@ export async function POST(req: NextRequest) {
   const session = event.data.object as Stripe.Checkout.Session;
   const metadata = session.metadata || {};
   const user_id = metadata.user_id;
-  const product_type = metadata.product_type;
-  const product_id = metadata.product_id;
-  const stripe_session_id = session.id;
+  const purchases = getCheckoutPurchasesFromMetadata(metadata);
 
-  if (!user_id || !product_id || !product_type) {
+  if (!user_id || purchases.length === 0) {
     return NextResponse.json({ error: 'Missing metadata in Stripe session' }, { status: 400 });
   }
 
-  const { error: purchaseError } = await supabase.from('purchases').upsert([
-    {
-      user_id,
-      product_id,
-      product_type,
-      stripe_session_id,
-      paid: true,
-    }
-  ], {
-    onConflict: 'user_id,product_id,product_type',
+  const { error: purchaseError } = await upsertCheckoutPurchases({
+    session,
+    supabase,
+    purchases,
+    userId: user_id,
   });
 
   if (purchaseError) {

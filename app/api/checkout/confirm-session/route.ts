@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
+import {
+  getCheckoutPurchasesFromMetadata,
+  upsertCheckoutPurchases,
+} from '@/lib/stripe/checkout-session-purchases';
 
 function getBearerToken(request: NextRequest): string | null {
   const authHeader = request.headers.get('authorization');
@@ -71,25 +75,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session does not belong to this user' }, { status: 403 });
     }
 
-    const productType = String(metadata.product_type ?? '').trim();
-    const productId = String(metadata.product_id ?? '').trim();
-    if (!productType || !productId) {
+    const purchases = getCheckoutPurchasesFromMetadata(metadata);
+    if (purchases.length === 0) {
       return NextResponse.json({ error: 'Stripe session metadata is incomplete' }, { status: 422 });
     }
 
     const admin = getSupabaseAdmin();
-    const { error: purchaseError } = await admin
-      .from('purchases')
-      .upsert(
-        [{
-          user_id: user.id,
-          product_id: productId,
-          product_type: productType,
-          stripe_session_id: checkoutSession.id,
-          paid: true,
-        }],
-        { onConflict: 'user_id,product_id,product_type' },
-      );
+    const { error: purchaseError } = await upsertCheckoutPurchases({
+      session: checkoutSession,
+      supabase: admin,
+      purchases,
+      userId: user.id,
+    });
 
     if (purchaseError) {
       console.error('[checkout-confirm] Failed to upsert purchase:', purchaseError.message);

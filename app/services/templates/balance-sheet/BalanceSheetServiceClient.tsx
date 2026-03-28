@@ -32,10 +32,14 @@ import AuthAwareCheckoutButton from '@/app/services/components/AuthAwareCheckout
 import useServicePageMotion from '@/app/services/components/useServicePageMotion';
 import type { BalanceSheetData } from '@/lib/templates/types';
 import {
+  TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE,
   TEMPLATE_BUNDLE_PRICE_CENTS,
   TEMPLATE_UNIT_PRICE_CENTS,
   formatUsd,
 } from '@/lib/template-offers';
+
+const singleTemplatePriceLabel = formatUsd(TEMPLATE_UNIT_PRICE_CENTS);
+const bundlePriceLabel = formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS);
 
 const outcomes = [
   {
@@ -93,12 +97,16 @@ const faqs = [
     a: 'No. The form is guided and sectioned by account types so you can complete it without guessing how to format line items.',
   },
   {
-    q: 'What do I get for $9.99?',
-    a: 'You get access to the full Balance Sheet workflow and a polished downloadable statement output suitable for lender review.',
+    q: `What do I get for ${singleTemplatePriceLabel}?`,
+    a: `You get access to the full Balance Sheet workflow, a polished downloadable statement output suitable for lender review, and room for up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate builds of this template. That gives you flexibility for different years, updated numbers, revised lender-requested versions, or multiple owner scenarios when needed.`,
+  },
+  {
+    q: 'How many versions can I create with this template?',
+    a: `You can create up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate builds of the Balance Sheet template. That is especially useful if you need multiple reporting periods, cleaner revised drafts, or different versions for the same financing file.`,
   },
   {
     q: 'Can I buy only this template?',
-    a: `Yes. This page is for the single Balance Sheet template at ${formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}. Full 5-template bundle is ${formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS)} one-time.`,
+    a: `Yes. This page is for the single Balance Sheet template at ${singleTemplatePriceLabel}. Full 5-template bundle is ${bundlePriceLabel} one-time.`,
   },
 ];
 
@@ -190,13 +198,13 @@ export default function BalanceSheetServiceClient() {
           <aside className="service-reveal lg:sticky lg:top-24 lg:self-start" data-service-reveal>
             <div className="service-lift rounded-3xl border border-cyan-200/30 bg-slate-950/65 p-6 shadow-2xl backdrop-blur">
               <p className="text-sm font-semibold uppercase tracking-[0.12em] text-cyan-200">Single Template Access</p>
-              <p className="mt-2 text-5xl font-black text-white">{formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}</p>
+              <p className="mt-2 text-5xl font-black text-white">{singleTemplatePriceLabel}</p>
               <p className="mt-2 text-sm text-slate-300">One-time purchase for the Balance Sheet template service.</p>
 
               <ul className="mt-5 space-y-2 text-sm text-slate-100">
                 <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Guided statement setup and account mapping</li>
                 <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Clean lender-ready structure and totals</li>
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Instant downloadable output format</li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Up to {TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} builds for multiple years, revisions, or owner versions</li>
               </ul>
 
               <div className="mt-6 space-y-3">
@@ -206,7 +214,7 @@ export default function BalanceSheetServiceClient() {
                   id="balance-sheet-service-hero-cta-start"
                   productType="balance_sheet"
                 >
-                  Start Balance Sheet
+                  Start Balance Sheet for {singleTemplatePriceLabel}
                 </AuthAwareCheckoutButton>
                 <Button asChild variant="outline" className="h-11 w-full rounded-xl border-cyan-200/40 bg-transparent font-semibold text-cyan-100 hover:bg-cyan-300/10 hover:text-cyan-50">
                   <Link id="balance-sheet-service-hero-cta-demo" href="/services/templates/balance-sheet/demo">
@@ -216,7 +224,7 @@ export default function BalanceSheetServiceClient() {
               </div>
 
               <p className="mt-4 text-xs text-slate-300">
-                Need more than one template? Bundle all 5 for <span className="font-semibold text-amber-200">{formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS)}</span>.
+                Need more than one template? Bundle all 5 for <span className="font-semibold text-amber-200">{bundlePriceLabel}</span>.
               </p>
             </div>
           </aside>
@@ -419,7 +427,7 @@ export default function BalanceSheetServiceClient() {
               id="balance-sheet-service-final-cta-start"
               productType="balance_sheet"
             >
-              Start for {formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}
+              Start for {singleTemplatePriceLabel}
             </AuthAwareCheckoutButton>
             <Button asChild variant="outline" className="h-11 rounded-xl border-cyan-200/35 bg-transparent text-cyan-100 hover:bg-cyan-300/10 hover:text-cyan-50">
               <Link id="balance-sheet-service-final-cta-bundle" href="/services/templates-bundle">

@@ -32,10 +32,14 @@ import AuthAwareCheckoutButton from '@/app/services/components/AuthAwareCheckout
 import useServicePageMotion from '@/app/services/components/useServicePageMotion';
 import type { PersonalFinancialStatementData } from '@/lib/templates/types';
 import {
+  TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE,
   TEMPLATE_BUNDLE_PRICE_CENTS,
   TEMPLATE_UNIT_PRICE_CENTS,
   formatUsd,
 } from '@/lib/template-offers';
+
+const singleTemplatePriceLabel = formatUsd(TEMPLATE_UNIT_PRICE_CENTS);
+const bundlePriceLabel = formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS);
 
 const outcomes = [
   {
@@ -97,12 +101,16 @@ const faqs = [
     a: 'No. A personal debt summary is only liabilities. This service produces a complete personal financial statement including assets, liabilities, income context, and the net-worth picture lenders evaluate.',
   },
   {
-    q: 'What do I receive for $9.99?',
-    a: 'You receive access to complete the Personal Financial Statement workflow and generate an instant downloadable SBA Form 413 PDF.',
+    q: `What do I receive for ${singleTemplatePriceLabel}?`,
+    a: `You receive access to complete the Personal Financial Statement workflow, generate an instant downloadable SBA Form 413 PDF, and create up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate builds of this template. That gives you room for multiple guarantors, updated financial snapshots, revised lender-requested versions, or different filing dates when needed.`,
+  },
+  {
+    q: 'How many versions can I create with this template?',
+    a: `You can create up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate builds of the Personal Financial Statement template. That is especially useful when a deal involves multiple owners or guarantors, refreshed financial information, or revised versions for lender follow-up.`,
   },
   {
     q: 'Can I buy only this template without the bundle?',
-    a: `Yes. This page is for the single Personal Financial Statement template at ${formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}. If you later want all templates, the full bundle is ${formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS)} one-time.`,
+    a: `Yes. This page is for the single Personal Financial Statement template at ${singleTemplatePriceLabel}. If you later want all templates, the full bundle is ${bundlePriceLabel} one-time.`,
   },
 ];
 
@@ -238,13 +246,13 @@ export default function PersonalFinancialStatementServiceClient() {
           <aside className="service-reveal lg:sticky lg:top-24 lg:self-start" data-service-reveal>
             <div className="service-lift rounded-3xl border border-cyan-200/30 bg-slate-950/65 p-6 shadow-2xl backdrop-blur">
               <p className="text-sm font-semibold uppercase tracking-[0.12em] text-cyan-200">Single Template Access</p>
-              <p className="mt-2 text-5xl font-black text-white">{formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}</p>
+              <p className="mt-2 text-5xl font-black text-white">{singleTemplatePriceLabel}</p>
               <p className="mt-2 text-sm text-slate-300">One-time purchase for the Personal Financial Statement template service.</p>
 
               <ul className="mt-5 space-y-2 text-sm text-slate-100">
                 <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Guided form flow from profile data to final statement</li>
                 <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Complete personal financial statement, not just debt-only output</li>
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />SBA Form 413 PDF generated and ready to download instantly</li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Up to {TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} builds for multiple guarantors, dates, or revisions</li>
               </ul>
 
               <div className="mt-6 space-y-3">
@@ -254,7 +262,7 @@ export default function PersonalFinancialStatementServiceClient() {
                   id="pfs-service-hero-cta-start"
                   productType="personal_financial_statement"
                 >
-                  Start Personal Financial Statement
+                  Start Personal Financial Statement for {singleTemplatePriceLabel}
                 </AuthAwareCheckoutButton>
                 <Button asChild variant="outline" className="h-11 w-full rounded-xl border-cyan-200/40 bg-transparent font-semibold text-cyan-100 hover:bg-cyan-300/10 hover:text-cyan-50">
                   <Link id="pfs-service-hero-cta-demo" href="/services/templates/personal-financial-statement/demo">
@@ -264,7 +272,7 @@ export default function PersonalFinancialStatementServiceClient() {
               </div>
 
               <p className="mt-4 text-xs text-slate-300">
-                Need more than one template? Bundle all 5 for <span className="font-semibold text-amber-200">{formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS)}</span>.
+                Need more than one template? Bundle all 5 for <span className="font-semibold text-amber-200">{bundlePriceLabel}</span>.
               </p>
             </div>
           </aside>
@@ -467,7 +475,7 @@ export default function PersonalFinancialStatementServiceClient() {
               id="pfs-service-final-cta-start"
               productType="personal_financial_statement"
             >
-              Start for {formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}
+              Start for {singleTemplatePriceLabel}
             </AuthAwareCheckoutButton>
             <Button asChild variant="outline" className="h-11 rounded-xl border-cyan-200/35 bg-transparent text-cyan-100 hover:bg-cyan-300/10 hover:text-cyan-50">
               <Link id="pfs-service-final-cta-bundle" href="/services/templates-bundle">

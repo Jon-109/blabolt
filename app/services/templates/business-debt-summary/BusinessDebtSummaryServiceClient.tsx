@@ -32,10 +32,14 @@ import AuthAwareCheckoutButton from '@/app/services/components/AuthAwareCheckout
 import useServicePageMotion from '@/app/services/components/useServicePageMotion';
 import type { BusinessDebtSummaryData } from '@/lib/templates/types';
 import {
+  TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE,
   TEMPLATE_BUNDLE_PRICE_CENTS,
   TEMPLATE_UNIT_PRICE_CENTS,
   formatUsd,
 } from '@/lib/template-offers';
+
+const singleTemplatePriceLabel = formatUsd(TEMPLATE_UNIT_PRICE_CENTS);
+const bundlePriceLabel = formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS);
 
 const outcomes = [
   {
@@ -85,8 +89,12 @@ const faqs = [
     a: 'This is a guided template service that helps you produce a lender-ready Business Debt Summary without building the structure yourself. You answer prompts, enter debt details, and get a professional output you can use in financing conversations.',
   },
   {
-    q: 'What do I receive for $9.99?',
-    a: 'You receive access to complete the Business Debt Summary workflow and generate a polished PDF that is ready for immediate download and lender review.',
+    q: `What do I receive for ${singleTemplatePriceLabel}?`,
+    a: `You receive access to complete the Business Debt Summary workflow, generate a polished PDF ready for immediate download and lender review, and create up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate builds of this template. That gives you room for multiple years, updated debt snapshots, lender revisions, or different owner/guarantor scenarios when needed.`,
+  },
+  {
+    q: 'How many versions can I create with this template?',
+    a: `You can create up to ${TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} separate builds of the Business Debt Summary template. That is helpful when you need multiple reporting dates, cleaner updated drafts, or different borrower and guarantor debt versions for the same file.`,
   },
   {
     q: 'How hard is it to complete?',
@@ -94,7 +102,7 @@ const faqs = [
   },
   {
     q: 'Can I buy only this template without the bundle?',
-    a: `Yes. This page is for the single Business Debt Summary template at ${formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}. If you later want everything, the full bundle is ${formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS)} one-time.`,
+    a: `Yes. This page is for the single Business Debt Summary template at ${singleTemplatePriceLabel}. If you later want everything, the full bundle is ${bundlePriceLabel} one-time.`,
   },
   {
     q: 'Will this replace my accountant or lender?',
@@ -189,13 +197,13 @@ export default function BusinessDebtSummaryServiceClient() {
           <aside className="service-reveal lg:sticky lg:top-24 lg:self-start" data-service-reveal>
             <div className="service-lift rounded-3xl border border-cyan-200/30 bg-slate-950/65 p-6 shadow-2xl backdrop-blur">
               <p className="text-sm font-semibold uppercase tracking-[0.12em] text-cyan-200">Single Template Access</p>
-              <p className="mt-2 text-5xl font-black text-white">{formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}</p>
+              <p className="mt-2 text-5xl font-black text-white">{singleTemplatePriceLabel}</p>
               <p className="mt-2 text-sm text-slate-300">One-time purchase for the Business Debt Summary template service.</p>
 
               <ul className="mt-5 space-y-2 text-sm text-slate-100">
                 <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Guided form experience from first field to final output</li>
                 <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Debt grouped in underwriter-friendly structure</li>
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Professional PDF generated and ready to download instantly</li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />Up to {TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE} builds for different dates, revisions, or owner scenarios</li>
               </ul>
 
               <div className="mt-6 space-y-3">
@@ -205,7 +213,7 @@ export default function BusinessDebtSummaryServiceClient() {
                   id="business-debt-service-hero-cta-start"
                   productType="business_debt_summary"
                 >
-                  Start Business Debt Summary
+                  Start Business Debt Summary for {singleTemplatePriceLabel}
                 </AuthAwareCheckoutButton>
                 <Button asChild variant="outline" className="h-11 w-full rounded-xl border-cyan-200/40 bg-transparent font-semibold text-cyan-100 hover:bg-cyan-300/10 hover:text-cyan-50">
                   <Link id="business-debt-service-hero-cta-demo" href="/services/templates/business-debt-summary/demo">
@@ -215,7 +223,7 @@ export default function BusinessDebtSummaryServiceClient() {
               </div>
 
               <p className="mt-4 text-xs text-slate-300">
-                Need more than one template? Bundle all 5 for <span className="font-semibold text-amber-200">{formatUsd(TEMPLATE_BUNDLE_PRICE_CENTS)}</span>.
+                Need more than one template? Bundle all 5 for <span className="font-semibold text-amber-200">{bundlePriceLabel}</span>.
               </p>
             </div>
           </aside>
@@ -418,7 +426,7 @@ export default function BusinessDebtSummaryServiceClient() {
               id="business-debt-service-final-cta-start"
               productType="business_debt_summary"
             >
-              Start for {formatUsd(TEMPLATE_UNIT_PRICE_CENTS)}
+              Start for {singleTemplatePriceLabel}
             </AuthAwareCheckoutButton>
             <Button asChild variant="outline" className="h-11 rounded-xl border-cyan-200/35 bg-transparent text-cyan-100 hover:bg-cyan-300/10 hover:text-cyan-50">
               <Link id="business-debt-service-final-cta-bundle" href="/services/templates-bundle">
