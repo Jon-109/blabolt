@@ -1,69 +1,163 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
+import { LogOut, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/supabase/helpers/client';
-import { ChevronDown } from 'lucide-react';
-import { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 
-import { usePathname } from 'next/navigation';
+const KNOWN_ADMIN_EMAILS = new Set([
+  'jonathan@businesslendingadvocate.com',
+  'rosantina@businesslendingadvocate.com',
+  'jonathanfaranda@gmail.com',
+]);
 
-import { useRouter } from 'next/navigation';
+function isKnownAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return KNOWN_ADMIN_EMAILS.has(email.toLowerCase());
+}
+
+function prettifyName(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getDisplayName(user: User | null): string | null {
+  if (!user) return null;
+
+  const meta = user.user_metadata ?? {};
+  const candidate =
+    (typeof meta.full_name === 'string' && meta.full_name) ||
+    (typeof meta.name === 'string' && meta.name) ||
+    (typeof meta.preferred_username === 'string' && meta.preferred_username) ||
+    (typeof user.email === 'string' ? user.email.split('@')[0] : null);
+
+  if (!candidate) return null;
+  const fullName = prettifyName(candidate);
+  const firstName = fullName.split(' ')[0]?.trim();
+  return firstName || fullName;
+}
+
+async function syncServerSession(session: Session | null) {
+  if (!session?.access_token || !session.refresh_token) {
+    return;
+  }
+
+  await fetch('/api/auth/session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
+    }),
+  }).catch(() => undefined);
+}
+
+async function clearServerSession() {
+  await fetch('/api/auth/session', {
+    method: 'DELETE',
+  }).catch(() => undefined);
+}
 
 const Header = () => {
   const router = useRouter();
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-  // Hide header on print/PDF pages
+  const pathname = usePathname() ?? '';
+
+  const isPackagingWorkspace =
+    pathname === '/templates' ||
+    pathname.startsWith('/templates/') ||
+    pathname === '/loan-packaging' ||
+    pathname.startsWith('/loan-packaging/');
+
+  const hideAffordabilityCta =
+    isPackagingWorkspace || pathname.startsWith('/comprehensive-cash-flow-analysis');
+
   if (pathname.startsWith('/report/print/')) return null;
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [canAccessComprehensive, setCanAccessComprehensive] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-  // Removed payment verification since comprehensive analysis is now free
+
+  const checkAccessStatus = async (fallbackAdmin = false, fallbackLoggedIn = false) => {
+    try {
+      const res = await fetch('/api/access/me', { cache: 'no-store' });
+      if (!res.ok) {
+        setIsLoggedIn(fallbackLoggedIn);
+        setIsAdmin(fallbackAdmin);
+        setCanAccessComprehensive(false);
+        return;
+      }
+
+      const json = await res.json();
+      setIsLoggedIn(Boolean(json?.isAuthenticated) || fallbackLoggedIn);
+      setIsAdmin(Boolean(json?.isAdmin) || fallbackAdmin);
+      setCanAccessComprehensive(Boolean(json?.canAccessComprehensive));
+    } catch {
+      setIsLoggedIn(fallbackLoggedIn);
+      setIsAdmin(fallbackAdmin);
+      setCanAccessComprehensive(false);
+    }
+  };
+
+  const applyUserState = async (user: User | null) => {
+    if (!user) {
+      setIsLoggedIn(false);
+      setIsAdmin(false);
+      setCanAccessComprehensive(false);
+      setDisplayName(null);
+      return;
+    }
+
+    const localAdmin = isKnownAdminEmail(user.email);
+    setIsLoggedIn(true);
+    setIsAdmin(localAdmin);
+    setDisplayName(getDisplayName(user));
+    await checkAccessStatus(localAdmin, true);
+  };
 
   useEffect(() => {
     const checkUser = async () => {
       setIsLoading(true);
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error checking auth status:', error);
-        setIsLoggedIn(false);
-        setUserEmail(null);
-        setUserId(null);
-      } else if (data?.session?.user) {
-        setIsLoggedIn(true);
-        setUserEmail(data.session.user.email || null);
-        setUserId(data.session.user.id);
-        
-        // No longer need to check payment since comprehensive analysis is now free
-      } else {
-        setIsLoggedIn(false);
-        setUserEmail(null);
-        setUserId(null);
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data?.session?.user) {
+          setDisplayName(null);
+          await checkAccessStatus(false, false);
+        } else {
+          await syncServerSession(data.session);
+          await applyUserState(data.session.user);
+        }
+      } catch {
+        await applyUserState(null);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     checkUser();
 
-    // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event: AuthChangeEvent, session: Session | null) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          setIsLoggedIn(true);
-          setUserEmail(session.user.email || null);
-          setUserId(session.user.id);
-          // No longer need to check payment since comprehensive analysis is now free
+          await syncServerSession(session);
+          await applyUserState(session.user);
         } else if (event === 'SIGNED_OUT') {
-          setIsLoggedIn(false);
-          setUserEmail(null);
-          setUserId(null);
-          // No longer tracking payment status
+          await clearServerSession();
+          await applyUserState(null);
         }
-      }
+      },
     );
 
     return () => {
@@ -71,20 +165,22 @@ const Header = () => {
     };
   }, []);
 
-  // Removed payment verification function since comprehensive analysis is now free
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    await clearServerSession();
+    setIsMobileMenuOpen(false);
+    router.push('/login');
   };
 
-  const closeDropdown = () => {
-    setIsDropdownOpen(false);
-  };
+  const greeting = useMemo(() => {
+    if (!displayName) return 'Hi';
+    return `Hi, ${displayName}`;
+  }, [displayName]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <div className="flex-shrink-0">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white">
+      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center" id="header-logo-link">
             <Image
               src="/images/BusLendAdv_Final_4c.jpg"
@@ -97,217 +193,210 @@ const Header = () => {
           </Link>
         </div>
 
-        {/* Hamburger menu button for mobile */}
         <button
-          className="md:hidden flex items-center justify-center p-2 rounded focus:outline-none focus:ring-2 focus:ring-[#002c55]"
+          className="md:hidden flex items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
           aria-label="Open navigation menu"
           id="header-mobile-menu-open"
           onClick={() => setIsMobileMenuOpen(true)}
         >
           <span className="sr-only">Open navigation menu</span>
-          <svg className="h-7 w-7 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center space-x-8">
-          <Link 
-            href="/cash-flow-analysis?showCalculator=true"
-            className="bg-[#002c55] text-white px-6 py-2 rounded-md hover:bg-[#002c55]/90 transition-colors font-medium"
-            id="header-cta-find-out-free"
-          >
-            Can You Afford A Loan? - Find Out for FREE
-          </Link>
-          <Link 
-            href="/cash-flow-analysis"
-            className="text-gray-700 hover:text-gray-900 font-medium"
-            id="header-link-cash-flow-analysis"
-          >
-            Cash Flow Analysis
-          </Link>
-          <Link 
-            href="/loan-services" 
-            className="text-gray-700 hover:text-gray-900 font-medium"
-            id="header-link-loan-services"
-          >
-            Loan Services
-          </Link>
-          
-          {isLoading ? (
-            <div className="w-24 h-10 bg-gray-100 animate-pulse rounded-md"></div>
-          ) : isLoggedIn ? (
-            <div className="relative">
-              <button
-                onClick={toggleDropdown}
-                className="flex items-center space-x-2 px-5 py-2 bg-gradient-to-r from-[#002c55] to-[#002c55]/80 text-white font-bold rounded-lg shadow-lg border-2 border-[#002c55] hover:from-[#002c55]/80 hover:to-[#002c55]/70 transition-all duration-200 outline-none focus:ring-2 focus:ring-[#002c55]/50"
-                aria-expanded={isDropdownOpen}
-                aria-haspopup="true"
-                style={{ boxShadow: '0 2px 8px rgba(30,64,175,0.10)' }}
-                id="header-dropdown-my-services"
-              >
-                <span>My Services</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {isDropdownOpen && (
-                <div 
-                  className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-                  onBlur={closeDropdown}
+        <div className="hidden items-center gap-2 md:flex">
+          {isPackagingWorkspace ? (
+            <>
+              {isLoggedIn && isAdmin ? (
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                  id="header-link-admin-dashboard"
                 >
-                  <div className="py-1" role="menu" aria-orientation="vertical">
-                    <Link 
-                      href="/comprehensive-cash-flow-analysis" 
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                      onClick={closeDropdown}
-                      role="menuitem"
-                      id="header-dropdown-link-cash-flow-analysis-dscr"
-                    >
-                      Cash Flow Analysis (DSCR)
-                    </Link>
+                  <ShieldCheck className="h-4 w-4" />
+                  Admin
+                </Link>
+              ) : null}
+              {isLoggedIn && canAccessComprehensive ? (
+                <Link
+                  href="/comprehensive-cash-flow-analysis"
+                  className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
+                  id="header-link-dscr-check"
+                >
+                  DSCR Check
+                </Link>
+              ) : null}
+              <Link
+                href="/templates"
+                className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
+                id="header-link-templates"
+              >
+                Templates
+              </Link>
+              <Link
+                href="/loan-packaging"
+                className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                id="header-link-loan-packaging"
+              >
+                Loan Package
+              </Link>
+            </>
+          ) : (
+            <>
+              {!hideAffordabilityCta ? (
+                <Link
+                  href="/cash-flow-analysis?showCalculator=true"
+                  className="rounded-full bg-gradient-to-r from-slate-900 to-sky-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:from-slate-800 hover:to-sky-800"
+                  id="header-cta-find-out-free"
+                >
+                  Free DSCR Check
+                </Link>
+              ) : null}
+              <Link
+                href="/cash-flow-analysis"
+                className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                id="header-link-cash-flow-analysis"
+              >
+                Cash Flow Analysis
+              </Link>
+              <Link
+                href="/loan-services"
+                className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                id="header-link-loan-services"
+              >
+                Loan Services
+              </Link>
+              {isLoggedIn && isAdmin ? (
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                  id="header-link-admin-dashboard"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Admin
+                </Link>
+              ) : null}
+            </>
+          )}
 
-                    <button 
-                      onClick={async () => {
-                        await supabase.auth.signOut();
-                        closeDropdown();
-                        router.push('/login');
-                      }}
-                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700"
-                      role="menuitem"
-                      id="header-dropdown-logout"
-                    >
-                      Log Out
-                    </button>
-                  </div>
-                </div>
-              )}
+          {isLoading ? (
+            <div className="ml-2 h-10 w-28 animate-pulse rounded-full bg-slate-100" />
+          ) : isLoggedIn ? (
+            <div className="ml-2 flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">{greeting}</span>
+              <button
+                onClick={handleSignOut}
+                className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                id="header-button-logout"
+              >
+                <LogOut className="h-4 w-4" />
+                Log Out
+              </button>
             </div>
           ) : (
-            <Link 
+            <Link
               href="/login"
-              className="text-[#002c55] hover:text-[#002c55]/80 border border-[#002c55] px-4 py-2 rounded-md hover:bg-blue-50 transition-colors font-medium"
+              className="ml-2 rounded-full border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
               id="header-link-login"
             >
               Login / Sign Up
             </Link>
           )}
         </div>
-      {/* Mobile menu overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex justify-end md:hidden"
-          aria-modal="true"
-          role="dialog"
-        >
-          {/* Sidebar menu */}
-          <div className="bg-white w-4/5 max-w-xs h-full shadow-2xl flex flex-col relative rounded-l-2xl animate-slide-in-right overflow-y-auto">
-            {/* Sticky header with logo and close button */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-4 bg-white/80 backdrop-blur border-b border-gray-100">
-              <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center" id="header-mobile-logo-link">
-                <Image
-                  src="/images/BusLendAdv_Final_4c.jpg"
-                  alt="Business Lending Advisors Logo"
-                  width={110}
-                  height={42}
-                  className="object-contain"
-                  priority
-                />
-              </Link>
-              <button
-                className="p-2 rounded focus:outline-none focus:ring-2 focus:ring-[#002c55]"
-                aria-label="Close navigation menu"
-                id="header-mobile-menu-close"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <svg className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
 
-            {/* Menu content */}
-            <nav className="flex flex-col gap-2 px-4 pt-2 pb-8">
-              {/* CTA Section */}
-              <Link
-                href="/cash-flow-analysis?showCalculator=true"
-                className="mt-2 mb-4 bg-gradient-to-r from-[#002c55] to-[#002c55]/80 text-white px-4 py-3 rounded-xl text-base font-bold text-center shadow-md hover:from-[#002c55]/80 hover:to-[#002c55]/70 transition-colors focus:outline-none focus:ring-2 focus:ring-[#002c55]/50"
-                onClick={() => setIsMobileMenuOpen(false)}
-                id="header-mobile-cta-find-out-free"
-              >
-                Can You Afford A Loan? - Find Out for FREE
-              </Link>
-
-              <hr className="my-2 border-gray-200" />
-
-              {/* Main Navigation */}
-              <MenuItem
-                href="/cash-flow-analysis"
-                label="Cash Flow Analysis"
-                onClick={() => setIsMobileMenuOpen(false)}
-                large
-                id="header-mobile-link-cash-flow-analysis"
-              />
-              <MenuItem
-                href="/loan-services"
-                label="Loan Services"
-                onClick={() => setIsMobileMenuOpen(false)}
-                large
-                id="header-mobile-link-loan-services"
-              />
-
-              {/* My Services Dropdown (only if logged in) */}
-              {isLoading ? (
-                <div className="w-24 h-10 bg-gray-100 animate-pulse rounded-md mt-2" />
-              ) : isLoggedIn ? (
-                <MyServicesDropdown
-                  setIsMobileMenuOpen={setIsMobileMenuOpen}
-                  router={router}
-                />
-              ) : null}
-
-              <hr className="my-2 border-gray-200" />
-
-              {/* Account Section */}
-              {isLoading ? null : !isLoggedIn ? (
-                <MenuItem
-                  href="/login"
-                  label="Login / Sign Up"
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm md:hidden" aria-modal="true" role="dialog">
+            <div className="relative flex h-full w-4/5 max-w-xs flex-col overflow-y-auto rounded-l-2xl bg-white shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/90 px-4 py-4 backdrop-blur">
+                <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center" id="header-mobile-logo-link">
+                  <Image
+                    src="/images/BusLendAdv_Final_4c.jpg"
+                    alt="Business Lending Advisors Logo"
+                    width={110}
+                    height={42}
+                    className="object-contain"
+                    priority
+                  />
+                </Link>
+                <button
+                  className="rounded-lg border border-slate-200 p-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  aria-label="Close navigation menu"
+                  id="header-mobile-menu-close"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  large
-                  id="header-mobile-link-login"
-                />
-              ) : null}
-            </nav>
-          </div>
-          {/* Overlay click closes menu */}
-          <div
-            className="flex-1"
-            tabIndex={-1}
-            aria-hidden="true"
-            id="header-mobile-overlay"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-        </div>
-      )}
-    </nav>
-  </header>
-);
-};
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-// MenuItem component for DRYness and larger font
-// (useState already imported at the top)
+              <nav className="flex flex-col gap-2 px-4 py-4">
+                {!isPackagingWorkspace && !hideAffordabilityCta ? (
+                  <Link
+                    href="/cash-flow-analysis?showCalculator=true"
+                    className="mb-2 rounded-xl bg-gradient-to-r from-slate-900 to-sky-900 px-4 py-3 text-center text-base font-bold text-white"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    id="header-mobile-cta-find-out-free"
+                  >
+                    Free DSCR Check
+                  </Link>
+                ) : null}
+
+                {isPackagingWorkspace ? (
+                  <>
+                    {isLoggedIn && isAdmin ? (
+                      <MenuItem href="/admin" label="Admin" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-admin-dashboard" />
+                    ) : null}
+                    {isLoggedIn && canAccessComprehensive ? (
+                      <MenuItem href="/comprehensive-cash-flow-analysis" label="DSCR Check" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-dscr-check" />
+                    ) : null}
+                    <MenuItem href="/templates" label="Templates" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-templates" />
+                    <MenuItem href="/loan-packaging" label="Loan Package" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-packaging" />
+                  </>
+                ) : (
+                  <>
+                    <MenuItem href="/cash-flow-analysis" label="Cash Flow Analysis" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-cash-flow-analysis" />
+                    <MenuItem href="/loan-services" label="Loan Services" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-services" />
+                  </>
+                )}
+
+                {isLoggedIn ? (
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-sm font-semibold text-slate-700">{greeting}</p>
+                    <button
+                      onClick={handleSignOut}
+                      className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"
+                      id="header-mobile-button-logout"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Log Out
+                    </button>
+                  </div>
+                ) : (
+                  <MenuItem href="/login" label="Login / Sign Up" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-login" />
+                )}
+              </nav>
+            </div>
+            <div className="flex-1" tabIndex={-1} aria-hidden="true" id="header-mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />
+          </div>
+        )}
+      </nav>
+    </header>
+  );
+};
 
 type MenuItemProps = {
   href: string;
   label: string;
   onClick?: () => void;
-  small?: boolean;
-  large?: boolean;
+  id?: string;
 };
-const MenuItem = ({ href, label, onClick, small, large, id }: MenuItemProps & { id?: string }) => (
+
+const MenuItem = ({ href, label, onClick, id }: MenuItemProps) => (
   <Link
     href={href}
-    className={`flex items-center px-3 py-4 rounded-lg transition-colors ${large ? 'text-xl font-semibold' : small ? 'text-base pl-6' : 'text-lg font-medium'} text-gray-700 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200`}
+    className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-lg font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
     onClick={onClick}
     id={id}
   >
@@ -315,54 +404,4 @@ const MenuItem = ({ href, label, onClick, small, large, id }: MenuItemProps & { 
   </Link>
 );
 
-// MyServicesDropdown for mobile menu
-const MyServicesDropdown = ({ 
-  setIsMobileMenuOpen, 
-  router
-}: { 
-  setIsMobileMenuOpen: (open: boolean) => void; 
-  router: any;
-}) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="flex flex-col">
-      <button
-        className="flex items-center justify-between w-full px-3 py-4 rounded-lg text-xl font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-expanded={open}
-        aria-controls="my-services-dropdown"
-        id="header-mobile-dropdown-my-services"
-      >
-        <span>My Services</span>
-        <svg className={`w-6 h-6 ml-2 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-      </button>
-      {open && (
-        <div id="my-services-dropdown" className="flex flex-col gap-1 pb-2">
-          <MenuItem
-            href="/comprehensive-cash-flow-analysis"
-            label="Cash Flow Analysis (DSCR)"
-            onClick={() => setIsMobileMenuOpen(false)}
-            small
-            id="header-mobile-dropdown-link-cash-flow-analysis-dscr"
-          />
-
-          <button
-            onClick={async () => {
-              // @ts-ignore
-              await supabase.auth.signOut();
-              setIsMobileMenuOpen(false);
-              router.push('/login');
-            }}
-            className="flex items-center px-3 py-3 rounded-lg text-base pl-6 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-200 text-left"
-            id="header-mobile-dropdown-logout"
-          >
-            Log Out
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
 export default Header;
-

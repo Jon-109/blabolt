@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getPublicStripeProductId } from '@/lib/stripe/public-products';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -15,11 +16,13 @@ export async function hasUserPurchasedCashFlowAnalysis(userId: string): Promise<
   }
 
   try {
+    const productId = getPublicStripeProductId('cash_flow_analysis');
+
     // Debug the request itself
     console.log("[DEBUG] Making Supabase request with params:", {
       user_id: userId,
       product_type: 'cash_flow_analysis',
-      product_id: 'prod_RPjWBW6yTN629z'
+      product_id: productId
     });
 
     // Check the purchases table for a paid cash_flow_analysis for this user
@@ -28,7 +31,7 @@ export async function hasUserPurchasedCashFlowAnalysis(userId: string): Promise<
       .select('paid')
       .eq('user_id', userId)
       .eq('product_type', 'cash_flow_analysis')
-      .eq('product_id', 'prod_RPjWBW6yTN629z')
+      .eq('product_id', productId)
       .eq('paid', true)
       .maybeSingle(); // Changed from .single() to .maybeSingle() to handle not found case better
 

@@ -1,29 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function escapeHtml(input: string) {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      return NextResponse.json(
+        { error: 'Email service is not configured' },
+        { status: 500 }
+      );
+    }
+
+    const resend = new Resend(resendApiKey);
     const body = await request.json();
     const { businessName, firstName, lastName, concerns, message } = body;
 
     // Validate required fields
-    if (!businessName || !firstName || !lastName || !concerns || !message) {
+    if (!businessName || !firstName || !lastName || !Array.isArray(concerns) || !message) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
       );
     }
+    if (concerns.length > 10) {
+      return NextResponse.json(
+        { error: 'Too many concerns selected' },
+        { status: 400 }
+      );
+    }
+    if (
+      String(businessName).length > 200 ||
+      String(firstName).length > 100 ||
+      String(lastName).length > 100 ||
+      String(message).length > 10000
+    ) {
+      return NextResponse.json(
+        { error: 'Input exceeds allowed length' },
+        { status: 400 }
+      );
+    }
 
     // Format concerns list
-    const concernsList = concerns.map((concern: string) => `• ${concern}`).join('\n');
+    const safeBusinessName = escapeHtml(String(businessName).trim());
+    const safeFirstName = escapeHtml(String(firstName).trim());
+    const safeLastName = escapeHtml(String(lastName).trim());
+    const safeConcerns = concerns.map((concern: unknown) => escapeHtml(String(concern).trim()));
+    const safeMessage = escapeHtml(String(message).trim());
+    const concernsList = safeConcerns.map((concern: string) => `• ${concern}`).join('\n');
 
     // Send email using Resend
     const { data, error } = await resend.emails.send({
       from: 'Business Lending Advocate <onboarding@resend.dev>', // You'll need to update this with your verified domain
       to: ['jonathan@businesslendingadvocate.com'],
-      subject: `New Contact Form Submission - ${businessName}`,
+      subject: `New Contact Form Submission - ${safeBusinessName}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -80,12 +118,12 @@ export async function POST(request: NextRequest) {
               <div class="content">
                 <div class="field">
                   <div class="field-label">Business Name:</div>
-                  <div class="field-value">${businessName}</div>
+                  <div class="field-value">${safeBusinessName}</div>
                 </div>
                 
                 <div class="field">
                   <div class="field-label">Contact Name:</div>
-                  <div class="field-value">${firstName} ${lastName}</div>
+                  <div class="field-value">${safeFirstName} ${safeLastName}</div>
                 </div>
                 
                 <div class="field">
@@ -95,7 +133,7 @@ export async function POST(request: NextRequest) {
                 
                 <div class="field">
                   <div class="field-label">Loan Details & Message:</div>
-                  <div class="field-value">${message.replace(/\n/g, '<br>')}</div>
+                  <div class="field-value">${safeMessage.replace(/\n/g, '<br>')}</div>
                 </div>
               </div>
             </div>

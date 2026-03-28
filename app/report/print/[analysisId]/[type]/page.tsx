@@ -3,26 +3,30 @@ import { getCashFlowAnalysisById } from '@/lib/getCashFlowAnalysisById';
 import { createClient } from '@/supabase/helpers/server';
 import { cookies as nextCookies } from 'next/headers';
 import CashFlowReport from '@/app/(components)/CashFlowReport';
-import BusinessDebtSummary from '@/app/(components)/cash-flow/BusinessDebtSummary';
+import CashFlowBusinessDebtSummaryTemplate from '@/app/(components)/cash-flow/CashFlowBusinessDebtSummaryTemplate';
 import './print-report.css';
-// Next.js Image can use public/ images via /images/ path
-const logoPath = '/images/BusLendAdv_Final_4c.jpg';
-import Image from 'next/image';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { verifyPdfRenderToken } from '@/lib/server/pdf-render-token';
+import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
+import { normalizeFinancialsPayload } from '@/lib/financial/calculations';
 
 export default async function PrintReportPage({ params, searchParams }: any) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const { analysisId, type } = resolvedParams;
+  if (type !== 'full' && type !== 'summary') {
+    return notFound();
+  }
   let supabase;
-  // If a token is present in the query, use it to create the client (for SSR PDF gen)
-  if (resolvedSearchParams && resolvedSearchParams.token) {
-    const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = process.env;
-    supabase = createSupabaseClient(
-      NEXT_PUBLIC_SUPABASE_URL!,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: `Bearer ${resolvedSearchParams.token}` } } }
-    );
+  const renderToken = typeof resolvedSearchParams?.renderToken === 'string'
+    ? resolvedSearchParams.renderToken
+    : null;
+  // If a signed render token is present, use the admin client for one-time PDF rendering.
+  if (renderToken) {
+    const payload = verifyPdfRenderToken(renderToken);
+    if (!payload || payload.analysisId !== analysisId || payload.type !== type) {
+      return notFound();
+    }
+    supabase = getSupabaseAdmin();
   } else {
     // Normal browser/server-side rendering
     supabase = createClient(await nextCookies());
@@ -30,9 +34,7 @@ export default async function PrintReportPage({ params, searchParams }: any) {
   const raw: any = await getCashFlowAnalysisById(analysisId, supabase);
   
   if (!raw || Object.values(raw).every((v) => v == null || v === '' || (typeof v === 'object' && Object.keys(v).length === 0))) {
-    console.warn('No analysis found or all fields empty for analysisId:', analysisId);
-    // Show a visible message for debugging in addition to notFound
-    return <div style={{color: 'red', padding: 32}}>ERROR: No analysis data found or all fields empty for ID: {analysisId}.<br/>Check Supabase fetch, authentication, and data presence.</div>;
+    return notFound();
   }
   // --- Transform data to match report preview logic ---
   // Helper to parse currency
@@ -46,46 +48,12 @@ export default async function PrintReportPage({ params, searchParams }: any) {
   const finalLoanInfo = raw.loanInfo;
 
   // Transform Financials
-  const transformedFinancials: any = {};
-  if (raw.financials) {
-    for (const yearKey of Object.keys(raw.financials)) {
-      const rawYearData = raw.financials[yearKey];
-      transformedFinancials[yearKey] = {
-        input: {
-          revenue: parseCurrency(rawYearData?.input?.revenue),
-          cogs: parseCurrency(rawYearData?.input?.cogs),
-          operatingExpenses: parseCurrency(rawYearData?.input?.operatingExpenses),
-          nonRecurringIncome: parseCurrency(rawYearData?.input?.nonRecurringIncome),
-          nonRecurringExpenses: parseCurrency(rawYearData?.input?.nonRecurringExpenses),
-          depreciation: parseCurrency(rawYearData?.input?.depreciation),
-          amortization: parseCurrency(rawYearData?.input?.amortization),
-          interest: parseCurrency(rawYearData?.input?.interest),
-          taxes: parseCurrency(rawYearData?.input?.taxes),
-        },
-        summary: {
-          revenue: rawYearData?.summary?.revenue ?? parseCurrency(rawYearData?.input?.revenue) ?? 0,
-          cogs: rawYearData?.summary?.cogs ?? parseCurrency(rawYearData?.input?.cogs) ?? 0,
-          grossProfit: rawYearData?.summary?.grossProfit ?? (rawYearData?.summary?.revenue ?? parseCurrency(rawYearData?.input?.revenue) ?? 0) - (rawYearData?.summary?.cogs ?? parseCurrency(rawYearData?.input?.cogs) ?? 0),
-          operatingExpenses: rawYearData?.summary?.operatingExpenses ?? parseCurrency(rawYearData?.input?.operatingExpenses) ?? 0,
-          netIncome: rawYearData?.summary?.netIncome ?? 0,
-          nonRecurringIncome: rawYearData?.summary?.nonRecurringIncome ?? parseCurrency(rawYearData?.input?.nonRecurringIncome) ?? 0,
-          nonRecurringExpenses: rawYearData?.summary?.nonRecurringExpenses ?? parseCurrency(rawYearData?.input?.nonRecurringExpenses) ?? 0,
-          depreciation: rawYearData?.summary?.depreciation ?? parseCurrency(rawYearData?.input?.depreciation) ?? 0,
-          amortization: rawYearData?.summary?.amortization ?? parseCurrency(rawYearData?.input?.amortization) ?? 0,
-          interest: rawYearData?.summary?.interest ?? parseCurrency(rawYearData?.input?.interest) ?? 0,
-          taxes: rawYearData?.summary?.taxes ?? parseCurrency(rawYearData?.input?.taxes) ?? 0,
-          ebitda: rawYearData?.summary?.ebitda ?? (
-            (rawYearData?.summary?.grossProfit ?? (rawYearData?.summary?.revenue ?? parseCurrency(rawYearData?.input?.revenue) ?? 0) - (rawYearData?.summary?.cogs ?? parseCurrency(rawYearData?.input?.cogs) ?? 0))
-            - (rawYearData?.summary?.operatingExpenses ?? parseCurrency(rawYearData?.input?.operatingExpenses) ?? 0)
-            + (rawYearData?.summary?.depreciation ?? parseCurrency(rawYearData?.input?.depreciation) ?? 0)
-            + (rawYearData?.summary?.amortization ?? parseCurrency(rawYearData?.input?.amortization) ?? 0)
-          ),
-          adjustedEbitda: rawYearData?.summary?.adjustedEbitda ?? rawYearData?.summary?.ebitda ?? 0,
-        },
-        ...(yearKey === '2025YTD' && rawYearData?.ytdMonth ? { ytdMonth: rawYearData.ytdMonth } : {})
-      };
-    }
-  }
+  const normalizedFinancials = normalizeFinancialsPayload(raw.financials);
+  const transformedFinancials: any = {
+    '2024': normalizedFinancials.year2024,
+    '2025': normalizedFinancials.year2025,
+    '2026YTD': normalizedFinancials.year2026YTD,
+  };
 
   // Transform Debts
   const transformedDebts = raw.debts && typeof raw.debts === 'object' && Array.isArray(raw.debts.entries)
@@ -127,9 +95,9 @@ export default async function PrintReportPage({ params, searchParams }: any) {
   // Transform DSCR
   const defaultDscrYearData = { noi: 0, debtService: 0, annualizedLoanPayment: 0, totalDebtService: 0, dscr: 0 };
 
-  // Helper to get YTD month number from '2025YTD' data
+  // Helper to get YTD month number from '2026YTD' data
   const getYtdMonthNumber = () => {
-    const ytdMonthRaw = transformedFinancials['2025YTD']?.ytdMonth;
+    const ytdMonthRaw = transformedFinancials['2026YTD']?.ytdMonth;
     if (!ytdMonthRaw) return 0;
     if (/^\d+$/.test(ytdMonthRaw)) return parseInt(ytdMonthRaw, 10);
     const monthMap: Record<string, number> = {
@@ -142,13 +110,13 @@ export default async function PrintReportPage({ params, searchParams }: any) {
   const ytdMonthNum = getYtdMonthNumber();
 
   // Calculate annualized/prorated debt and loan payment for each year
-  const dscrYears = ['2023', '2024', '2025YTD'];
+  const dscrYears = ['2024', '2025', '2026YTD'];
   const transformedDscr: any = {};
   dscrYears.forEach((year) => {
     const financialsForYear = transformedFinancials[year];
     let debtService = 0;
     let annualizedLoanPayment = 0;
-    if (year === '2025YTD') {
+    if (year === '2026YTD') {
       if (ytdMonthNum > 0) {
         debtService = (transformedDebts?.entries ?? []).reduce(
           (sum: number, debt: any) => sum + Number(debt.monthlyPayment ?? 0) * ytdMonthNum,
@@ -164,7 +132,7 @@ export default async function PrintReportPage({ params, searchParams }: any) {
         (sum: number, debt: any) => sum + Number(debt.monthlyPayment ?? 0) * 12,
         0
       );
-      annualizedLoanPayment = year === '2024' ? (finalLoanInfo.annualizedLoan ?? 0) : 0;
+      annualizedLoanPayment = year === '2025' ? (finalLoanInfo.annualizedLoan ?? 0) : 0;
     }
     const totalDebtServiceForYear = debtService + annualizedLoanPayment;
     transformedDscr[year] = {
@@ -172,8 +140,8 @@ export default async function PrintReportPage({ params, searchParams }: any) {
       debtService,
       annualizedLoanPayment,
       totalDebtService: totalDebtServiceForYear,
-      dscr: totalDebtServiceForYear > 0 && (financialsForYear?.summary?.ebitda ?? 0) > 0
-        ? (financialsForYear?.summary?.ebitda ?? 0) / totalDebtServiceForYear
+      dscr: totalDebtServiceForYear > 0 && (financialsForYear?.summary?.adjustedEbitda ?? 0) > 0
+        ? (financialsForYear?.summary?.adjustedEbitda ?? 0) / totalDebtServiceForYear
         : 0,
     };
   });
@@ -181,9 +149,9 @@ export default async function PrintReportPage({ params, searchParams }: any) {
 
   // Populate annualizedLoanPayments for table display
   const annualizedLoanPayments: Record<string, number> = {
-    '2023': 0,
-    '2024': finalLoanInfo.annualizedLoan ?? 0,
-    '2025YTD': ytdMonthNum > 0 ? ((finalLoanInfo.annualizedLoan ?? 0) * ytdMonthNum) / 12 : 0,
+    '2024': 0,
+    '2025': finalLoanInfo.annualizedLoan ?? 0,
+    '2026YTD': ytdMonthNum > 0 ? ((finalLoanInfo.annualizedLoan ?? 0) * ytdMonthNum) / 12 : 0,
   };
 
   const finalReportData = {
@@ -211,7 +179,10 @@ export default async function PrintReportPage({ params, searchParams }: any) {
       )}
       {type === 'summary' && (
         <section id="business-debt-summary">
-          <BusinessDebtSummary debts={transformedDebts} businessName={finalLoanInfo?.businessName} />
+          <CashFlowBusinessDebtSummaryTemplate
+            debts={transformedDebts}
+            businessName={finalLoanInfo?.businessName}
+          />
         </section>
       )}
     </div>

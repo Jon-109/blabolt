@@ -1,272 +1,431 @@
-'use client'
+'use client';
+
 export const dynamic = 'force-dynamic';
 
-import { Suspense } from 'react';
-import { supabase } from '@/supabase/helpers/client'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import Cookies from 'js-cookie'
-import { Lock, Mail, ShieldCheck } from 'lucide-react'
+import { Suspense, useEffect, useState, type FormEvent } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { CheckCircle2, Lock, ShieldCheck, Sparkles } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+import { Button } from '@/app/(components)/ui/button';
+import { Input } from '@/app/(components)/ui/input';
+import { isTemplateType } from '@/lib/stripe/catalog';
+import { supabase } from '@/supabase/helpers/client';
+
+type LoginFlow = {
+  badge: string;
+  steps: [string, string, string];
+  subtitle: string;
+  title: string;
+};
+
+type AuthMethod = 'email' | 'google' | null;
+
+function normalizeRedirectTarget(target: string | null): string {
+  if (!target) {
+    return '/';
+  }
+
+  try {
+    return decodeURIComponent(target);
+  } catch {
+    return target;
+  }
+}
+
+function getSafeRedirectPath(target: string | null): string {
+  const normalized = normalizeRedirectTarget(target);
+  if (!normalized.startsWith('/') || normalized.startsWith('//')) {
+    return '/';
+  }
+
+  return normalized;
+}
+
+function getLoginFlow(redirectTo: string | null): LoginFlow {
+  const normalizedPath = getSafeRedirectPath(redirectTo);
+  const pathWithoutQuery = (normalizedPath.split('?')[0] ?? '/').toLowerCase();
+  const isCheckout = pathWithoutQuery.startsWith('/checkout/');
+  const checkoutProductType = isCheckout
+    ? (pathWithoutQuery.slice('/checkout/'.length).split('/')[0] ?? null)
+    : null;
+  const isTemplateFlow =
+    pathWithoutQuery === '/templates' ||
+    pathWithoutQuery.startsWith('/templates/') ||
+    pathWithoutQuery.startsWith('/services/templates') ||
+    checkoutProductType === 'templates_bundle' ||
+    (checkoutProductType ? isTemplateType(checkoutProductType) : false);
+
+  if (pathWithoutQuery.startsWith('/loan-brokering')) {
+    return {
+      badge: 'Loan Brokering',
+      title: 'Sign in to continue',
+      subtitle: 'Secure access for your brokering flow.',
+      steps: ['Sign in', 'Sign Broker Agreement', 'Loan Packaging'],
+    };
+  }
+
+  if (checkoutProductType === 'loan_packaging' || pathWithoutQuery.startsWith('/loan-packaging')) {
+    const isPaymentFlow = checkoutProductType === 'loan_packaging';
+
+    return {
+      badge: 'Loan Packaging',
+      title: isPaymentFlow ? 'Sign in before payment' : 'Sign in to continue',
+      subtitle: isPaymentFlow ? 'Login first, then complete payment for packaging.' : 'Resume your packaging workspace.',
+      steps: isPaymentFlow
+        ? ['Sign in', 'Complete payment', 'Open packaging']
+        : ['Sign in', 'Return to packaging', 'Continue'],
+    };
+  }
+
+  if (
+    checkoutProductType === 'cash_flow_analysis' ||
+    pathWithoutQuery.startsWith('/comprehensive-cash-flow-analysis')
+  ) {
+    const isPaymentFlow = checkoutProductType === 'cash_flow_analysis';
+
+    return {
+      badge: 'Comprehensive Analysis',
+      title: isPaymentFlow ? 'Sign in before payment' : 'Sign in to continue',
+      subtitle: isPaymentFlow ? 'Login first, then complete payment for access.' : 'Resume your analysis workspace.',
+      steps: isPaymentFlow
+        ? ['Sign in', 'Complete payment', 'Open analysis']
+        : ['Sign in', 'Return to analysis', 'Continue'],
+    };
+  }
+
+  if (isTemplateFlow) {
+    const isPaymentFlow =
+      checkoutProductType === 'templates_bundle' ||
+      (checkoutProductType ? isTemplateType(checkoutProductType) : false);
+
+    return {
+      badge: 'Templates',
+      title: isPaymentFlow ? 'Sign in before payment' : 'Sign in to continue',
+      subtitle: isPaymentFlow ? 'Login first, then complete payment for templates.' : 'Resume your templates workspace.',
+      steps: isPaymentFlow
+        ? ['Sign in', 'Complete payment', 'Open templates']
+        : ['Sign in', 'Return to templates', 'Continue'],
+    };
+  }
+
+  return {
+    badge: 'Account Access',
+    title: 'Sign in to your workspace',
+    subtitle: 'Pick up where you left off.',
+    steps: ['Sign in', 'Return to page', 'Continue'],
+  };
+}
+
+function GoogleIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 18 18">
+      <path
+        d="M17.64 9.20455c0-.63818-.05727-1.25182-.16364-1.84091H9v3.48182h4.84364c-.20864 1.125-.84273 2.07955-1.79591 2.71818v2.25818h2.90864c1.70182-1.56681 2.68363-3.87682 2.68363-6.61727Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M9 18c2.43 0 4.46727-.80591 5.95636-2.17818l-2.90864-2.25818c-.80591.54-1.83682.85909-3.04772.85909-2.34409 0-4.32818-1.58318-5.03636-3.70909H.95636v2.33182A8.9986 8.9986 0 0 0 9 18Z"
+        fill="#34A853"
+      />
+      <path
+        d="M3.96364 10.71364A5.4109 5.4109 0 0 1 3.68182 9c0-.59591.10227-1.17409.28182-1.71364V4.95455H.95636A8.99868 8.99868 0 0 0 0 9c0 1.45091.34773 2.82409.95636 4.04591l3.00728-2.33227Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M9 3.57727c1.32136 0 2.50773.45409 3.44182 1.34591l2.58136-2.58136C13.46318.89091 11.42636 0 9 0A8.9986 8.9986 0 0 0 .95636 4.95455l3.00728 2.33181C4.67182 5.16045 6.65591 3.57727 9 3.57727Z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
+
+async function syncServerSession(session: Session | null) {
+  if (!session?.access_token || !session.refresh_token) {
+    return;
+  }
+
+  await fetch('/api/auth/session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
+    }),
+  });
+}
 
 function LoginPageContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const safeRedirectTo = getSafeRedirectPath(searchParams.get('redirectTo'));
+  const loginFlow = getLoginFlow(safeRedirectTo);
+
+  const [authMethod, setAuthMethod] = useState<AuthMethod>(null);
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [password, setPassword] = useState('');
+
+  const isSubmitting = authMethod !== null;
 
   useEffect(() => {
-    // Log for debugging
-    console.log('Setting up auth state change listener');
-    
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
-      console.log('Auth state changed:', event, !!session);
-      
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event: string, session: Session | null) => {
       if (event === 'SIGNED_IN' && session) {
-        console.log('User signed in, redirecting...');
-        const redirectTo = searchParams.get('redirectTo') || '/';
-        router.push(redirectTo);
+        await syncServerSession(session);
+        router.replace(safeRedirectTo);
       }
     });
 
-    // Check for error from auth callback
-    const errorMsg = searchParams.get('error');
-    if (errorMsg) {
-      console.log('Auth error detected:', errorMsg);
+    if (searchParams.get('error')) {
       setError('Authentication failed. Please try again.');
     }
 
-    // Check if user is already logged in
     const checkSession = async () => {
-      console.log('Checking for existing session...');
-      const { data, error } = await supabase.auth.getSession();
-      
-      console.log('Session check result:', !!data.session, error);
-      
+      const { data } = await supabase.auth.getSession();
+
       if (data.session) {
-        console.log('Existing session found, redirecting...');
-        const redirectTo = searchParams.get('redirectTo') || '/';
-        router.push(redirectTo);
-      } else {
-        console.log('No session found, showing login form');
-        setIsLoading(false);
+        await syncServerSession(data.session);
+        router.replace(safeRedirectTo);
+        return;
       }
+
+      setIsLoading(false);
     };
 
-    checkSession();
+    void checkSession();
 
-    // --- Hydrate Supabase session from cookies if needed (after SSR login) ---
-    supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
-      if (!data.session) {
-        const access_token = Cookies.get('sb-access-token');
-        const refresh_token = Cookies.get('sb-refresh-token');
-        if (access_token && refresh_token) {
-          supabase.auth.setSession({ access_token, refresh_token })
-            .then(({ data, error }: { data: { session: any }, error: any }) => {
-              if (error) {
-                console.error('Error hydrating session from cookies:', error);
-              } else {
-                console.log('Session hydrated from cookies:', !!data.session);
-              }
-            });
-        }
-      }
-    });
-    // --- End hydration logic ---
-
-    // Clean up subscription
     return () => {
-      console.log('Cleaning up auth subscription');
-      subscription?.unsubscribe();
+      subscription.unsubscribe();
     };
-  }, [router, searchParams]);
+  }, [router, safeRedirectTo, searchParams]);
 
-  // Handle email/password login
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  const handleEmailLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAuthMethod('email');
     setError(null);
-    console.log('Attempting email login for:', email);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      console.log('Email login result:', !!data.session, error);
-      
-      if (error) throw error;
-
-      if (data.session) {
-        console.log('Login successful, session created');
-        // Redirect will happen automatically via onAuthStateChange
-        const redirectTo = searchParams.get('redirectTo') || '/';
-        console.log('Redirecting to:', redirectTo);
-        router.push(redirectTo);
-      } else {
-        console.log('No session created after login');
-        throw new Error('Login succeeded but no session was created');
+      if (signInError) {
+        throw signInError;
       }
-    } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Failed to sign in');
-      setIsSubmitting(false);
+
+      if (!data.session) {
+        throw new Error('Login succeeded but no session was created.');
+      }
+
+      await syncServerSession(data.session);
+      router.replace(safeRedirectTo);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to sign in';
+      setError(message);
+      setAuthMethod(null);
     }
   };
 
-  // Handle Google login
   const handleGoogleLogin = async () => {
-    setIsSubmitting(true);
+    setAuthMethod('google');
     setError(null);
-    console.log('Initiating Google login');
 
     try {
       const redirectUrl = `${window.location.origin}/auth/callback`;
-      const redirectToParam = searchParams.get('redirectTo') || '/';
-      
-      console.log('Google redirect URL:', redirectUrl);
-      console.log('Redirect param:', redirectToParam);
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${redirectUrl}?redirectTo=${encodeURIComponent(redirectToParam)}`,
+          redirectTo: `${redirectUrl}?redirectTo=${encodeURIComponent(safeRedirectTo)}`,
           skipBrowserRedirect: false,
         },
       });
 
-      console.log('Google OAuth result:', data, error);
-      
-      if (error) throw error;
-      
-      // This won't be reached for OAuth as it redirects the browser
-      console.log('Google OAuth initiated, browser should redirect');
-    } catch (err: any) {
-      console.error('Google login error:', err);
-      setError(err.message || 'Failed to sign in with Google');
-      setIsSubmitting(false);
+      if (oauthError) {
+        throw oauthError;
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to sign in with Google';
+      setError(message);
+      setAuthMethod(null);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-[calc(100svh-4rem)] items-center justify-center bg-[linear-gradient(180deg,#eef4ff_0%,#f8fbff_100%)] px-4">
+        <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-600" />
+          Preparing sign-in...
+        </div>
       </div>
     );
   }
 
   return (
-    <>
-      {/* Account Benefit Banner */}
-      <div className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-4 px-6 shadow-lg">
-        <div className="max-w-4xl mx-auto flex items-start sm:items-center gap-4">
-          <ShieldCheck className="w-8 h-8 text-white shrink-0 hidden sm:block" aria-label="Shield" />
-          <p className="text-sm sm:text-base leading-relaxed">
-            Create a free Business Lending Advocate account to securely save your cash flow analysis, monitor progress, and access your personalized recommendations anytime.
-          </p>
-        </div>
-      </div>
-      <div className="min-h-screen bg-bla-gradient flex flex-col justify-start items-center px-4">
-        <div className="w-full max-w-md bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-6 flex flex-col items-center border border-slate-100 transition-all duration-300">
-          <h1 className="text-3xl font-black text-slate-900 mb-1 tracking-tight text-center drop-shadow-sm">
-            Sign in to Business Lending Advocate
-          </h1>
-          <p className="text-base text-slate-600 mb-4 text-center max-w-xs">
-            Access your personalized cash flow analysis and loan services.
-          </p>
+    <div className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-[linear-gradient(180deg,#eef4ff_0%,#edf4ff_24%,#f8fbff_60%,#eef4ff_100%)] px-4 py-0 sm:px-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.10),transparent_72%)]" />
+      <div className="pointer-events-none absolute left-[-4rem] top-12 h-28 w-28 rounded-full bg-blue-100/40 blur-3xl" />
+      <div className="pointer-events-none absolute right-[-4rem] top-8 h-32 w-32 rounded-full bg-cyan-100/45 blur-3xl" />
 
-          {error && (
-            <div className="w-full p-3 mb-4 bg-red-50 text-red-700 text-sm rounded-md text-center">
-              {error}
-            </div>
-          )}
-
-          {/* Google Login Button */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={isSubmitting}
-            className="w-full flex items-center justify-center py-2 px-4 mb-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
-              <g transform="matrix(1, 0, 0, 1, 0, 0)">
-                <path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5,16.25 5,12C5,7.9 8.2,4.73 12.2,4.73C15.29,4.73 17.1,6.7 17.1,6.7L19,4.72C19,4.72 16.56,2 12.1,2C6.42,2 2.03,6.8 2.03,12C2.03,17.05 6.16,22 12.25,22C17.6,22 21.5,18.33 21.5,12.91C21.5,11.76 21.35,11.1 21.35,11.1Z" fill="currentColor"></path>
-              </g>
-            </svg>
-            Sign in with Google
-          </button>
-
-          <div className="relative w-full mb-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">or sign in with email</span>
-            </div>
-          </div>
-
-          {/* Email/Password Login Form */}
-          <form onSubmit={handleEmailLogin} className="w-full space-y-4 mb-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? 'Signing in...' : 'Sign in with Email'}
-            </button>
-          </form>
-
-          <div className="mt-4 text-sm text-center text-slate-500">
-            <p>Don't have an account? Signing in will create one automatically.</p>
-          </div>
-          
-          <div className="mt-8 text-xs text-slate-400 text-center flex items-center justify-center gap-2">
-            <Lock className="w-4 h-4 text-emerald-500" aria-label="Lock" />
-            <span>256‑bit TLS encryption</span>
-          </div>
-          
-          <div className="mt-4 text-slate-300 text-xs text-center max-w-md">
-            <span>&copy; {new Date().getFullYear()} Business Lending Advocate. All rights reserved.</span>
+      <div className="mx-auto flex min-h-[calc(100svh-4rem)] w-full flex-col justify-start py-2 sm:py-3">
+        <div className="mb-3 w-full">
+          <div className="flex w-full items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-full border border-emerald-200 bg-white/85 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-800 shadow-sm backdrop-blur sm:text-xs">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Secure Account Access</span>
+            <span className="shrink-0 text-slate-300">•</span>
+            <Lock className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Protected Sign-In</span>
+            <span className="shrink-0 text-slate-300">•</span>
+            <Sparkles className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Encrypted Session</span>
           </div>
         </div>
+
+        <div className="mx-auto w-full max-w-lg">
+          <div className="w-full rounded-[30px] border border-blue-100 bg-white p-4 shadow-[0_24px_90px_-40px_rgba(30,64,175,0.28)] sm:p-6">
+            <div className="-mx-4 -mt-4 mb-4 rounded-t-[30px] border-b border-blue-100 bg-[linear-gradient(180deg,rgba(59,130,246,0.18)_0%,rgba(191,219,254,0.72)_100%)] px-4 pt-4 pb-4 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700 backdrop-blur">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  {loginFlow.badge}
+                </div>
+                <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                  <Lock className="h-3.5 w-3.5 text-emerald-600" />
+                  Secure
+                </div>
+              </div>
+
+              <div className="text-center">
+                <h1 className="text-[1.9rem] font-black tracking-tight text-slate-950 sm:text-[2rem]">
+                  {loginFlow.title}
+                </h1>
+                <p className="mt-1 text-sm font-medium text-slate-700">
+                  {loginFlow.subtitle}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+            <div className="grid grid-cols-3 gap-2">
+              {loginFlow.steps.map((step, index) => (
+                <div
+                  key={step}
+                  className="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-2 py-2.5 text-center shadow-sm"
+                >
+                  <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-blue-700 text-[11px] font-bold text-white">
+                    {index + 1}
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold leading-4 text-slate-800 sm:text-xs">
+                    {step}
+                  </p>
+                </div>
+              ))}
+            </div>
+            </div>
+
+            {error ? (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            ) : null}
+
+            <div className="mt-5 space-y-4">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSubmitting}
+                onClick={handleGoogleLogin}
+                className="h-12 w-full rounded-2xl border-slate-300 bg-white text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+              >
+                <span className="mr-3 flex h-5 w-5 items-center justify-center">
+                  <GoogleIcon />
+                </span>
+                {authMethod === 'google' ? 'Connecting...' : 'Continue with Google'}
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    or
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleEmailLogin} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="h-12 rounded-2xl border-slate-300 bg-slate-50 px-4 text-slate-950 placeholder:text-slate-400"
+                    placeholder="name@company.com"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="h-12 rounded-2xl border-slate-300 bg-slate-50 px-4 text-slate-950 placeholder:text-slate-400"
+                    autoComplete="current-password"
+                    placeholder="Enter password"
+                    required
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="h-12 w-full rounded-2xl bg-blue-700 text-sm font-semibold text-white shadow-sm hover:bg-blue-800"
+                >
+                  {authMethod === 'email' ? 'Signing in...' : 'Continue with Email'}
+                </Button>
+              </form>
+            </div>
+
+            <div className="mt-4 flex items-center justify-center gap-2 border-t border-slate-100 pt-4 text-center text-[11px] font-medium leading-4 text-slate-600 sm:text-xs">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+              <span>
+                {loginFlow.steps[1] === 'Complete payment'
+                  ? 'After sign-in, you go to payment next.'
+                  : 'After sign-in, you go right back to your flow.'}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[calc(100svh-4rem)] items-center justify-center bg-[linear-gradient(180deg,#eef4ff_0%,#f8fbff_100%)] px-4 text-sm font-medium text-slate-700">
+          Loading sign-in...
+        </div>
+      }
+    >
       <LoginPageContent />
     </Suspense>
   );

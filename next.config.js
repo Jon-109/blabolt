@@ -1,7 +1,7 @@
 import withMDX from '@next/mdx';
 
 const nextConfig = {
-  // Any custom Next.js config here
+  reactStrictMode: true,
 };
 
 export default withMDX({

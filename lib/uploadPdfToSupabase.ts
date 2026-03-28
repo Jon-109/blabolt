@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
 import { randomUUID } from 'crypto';
 
 /**
@@ -15,21 +14,37 @@ export async function uploadPdfToSupabase(pdfBuffer: Buffer, analysisId: string,
   const bucket = 'pdfs';
 
   // Create a Supabase client using the service role key (server-side only)
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error('Supabase storage configuration is missing');
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
   // Upload the file
-  const { data, error } = await supabase.storage.from(bucket).upload(filename, pdfBuffer, {
+  const { error } = await supabase.storage.from(bucket).upload(filename, pdfBuffer, {
     contentType: 'application/pdf',
     upsert: true,
   });
   if (error) throw new Error('Failed to upload PDF to Supabase Storage: ' + error.message);
 
-  // Get the public URL
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filename);
-  if (!urlData?.publicUrl) throw new Error('Failed to get public URL for uploaded PDF');
+  if (process.env.PDF_URL_MODE === 'public') {
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filename);
+    if (!urlData?.publicUrl) throw new Error('Failed to get public URL for uploaded PDF');
+    return urlData.publicUrl;
+  }
 
-  return urlData.publicUrl;
+  // Default to signed URLs to avoid exposing sensitive PDFs publicly.
+  const { data: signedData, error: signedError } = await supabase
+    .storage
+    .from(bucket)
+    .createSignedUrl(filename, 60 * 60 * 24 * 30);
+
+  if (signedError || !signedData?.signedUrl) {
+    throw new Error('Failed to create signed URL for uploaded PDF');
+  }
+
+  return signedData.signedUrl;
 }

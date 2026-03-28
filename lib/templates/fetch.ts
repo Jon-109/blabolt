@@ -14,6 +14,7 @@ export async function fetchUserTemplateSubmissions(
   let query = supabase
     .from('template_submissions')
     .select('*')
+    .is('archived_at', null)
     .order('created_at', { ascending: false });
 
   if (templateType) {
@@ -42,6 +43,7 @@ export async function fetchTemplateSubmission(
     .from('template_submissions')
     .select('*')
     .eq('id', submissionId)
+    .is('archived_at', null)
     .single();
 
   if (error) {

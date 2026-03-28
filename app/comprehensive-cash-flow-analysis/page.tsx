@@ -1,26 +1,33 @@
 'use client'
 
-import { convertToNumeric } from "@/app/(components)/FinancialsUtils";
-
 import { useState, useMemo, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react'
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 // Import helper for runtime dynamic import
 // (actual import is done inside useEffect to avoid SSR issues)
 
-import Link from 'next/link'
 import LoanInfoStep from '@/app/(components)/LoanInfoStep'
 import FinancialsStep from '@/app/(components)/FinancialsStep'
 // Import the necessary types from FinancialsStep
 import type { FinancialsPayload, FullFinancialData, NumericFinancialData } from '@/app/(components)/FinancialsStep'; 
 import BusinessDebtsStep from '@/app/(components)/BusinessDebtsStep'
-import type { Debt } from '@/app/(components)/BusinessDebtsStep';
+import type { Debt, DebtCategory } from '@/app/(components)/BusinessDebtsStep';
 import { ReviewSubmitStep } from '@/app/(components)/ReviewSubmitStep'
 import { categories } from '@/app/(components)/BusinessDebtsStep';
 import { supabase } from '@/supabase/helpers/client'
 import { Toast, useToast } from '@/app/(components)/shared/Toast'; // Import Toast and useToast
-import { calculateDebtSummary } from '@/lib/financial/calculations';
+import {
+  buildDebtMetrics,
+  calculateDebtSummary,
+  calculateDscrResults,
+  formatCreditUtilizationRate,
+  formatTermForStorage,
+  normalizeFinancialsPayload,
+  roundDscrMap,
+} from '@/lib/financial/calculations';
 import type { LoanInfoData } from '@/app/(components)/LoanInfoStep';
-import type { Session, AuthError } from '@supabase/supabase-js';
+import { getTemplateSharedProfile, upsertTemplateSharedProfile } from '@/lib/templates/profile';
+import TemplatePageShell from '@/app/(components)/templates/shared/TemplatePageShell';
+import TemplateHeroProgressBar from '@/app/(components)/templates/shared/TemplateHeroProgressBar';
 
 // Helper to get default state structures
 const getDefaultLoanInfo = (): LoanInfoData => ({
@@ -70,15 +77,15 @@ const createEmptyNumericFinancialData = (): NumericFinancialData => ({
 });
 
 const getDefaultFinancials = (): FinancialsPayload => ({
-  year2023: { 
-    input: createEmptyFullFinancialData(),
-    summary: createEmptyNumericFinancialData(),
-  },
   year2024: { 
     input: createEmptyFullFinancialData(),
     summary: createEmptyNumericFinancialData(),
   },
-  year2025YTD: { 
+  year2025: { 
+    input: createEmptyFullFinancialData(),
+    summary: createEmptyNumericFinancialData(),
+  },
+  year2026YTD: { 
     input: createEmptyFullFinancialData(),
     summary: createEmptyNumericFinancialData(),
     ytdMonth: '', // Default YTD month
@@ -97,59 +104,139 @@ const steps: Step[] = [
   { id: 4, title: 'Review & Submit' }
 ]
 
+const FINANCIAL_PROGRESS_FIELDS: Array<keyof FullFinancialData> = [
+  'revenue',
+  'cogs',
+  'operatingExpenses',
+  'nonRecurringIncome',
+  'nonRecurringExpenses',
+  'depreciation',
+  'amortization',
+  'interest',
+  'taxes',
+];
+
+const PROGRESS_STEP_WEIGHT = 33;
+
+const hasMeaningfulValue = (value: unknown) => {
+  if (value == null) return false;
+  if (typeof value === 'number') return Number.isFinite(value);
+  const stringValue = String(value).trim();
+  if (!stringValue || stringValue === '$') return false;
+  return /[A-Za-z0-9]/.test(stringValue);
+};
+
 export default function Page() {
   const router = useRouter();
-
-  // --- DEBUG: Log Supabase session on mount ---
-  useEffect(() => {
-    supabase.auth.getSession().then(
-      (res: { data: { session: Session | null }, error: AuthError | null }) => {
-        console.debug('[DEBUG] Supabase session:', res);
-      }
-    );
-  }, []);
+  const searchParams = useSearchParams();
+  const comprehensivePagePath = '/comprehensive-cash-flow-analysis';
+  const requestedAnalysisId = searchParams.get('analysisId');
+  const pendingCheckoutSessionId = searchParams.get('session_id');
+  const isEditingExistingAnalysis = searchParams.get('edit') === '1' && Boolean(requestedAnalysisId);
+  const comprehensiveRedirectPath = isEditingExistingAnalysis && requestedAnalysisId
+    ? `${comprehensivePagePath}?analysisId=${encodeURIComponent(requestedAnalysisId)}&edit=1`
+    : comprehensivePagePath;
 
   // --- Protect route: redirect to login if not authenticated ---
   // --- Also redirect to report-preview if user already has a submitted analysis ---
   useEffect(() => {
     async function checkAuthAndPurchase() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
+
       if (!user) {
         setCurrentStep(1);
-        router.replace('/login');
+        router.replace(`/login?redirectTo=${encodeURIComponent(comprehensiveRedirectPath)}`);
         return;
       }
 
-      // No longer need to check payment since comprehensive analysis is now free
-      // User is authenticated, they can access the comprehensive form
+      const fetchAccessPayload = async () => {
+        const accessResponse = await fetch('/api/access/me', {
+          cache: 'no-store',
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : undefined,
+        });
 
-      // If not purchased, check if user has a submitted analysis (legacy logic)
-      const { data: submittedAnalyses, error: analysesError } = await supabase
-        .from('cash_flow_analyses')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('status', 'submitted')
-        .order('updated_at', { ascending: false })
-        .limit(1);
-      if (analysesError) {
-        console.error('Error checking for submitted analyses:', analysesError);
+        if (!accessResponse.ok) {
+          return { ok: false, payload: null as any };
+        }
+
+        return {
+          ok: true,
+          payload: await accessResponse.json(),
+        };
+      };
+
+      let accessResult = await fetchAccessPayload();
+      if (!accessResult.ok) {
+        setCurrentStep(1);
+        router.replace(`/login?redirectTo=${encodeURIComponent(comprehensiveRedirectPath)}`);
         return;
       }
-      if (submittedAnalyses && submittedAnalyses.length > 0) {
-        router.replace(`/report-preview?id=${submittedAnalyses[0].id}`);
+
+      if (!accessResult.payload?.canAccessComprehensive && pendingCheckoutSessionId && session?.access_token) {
+        await fetch('/api/checkout/confirm-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ sessionId: pendingCheckoutSessionId }),
+        }).catch(() => null);
+
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, 900 * (attempt + 1)));
+          accessResult = await fetchAccessPayload();
+          if (!accessResult.ok || accessResult.payload?.canAccessComprehensive) {
+            break;
+          }
+        }
+      }
+
+      const accessPayload = accessResult.payload;
+      if (!accessPayload?.canAccessComprehensive) {
+        setCurrentStep(1);
+        router.replace('/cash-flow-analysis');
+        return;
+      }
+
+      if (pendingCheckoutSessionId && typeof window !== 'undefined') {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete('session_id');
+        window.history.replaceState({}, '', nextUrl.toString());
+      }
+
+      if (!isEditingExistingAnalysis) {
+        const { data: submittedAnalyses, error: analysesError } = await supabase
+          .from('cash_flow_analyses')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('status', 'submitted')
+          .order('updated_at', { ascending: false })
+          .limit(1);
+        if (analysesError) {
+          console.error('Error checking for submitted analyses:', analysesError);
+          return;
+        }
+        if (submittedAnalyses && submittedAnalyses.length > 0) {
+          router.replace(`/report-preview?id=${submittedAnalyses[0].id}`);
+        }
       }
     }
     checkAuthAndPurchase();
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [comprehensiveRedirectPath, isEditingExistingAnalysis, pendingCheckoutSessionId, router]);
 
   // --- Listen for auth state changes: redirect to login on SIGNED_OUT, reset to step 1 on SIGNED_IN ---
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event: string, session: any) => {
       if (event === 'SIGNED_OUT') {
         setCurrentStep(1);
-        router.replace('/login');
+        router.replace(`/login?redirectTo=${encodeURIComponent(comprehensiveRedirectPath)}`);
       } else if (event === 'SIGNED_IN') {
         setCurrentStep(1);
       }
@@ -157,7 +244,7 @@ export default function Page() {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [router]);
+  }, [comprehensiveRedirectPath, router]);
 
   // --- Hydration-safe client mount flag ---
   const [hasMounted, setHasMounted] = useState(false);
@@ -170,9 +257,30 @@ export default function Page() {
   const [financials, setFinancials] = useState<FinancialsPayload>(getDefaultFinancials());
   const [debts, setDebts] = useState<Array<Debt>>([]);
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [loadedAnalysisStatus, setLoadedAnalysisStatus] = useState<string | null>(null);
+  const [debtProgressState, setDebtProgressState] = useState<{
+    categoryCounts: Record<DebtCategory, number>;
+    answeredCategories: Record<DebtCategory, boolean>;
+  }>({
+    categoryCounts: {
+      REAL_ESTATE: 0,
+      VEHICLE_EQUIPMENT: 0,
+      CREDIT_CARD: 0,
+      LINE_OF_CREDIT: 0,
+      OTHER: 0,
+    },
+    answeredCategories: {
+      REAL_ESTATE: false,
+      VEHICLE_EQUIPMENT: false,
+      CREDIT_CARD: false,
+      LINE_OF_CREDIT: false,
+      OTHER: false,
+    },
+  });
 
   // --- Add debtsRef to always have latest debts ---
   const debtsRef = useRef(debts);
+  const lastSyncedBusinessNameRef = useRef('');
   useEffect(() => {
     debtsRef.current = debts;
   }, [debts]);
@@ -229,28 +337,54 @@ export default function Page() {
         setFinancials(getDefaultFinancials());
         setDebts([]);
         setDraftId(null);
+        setLoadedAnalysisStatus(null);
       } else if (user) {
         console.log('[DEBUG] fetchUserAndDraft: User found:', { id: user.id, email: user.email });
         setUserEmail(user.email || null);
+        const sharedProfile = await getTemplateSharedProfile(user.id);
+        const sharedBusinessName =
+          sharedProfile.businessName || sharedProfile.businessLegalName || '';
+        if (sharedBusinessName) {
+          lastSyncedBusinessNameRef.current = sharedBusinessName;
+        }
 
         // Always attempt to fetch the latest draft from Supabase for the authenticated user
         console.log(`[DEBUG] fetchUserAndDraft: Querying Supabase for draft with user_id: ${user.id}`);
-        const { data: dbDraftData, error: dbDraftError } = await supabase
+        let draftQuery = supabase
           .from('cash_flow_analyses')
-          .select('id, business_name, loan_purpose, desired_amount, estimated_payment, financials, debts, first_name, last_name, down_payment, down_payment293, proposed_loan, term, interest_rate, annualized_loan')
-          .eq('user_id', user.id)
-          .eq('status', 'inprogress') 
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .single();
+          .select('id, business_name, loan_purpose, desired_amount, estimated_payment, financials, debts, first_name, last_name, down_payment, down_payment293, proposed_loan, term, interest_rate, annualized_loan, status')
+          .eq('user_id', user.id);
 
-        if (dbDraftError?.code === 'PGRST116') {
+        if (requestedAnalysisId) {
+          draftQuery = draftQuery.eq('id', requestedAnalysisId).limit(1);
+        } else {
+          draftQuery = draftQuery
+            .in('status', ['draft', 'inprogress'])
+            .order('updated_at', { ascending: false })
+            .limit(1);
+        }
+
+        const { data: dbDraftData, error: dbDraftError } = await draftQuery.maybeSingle();
+
+        if (!dbDraftData && requestedAnalysisId) {
+          console.error('[DEBUG] Requested analysis for edit was not found:', requestedAnalysisId);
+          router.replace('/report-preview');
+          return;
+        }
+
+        if (!dbDraftData && !requestedAnalysisId) {
           // No draft found for user, this is normal on first entry
           console.info('[DEBUG] No draft found for user, creating new blank draft row.');
           // Insert a new blank draft for this user
           const { data: newDraft, error: insertError } = await supabase
             .from('cash_flow_analyses')
-            .insert([{ user_id: user.id, status: 'inprogress' }])
+            .insert([
+              {
+                user_id: user.id,
+                status: 'inprogress',
+                business_name: sharedBusinessName || null,
+              },
+            ])
             .select()
             .single();
           if (insertError) {
@@ -267,9 +401,14 @@ export default function Page() {
           } else if (newDraft) {
             console.log('[DEBUG] New draft created:', newDraft);
             setDraftId(newDraft.id);
-            setLoanInfo({ ...getDefaultLoanInfo(), id: newDraft.id });
+            setLoanInfo({
+              ...getDefaultLoanInfo(),
+              id: newDraft.id,
+              businessName: sharedBusinessName || '',
+            });
             setFinancials(getDefaultFinancials());
             setDebts([]);
+            setLoadedAnalysisStatus('inprogress');
           }
         } else if (dbDraftError) {
           // Other errors should be logged as errors
@@ -282,11 +421,12 @@ export default function Page() {
         if (dbDraftData && !dbDraftError) {
           console.log('[DEBUG] fetchUserAndDraft: Setting draftId:', dbDraftData.id);
           setDraftId(dbDraftData.id); 
+          setLoadedAnalysisStatus(dbDraftData.status || 'inprogress');
 
           const newLoanInfo = {
             ...getDefaultLoanInfo(), 
             id: dbDraftData.id, 
-            businessName: dbDraftData.business_name || '',
+            businessName: dbDraftData.business_name || sharedBusinessName || '',
             firstName: dbDraftData.first_name || '',
             lastName: dbDraftData.last_name || '',
             loanPurpose: dbDraftData.loan_purpose || '',
@@ -304,7 +444,7 @@ export default function Page() {
 
           if (dbDraftData.financials) {
             console.log('[DEBUG] fetchUserAndDraft: Setting financials:', dbDraftData.financials);
-            setFinancials(dbDraftData.financials);
+            setFinancials(normalizeFinancialsPayload(dbDraftData.financials));
           } else {
             console.log('[DEBUG] fetchUserAndDraft: No financials in DB draft, resetting to default.');
             setFinancials(getDefaultFinancials()); 
@@ -331,12 +471,14 @@ export default function Page() {
           setFinancials(getDefaultFinancials());
           setDebts([]);
           setDraftId(null);
+          setLoadedAnalysisStatus(null);
         } else {
           console.log('[DEBUG] fetchUserAndDraft: No draft found in Supabase (or PGRST116 error). Resetting form to defaults.');
           setLoanInfo(getDefaultLoanInfo());
           setFinancials(getDefaultFinancials());
           setDebts([]);
           setDraftId(null);
+          setLoadedAnalysisStatus(null);
         }
       } else {
         console.log('[DEBUG] fetchUserAndDraft: No user logged in. Resetting form to default state.');
@@ -345,6 +487,7 @@ export default function Page() {
         setFinancials(getDefaultFinancials());
         setDebts([]);
         setDraftId(null);
+        setLoadedAnalysisStatus(null);
       }
       setLoadingUser(false);
       setHydrated(true); 
@@ -352,7 +495,7 @@ export default function Page() {
     };
 
     fetchUserAndDraft();
-  }, [supabase]); // Depend only on supabase client. Remove draftId from deps.
+  }, [requestedAnalysisId, router]); // Reload if a specific analysis is requested.
 
   // --- Utility: Calculate per-category totals for debts ---
   function getDebtCategoryTotals(debts: Debt[]) {
@@ -421,144 +564,6 @@ export default function Page() {
     return isNaN(num) ? null : num;
   };
 
-  // --- Fix: save term as years string (e.g., '5 Years') ---
-  const toYearsString = (months: any): string => {
-    const n = parseInt(months, 10);
-    if (isNaN(n) || n === 0) return '';
-    const years = n / 12;
-    return years === 1 ? '1 Year' : `${years} Years`;
-  };
-
-  // Utility to flatten financials for 2023, 2024, 2025YTD
-  function flattenFinancials(financials: any) {
-    return {
-      // 2023
-      ebitda2023: financials.year2023?.summary?.ebitda ?? '',
-      revenue2023: financials.year2023?.input?.revenue ?? '',
-      cogs2023: financials.year2023?.input?.cogs ?? '',
-      grossProfit2023: financials.year2023?.summary?.grossProfit ?? '',
-      operatingExpenses2023: financials.year2023?.input?.operatingExpenses ?? '',
-      nonRecurringIncome2023: financials.year2023?.input?.nonRecurringIncome ?? '',
-      nonRecurringExpenses2023: financials.year2023?.input?.nonRecurringExpenses ?? '',
-      depreciation2023: financials.year2023?.input?.depreciation ?? '',
-      amortization2023: financials.year2023?.input?.amortization ?? '',
-      operatingIncome2023: financials.year2023?.summary?.operatingIncome ?? '',
-      // 2024
-      ebitda2024: financials.year2024?.summary?.ebitda ?? '',
-      revenue2024: financials.year2024?.input?.revenue ?? '',
-      cogs2024: financials.year2024?.input?.cogs ?? '',
-      grossProfit2024: financials.year2024?.summary?.grossProfit ?? '',
-      operatingExpenses2024: financials.year2024?.input?.operatingExpenses ?? '',
-      nonRecurringIncome2024: financials.year2024?.input?.nonRecurringIncome ?? '',
-      nonRecurringExpenses2024: financials.year2024?.input?.nonRecurringExpenses ?? '',
-      depreciation2024: financials.year2024?.input?.depreciation ?? '',
-      amortization2024: financials.year2024?.input?.amortization ?? '',
-      operatingIncome2024: financials.year2024?.summary?.operatingIncome ?? '',
-      // 2025YTD
-      ebitda2025YTD: financials.year2025YTD?.summary?.ebitda ?? '',
-      revenue2025YTD: financials.year2025YTD?.input?.revenue ?? '',
-      cogs2025: financials.year2025YTD?.input?.cogs ?? '',
-      grossProfit2025: financials.year2025YTD?.summary?.grossProfit ?? '',
-      operatingExpenses2025: financials.year2025YTD?.input?.operatingExpenses ?? '',
-      nonRecurringIncome2025: financials.year2025YTD?.input?.nonRecurringIncome ?? '',
-      nonRecurringExpenses2025: financials.year2025YTD?.input?.nonRecurringExpenses ?? '',
-      depreciation2025: financials.year2025YTD?.input?.depreciation ?? '',
-      amortization2025: financials.year2025YTD?.input?.amortization ?? '',
-      operatingIncome2025: financials.year2025YTD?.summary?.operatingIncome ?? '',
-      ytdMonth: financials.year2025YTD?.ytdMonth ?? '',
-    };
-  }
-
-  // Utility to flatten debts into grouped, indexed fields for backend
-  function flattenDebts(debts: any[]) {
-    // Group by category
-    const grouped: {
-      REAL_ESTATE: any[];
-      VEHICLE_EQUIPMENT: any[];
-      CREDIT_CARD: any[];
-      LINE_OF_CREDIT: any[];
-      OTHER: any[];
-    } = {
-      REAL_ESTATE: [],
-      VEHICLE_EQUIPMENT: [],
-      CREDIT_CARD: [],
-      LINE_OF_CREDIT: [],
-      OTHER: []
-    };
-    for (const debt of debts) {
-      if (!debt) continue;
-      const category = debt.category as keyof typeof grouped;
-      if (category in grouped) {
-        (grouped[category] as any[]).push(debt);
-      } else {
-        grouped.OTHER.push(debt);
-      }
-    }
-    // Map to field structure expected by backend
-    const realEstate: Record<string, any> = {};
-    grouped.REAL_ESTATE.slice(0, 5).forEach((d, idx) => {
-      if (!d) return;
-      realEstate[(idx + 1).toString()] = {
-        address: d?.description ?? '',
-        lenderNotes: d?.notes ?? '',
-        minimumMonthly: d?.monthlyPayment ?? '',
-        originalLoan: d?.originalLoanAmount ?? '',
-        outstandingBalance: d?.outstandingBalance ?? ''
-      };
-    });
-    const vehicleEquipment: Record<string, any> = {};
-    grouped.VEHICLE_EQUIPMENT.slice(0, 5).forEach((d, idx) => {
-      if (!d) return;
-      vehicleEquipment[(idx + 1).toString()] = {
-        lenderName: d?.notes ?? '',
-        notes: d?.description ?? '',
-        minimumMonthly: d?.monthlyPayment ?? '',
-        originalLoan: d?.originalLoanAmount ?? '',
-        outstandingBalance: d?.outstandingBalance ?? ''
-      };
-    });
-    const creditCards: Record<string, any> = {};
-    grouped.CREDIT_CARD.slice(0, 5).forEach((d, idx) => {
-      if (!d) return;
-      creditCards[(idx + 1).toString()] = {
-        lenderName: d?.description ?? '',
-        notes: d?.notes ?? '',
-        minimumMonthly: d?.monthlyPayment ?? '',
-        creditLimit: d?.originalLoanAmount ?? '',
-        balance: d?.outstandingBalance ?? ''
-      };
-    });
-    const linesOfCredit: Record<string, any> = {};
-    grouped.LINE_OF_CREDIT.slice(0, 5).forEach((d, idx) => {
-      if (!d) return;
-      linesOfCredit[(idx + 1).toString()] = {
-        lenderName: d?.description ?? '',
-        notes: d?.notes ?? '',
-        minimumMonthly: d?.monthlyPayment ?? '',
-        creditLimit: d?.originalLoanAmount ?? '',
-        outstandingBalance: d?.outstandingBalance ?? ''
-      };
-    });
-    const otherDebts: Record<string, any> = {};
-    grouped.OTHER.slice(0, 5).forEach((d, idx) => {
-      if (!d) return;
-      otherDebts[(idx + 1).toString()] = {
-        description: d?.description ?? '',
-        notes: d?.notes ?? '',
-        minimumMonthly: d?.monthlyPayment ?? '',
-        originalLoan: d?.originalLoanAmount ?? '',
-        outstandingBalance: d?.outstandingBalance ?? ''
-      };
-    });
-    return {
-      realEstate,
-      vehicleEquipment,
-      creditCards,
-      linesOfCredit,
-      otherDebts
-    };
-  }
-
   // --- Progress Bar Calculation Helper ---
   function getProgressWidth() {
     if (!steps || steps.length === 0) return 0;
@@ -568,131 +573,54 @@ export default function Page() {
     return ((currentStep - 1) / (steps.length - 1)) * 100;
   }
 
+  const buildAnalysisStatePayload = useCallback(() => {
+    const normalizedFinancials = normalizeFinancialsPayload(financials);
+    const debtMetrics = buildDebtMetrics(
+      debtsRef.current || [],
+      loanInfo.annualizedLoan,
+      normalizedFinancials.year2026YTD?.ytdMonth,
+    );
+    const dscr = roundDscrMap(
+      calculateDscrResults(
+        normalizedFinancials,
+        debtMetrics.annualDebtServices,
+        debtMetrics.annualizedLoanPayments,
+      ),
+    );
+
+    return {
+      normalizedFinancials,
+      debtsJson: {
+        entries: debtsRef.current || [],
+        monthlyDebtService: debtMetrics.debtSummary.monthlyDebtService,
+        annualDebtService: debtMetrics.annualDebtServices,
+        annualDebtServices: debtMetrics.annualDebtServices,
+        totalCreditBalance: debtMetrics.debtSummary.totalCreditBalance,
+        totalCreditLimit: debtMetrics.debtSummary.totalCreditLimit,
+        creditUtilizationRate: formatCreditUtilizationRate(debtMetrics.debtSummary.creditUtilizationRate),
+        categoryTotals: debtMetrics.debtSummary.categoryTotals,
+        totalDebtService: debtMetrics.totalDebtService,
+        annualizedLoanPayments: debtMetrics.annualizedLoanPayments,
+      },
+      dscr,
+    };
+  }, [financials, loanInfo.annualizedLoan]);
+
   // --- Save Draft to Supabase ---
-  const saveDraft = async () => {
+  const saveDraft = async (): Promise<string | null> => {
     if (!hydrated) {
       console.warn('[DEBUG] Blocked saveDraft: not hydrated yet.');
-      return;
+      return draftId;
     }
     const { data: userData, error: userError } = await supabase.auth.getUser();
 
     if (userError || !userData?.user?.id) {
         console.warn("Cannot save draft, user not available.");
-        return; // Don't proceed if user isn't available
+        return draftId; // Don't proceed if user isn't available
     }
     const userId = userData.user.id;
 
-    // Compose enriched debts JSONB
-    const debtSummary = calculateDebtSummary(debtsRef.current || []);
-    const creditUtilizationRateRaw = debtSummary.creditUtilizationRate;
-    const creditUtilizationRateFormatted =
-      creditUtilizationRateRaw == null ? null : `${(creditUtilizationRateRaw * 100).toFixed(1)}%`;
-    // Safely parse YTD month number for use in debtsJson
-    const ytdMonthRaw = financials.year2025YTD?.ytdMonth;
-    let ytdMonthNum = 0;
-    if (ytdMonthRaw) {
-      if (/^\d+$/.test(ytdMonthRaw)) ytdMonthNum = parseInt(ytdMonthRaw, 10);
-      else {
-        const monthMap = {
-          'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
-          'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
-        };
-        ytdMonthNum = monthMap[ytdMonthRaw as keyof typeof monthMap] || 0;
-      }
-    }
-
-    const debtsJson = {
-      entries: debtsRef.current || [],
-      monthlyDebtService: debtSummary.monthlyDebtService,
-      annualDebtService: debtSummary.annualDebtService,
-      totalCreditBalance: debtSummary.totalCreditBalance,
-      totalCreditLimit: debtSummary.totalCreditLimit,
-      creditUtilizationRate: creditUtilizationRateFormatted,
-      categoryTotals: debtSummary.categoryTotals,
-      totalDebtService: {
-        '2023': debtSummary.annualDebtService + (Number(loanInfo.annualizedLoan) || 0),
-        '2024': debtSummary.annualDebtService + (Number(loanInfo.annualizedLoan) || 0),
-        '2025YTD': debtSummary.annualDebtService * (ytdMonthNum / 12) + (Number(loanInfo.annualizedLoan) || 0) * (ytdMonthNum / 12),
-      },
-    };
-
-    // Helper to get the number of months for YTD (from month string)
-    const getYTDMonthNumber = () => {
-      const ytdMonth = financials.year2025YTD?.ytdMonth;
-      if (!ytdMonth) return 0;
-      if (/^\d+$/.test(ytdMonth)) return parseInt(ytdMonth, 10);
-      const monthMap = {
-        'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
-        'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
-      };
-      return monthMap[ytdMonth as keyof typeof monthMap] || 0;
-    };
-
-    // Helper to get annualized loan payment for each year
-    const getAnnualizedLoanPayment = (year: '2023' | '2024' | '2025YTD') => {
-      if (year === '2023') return 0;
-      if (year === '2024') return Number(loanInfo.annualizedLoan) || 0;
-      if (year === '2025YTD') {
-        const months = getYTDMonthNumber();
-        if (!months) return 0;
-        return ((Number(loanInfo.annualizedLoan) || 0) * months) / 12;
-      }
-      return 0;
-    };
-
-    // Helper to get annual debt service for each year
-    const getAnnualDebtService = (year: '2023' | '2024' | '2025YTD') => {
-      const annualDebtService = (debts || []).reduce((sum, d) => sum + (parseFloat(d.monthlyPayment.replace(/[^\d.]/g, '')) || 0), 0) * 12;
-      if (year === '2023' || year === '2024') return annualDebtService;
-      if (year === '2025YTD') {
-        const months = getYTDMonthNumber();
-        if (!months) return 0;
-        return (annualDebtService * months) / 12;
-      }
-      return 0;
-    };
-
-    // --- Ensure financials summaries are up to date before DSCR calculation ---
-
-    const processedFinancials = {
-      year2023: {
-        input: financials.year2023?.input || {},
-        summary: convertToNumeric(financials.year2023?.input || {})
-      },
-      year2024: {
-        input: financials.year2024?.input || {},
-        summary: convertToNumeric(financials.year2024?.input || {})
-      },
-      year2025YTD: {
-        input: financials.year2025YTD?.input || {},
-        summary: convertToNumeric(financials.year2025YTD?.input || {}),
-        ytdMonth: financials.year2025YTD?.ytdMonth || ''
-      }
-    };
-
-    // Compose DSCRs for all years (rounded to 2 decimal points)
-    const { calculateDSCR: calculateDSCRReview } = require('@/app/(components)/ReviewSubmitStep.dscr');
-    const dscrResults = calculateDSCRReview(
-      processedFinancials,
-      {
-        '2023': getAnnualDebtService('2023'),
-        '2024': getAnnualDebtService('2024'),
-        '2025YTD': getAnnualDebtService('2025YTD'),
-      },
-      {
-        '2023': getAnnualizedLoanPayment('2023'),
-        '2024': getAnnualizedLoanPayment('2024'),
-        '2025YTD': getAnnualizedLoanPayment('2025YTD'),
-      }
-    );
-    const round2 = (v: number | null) => (v == null ? null : Math.round(v * 100) / 100);
-    const dscrs = {
-      '2023': round2(dscrResults.dscr2023),
-      '2024': round2(dscrResults.dscr2024),
-      '2025YTD': round2(dscrResults.dscr2025),
-    };
-    // Use processedFinancials for saving as well
-    // ...
+    const { normalizedFinancials, debtsJson, dscr } = buildAnalysisStatePayload();
 
     // --- Compose draftData ---
     const draftData: { [key: string]: any } = {
@@ -707,17 +635,16 @@ export default function Page() {
       down_payment: toNumberOrNull(loanInfo.downPayment),
       down_payment293: loanInfo.downPayment293 || null,
       proposed_loan: toNumberOrNull(loanInfo.proposedLoan),
-      term: toYearsString(loanInfo.term), // Fix: save term as years string
+      term: formatTermForStorage(loanInfo.term),
       interest_rate: toNumberOrNull(loanInfo.interestRate),
       annualized_loan: toNumberOrNull(loanInfo.annualizedLoan),
-      financials: financials || {}, // Ensure it's an object
+      financials: normalizedFinancials,
       debts: debtsJson,
-      status: 'inprogress',
-      dscr: dscrs,
+      status: loadedAnalysisStatus === 'submitted' ? 'submitted' : 'inprogress',
+      dscr,
     };
+    let currentDraftId = draftId;
     try {
-        // Use draftId directly from state
-        let currentDraftId = draftId;
 
         if (!currentDraftId) {
           // If draftId is not in state, it means we need to create a new draft.
@@ -729,7 +656,27 @@ export default function Page() {
             .single();
           if (error) {
             console.error('[DEBUG] Supabase insert error:', error, error?.message, error?.details, error?.hint);
+            const { data: existingActiveDraft } = await supabase
+              .from('cash_flow_analyses')
+              .select('id')
+              .eq('user_id', userId)
+              .in('status', ['draft', 'inprogress'])
+              .order('updated_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (existingActiveDraft?.id) {
+              currentDraftId = existingActiveDraft.id;
+              setDraftId(existingActiveDraft.id);
+              const { error: existingDraftUpdateError } = await supabase
+                .from('cash_flow_analyses')
+                .update(draftData)
+                .eq('id', existingActiveDraft.id);
+              if (existingDraftUpdateError) {
+                console.error('[DEBUG] Failed updating existing active draft after insert race:', existingDraftUpdateError);
+              }
+            }
           } else if (data?.id) {
+            currentDraftId = data.id;
             setDraftId(data.id);
             console.log('[DEBUG] Supabase insert success, new draftId:', data.id);
           } else {
@@ -738,23 +685,9 @@ export default function Page() {
         } else {
           // Update existing draft
           console.log('[DEBUG] Using draftId for update:', currentDraftId);
-          // 1. Fetch existing row
-          const { data: existingRows, error: fetchError } = await supabase
-            .from('cash_flow_analyses')
-            .select('*')
-            .eq('id', currentDraftId)
-            .limit(1);
-          if (fetchError) {
-            console.error('[DEBUG] Supabase fetch error before update:', fetchError);
-            // Optionally, fallback to updating with just draftData
-          }
-          const existingRow = (existingRows && existingRows.length > 0) ? existingRows[0] : {};
-          // 2. Merge existing row with draftData (draftData takes precedence)
-          const mergedData = { ...existingRow, ...draftData };
-          // 3. Update with merged object
           const { error, data } = await supabase
             .from('cash_flow_analyses')
-            .update(mergedData)
+            .update(draftData)
             .eq('id', currentDraftId);
           if (error) {
             console.error('[DEBUG] Supabase update error:', error, error?.message, error?.details, error?.hint);
@@ -764,7 +697,18 @@ export default function Page() {
         }
     } catch (err) {
       console.error('[DEBUG] Draft save error:', err);
+      return draftId;
     }
+
+    const nextBusinessName = loanInfo.businessName.trim();
+    if (nextBusinessName && nextBusinessName !== lastSyncedBusinessNameRef.current) {
+      lastSyncedBusinessNameRef.current = nextBusinessName;
+      void upsertTemplateSharedProfile(userId, {
+        businessName: nextBusinessName,
+        businessLegalName: nextBusinessName,
+      });
+    }
+    return currentDraftId;
   };
 
   const handleNext = useCallback(async () => { // Make async if saveDraft is needed
@@ -844,13 +788,37 @@ export default function Page() {
     setDebts(debts);
   }, []);
 
+  useEffect(() => {
+    const derivedCategoryCounts = categories.reduce((acc, category) => {
+      acc[category.id as DebtCategory] = debts.filter((debt) => debt.category === category.id).length;
+      return acc;
+    }, {} as Record<DebtCategory, number>);
+
+    setDebtProgressState((prev) => ({
+      categoryCounts: {
+        REAL_ESTATE: prev.answeredCategories.REAL_ESTATE ? prev.categoryCounts.REAL_ESTATE : derivedCategoryCounts.REAL_ESTATE,
+        VEHICLE_EQUIPMENT: prev.answeredCategories.VEHICLE_EQUIPMENT ? prev.categoryCounts.VEHICLE_EQUIPMENT : derivedCategoryCounts.VEHICLE_EQUIPMENT,
+        CREDIT_CARD: prev.answeredCategories.CREDIT_CARD ? prev.categoryCounts.CREDIT_CARD : derivedCategoryCounts.CREDIT_CARD,
+        LINE_OF_CREDIT: prev.answeredCategories.LINE_OF_CREDIT ? prev.categoryCounts.LINE_OF_CREDIT : derivedCategoryCounts.LINE_OF_CREDIT,
+        OTHER: prev.answeredCategories.OTHER ? prev.categoryCounts.OTHER : derivedCategoryCounts.OTHER,
+      },
+      answeredCategories: {
+        REAL_ESTATE: prev.answeredCategories.REAL_ESTATE || derivedCategoryCounts.REAL_ESTATE > 0,
+        VEHICLE_EQUIPMENT: prev.answeredCategories.VEHICLE_EQUIPMENT || derivedCategoryCounts.VEHICLE_EQUIPMENT > 0,
+        CREDIT_CARD: prev.answeredCategories.CREDIT_CARD || derivedCategoryCounts.CREDIT_CARD > 0,
+        LINE_OF_CREDIT: prev.answeredCategories.LINE_OF_CREDIT || derivedCategoryCounts.LINE_OF_CREDIT > 0,
+        OTHER: prev.answeredCategories.OTHER || derivedCategoryCounts.OTHER > 0,
+      },
+    }));
+  }, [debts]);
+
   // --- Submit Logic ---
   // Wrap handleSubmit in useCallback
   const handleSubmit = useCallback(async (): Promise<{ submissionId?: string }> => { 
-    console.log('Reached handleSubmit');
-    const { data: { user }, error } = await supabase.auth.getUser();
-    console.log('User object:', user);
-    if (!user) {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    const user = session?.user ?? null;
+    const accessToken = session?.access_token ?? null;
+    if (!user || !accessToken) {
       console.error('User not authenticated (client-side)');
       throw new Error('User not authenticated');
     }
@@ -861,111 +829,60 @@ export default function Page() {
     setSubmitStatus('submitting');
     setSubmitError(null);
     try {
-      // --- Build flat draftData matching cashFlowFieldMap ---
-      const debtsFlat = flattenDebts(debts);
-      const draftData = {
-        // User info
-        email: userEmail ?? user?.email ?? '',
-        businessName: loanInfo.businessName,
-        firstName: loanInfo.firstName,
-        lastName: loanInfo.lastName,
-        loanPurpose: loanInfo.loanPurpose,
-        totalProjectAmount: loanInfo.desiredAmount,
-        downPaymentPercent: loanInfo.downPayment,
-        downPaymentAmount: loanInfo.downPayment293,
-        proposedLoanAmount: loanInfo.proposedLoan,
-        term: loanInfo.term,
-        interestRate: loanInfo.interestRate,
-        annualizedLoan: loanInfo.annualizedLoan,
-        financials, // <--- Ensure full financials object is sent
-        ...flattenFinancials(financials),
-        ...debtsFlat,
-        draftId,
-      };
-      console.debug('[SUBMIT] Draft data payload:', draftData);
-      const accessToken = user?.access_token;
-      // --- Update PDF URLs in Supabase record (PDF generation logic) ---
-      // TODO: Decide how to handle PDF URLs when external PDF generation is skipped
-      const pdfData = { cashFlow: { pdfUrl: null }, debtSummary: { pdfUrl: null }}; // Placeholder
-
-      if (draftId) {
-        const { error: updateError } = await supabase
-          .from('cash_flow_analyses')
-          .update({
-            cash_flow_pdf_url: pdfData.cashFlow?.pdfUrl || null,
-            debt_summary_pdf_url: pdfData.debtSummary?.pdfUrl || null,
-            status: 'submitted', // Update status to 'submitted' when the form is submitted
-          })
-          .eq('id', draftId);
-        if (updateError) {
-          console.error('[SUBMIT] Supabase PDF URL update error:', updateError);
-          throw new Error('Failed to update PDF URLs in database: ' + (updateError.message || JSON.stringify(updateError)));
-        } else {
-          console.debug('[SUBMIT] Supabase PDF URLs updated successfully.');
-        }
-      } else {
-        console.warn('[SUBMIT] No draftId found, skipping PDF URL update.');
+      const savedDraftId = await saveDraft();
+      if (!savedDraftId) {
+        throw new Error('Failed to save analysis before submission.');
       }
 
-      // --- Calculate DSCR 2024 for redirect ---
-      const { calculateDSCR: calculateDSCRReview } = require('@/app/(components)/ReviewSubmitStep.dscr');
-      const getYTDMonthNumber = () => {
-        const ytdMonth = financials.year2025YTD?.ytdMonth;
-        if (!ytdMonth) return 0;
-        if (/^\d+$/.test(ytdMonth)) return parseInt(ytdMonth, 10);
-        const monthMap = {
-          'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5, 'June': 6,
-          'July': 7, 'August': 8, 'September': 9, 'October': 10, 'November': 11, 'December': 12
-        };
-        return monthMap[ytdMonth as keyof typeof monthMap] || 0;
-      };
-      const getAnnualizedLoanPayment = (year: '2023' | '2024' | '2025YTD') => {
-        if (year === '2023') return 0;
-        if (year === '2024') return Number(loanInfo.annualizedLoan) || 0;
-        if (year === '2025YTD') {
-          const months = getYTDMonthNumber();
-          if (!months) return 0;
-          return ((Number(loanInfo.annualizedLoan) || 0) * months) / 12;
+      const generatePdf = async (type: 'full' | 'summary') => {
+        const response = await fetch('/api/generate-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            analysisId: savedDraftId,
+            type,
+            accessToken,
+            download: false,
+          }),
+          credentials: 'include',
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(payload?.error || `Failed to generate ${type} PDF.`);
         }
-        return 0;
+
+        return payload?.pdfUrl as string | null | undefined;
       };
-      const getAnnualDebtService = (year: '2023' | '2024' | '2025YTD') => {
-        const annualDebtService = (debts || []).reduce((sum, d) => sum + (parseFloat(d.monthlyPayment.replace(/[^\d.]/g, '')) || 0), 0) * 12;
-        if (year === '2023' || year === '2024') return annualDebtService;
-        if (year === '2025YTD') {
-          const months = getYTDMonthNumber();
-          if (!months) return 0;
-          return (annualDebtService * months) / 12;
-        }
-        return 0;
-      };
-      const dscrResults = calculateDSCRReview(
-        financials,
-        {
-          '2023': getAnnualDebtService('2023'),
-          '2024': getAnnualDebtService('2024'),
-          '2025YTD': getAnnualDebtService('2025YTD'),
-        },
-        {
-          '2023': getAnnualizedLoanPayment('2023'),
-          '2024': getAnnualizedLoanPayment('2024'),
-          '2025YTD': getAnnualizedLoanPayment('2025YTD'),
-        }
-      );
-      const round2 = (v: number | null) => (v == null ? null : Math.round(v * 100) / 100);
-      const dscr2024 = round2(dscrResults.dscr2024);
-      console.debug('[SUBMIT] Calculated DSCR 2024:', dscr2024);
-      // --- End submission logic ---
+
+      const [cashFlowPdfUrl, debtSummaryPdfUrl] = await Promise.all([
+        generatePdf('full'),
+        generatePdf('summary'),
+      ]);
+
+      const { error: updateError } = await supabase
+        .from('cash_flow_analyses')
+        .update({ status: 'submitted' })
+        .eq('id', savedDraftId);
+      if (updateError) {
+        throw new Error(updateError.message || 'Failed to finalize submission.');
+      }
+
+      setLoadedAnalysisStatus('submitted');
+      setPdfUrls(JSON.stringify({
+        cashFlowPdfUrl: cashFlowPdfUrl ?? null,
+        debtSummaryPdfUrl: debtSummaryPdfUrl ?? null,
+      }));
       setSubmitStatus('success');
-      router.push(`/report-preview?id=${draftId}`); 
-      return { submissionId: 'simulated-id' }; 
+      router.push(`/report-preview?id=${savedDraftId}`); 
+      return { submissionId: savedDraftId }; 
     } catch (err: any) {
       console.error('[SUBMIT] Submission failed:', err);
       setSubmitError('Submission failed. Please try again. ' + (err?.message || ''));
       setSubmitStatus('error');
       return {};
     }
-  }, [submitStatus, loanInfo, financials, debts, userEmail, draftId, supabase, setSubmitStatus, setSubmitError, setPdfUrls, setDraftId, router]);
+  }, [saveDraft, submitStatus, supabase, router]);
   // Defensive fallback for currentStepComponent
   let currentStepComponent;
   switch (currentStep) {
@@ -998,6 +915,7 @@ export default function Page() {
           ref={businessDebtsStepRef}
           initialData={debts}
           onFormDataChange={handleDebtsChange}
+          onProgressChange={setDebtProgressState}
           isFormValid={setIsStepValid}
           onNext={handleNext}
           onBack={handleBack}
@@ -1024,7 +942,9 @@ export default function Page() {
           submitError={submitError ?? null}
           pdfUrls={pdfUrls ?? null}
           
-          onSaveDraft={saveDraft}
+          onSaveDraft={async () => {
+            await saveDraft();
+          }}
           onConfirmChange={setIsReviewConfirmed}
         />
       );
@@ -1034,157 +954,203 @@ export default function Page() {
   }
 
   // Defensive: always render main content
-  return (
-    <div id="__page-root" className="min-h-screen bg-gray-100">
-      {/* Global Navigation */}
-      <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-30">
-        <div className="max-w-[1200px] h-full mx-auto px-6 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-gray-900">
-            BlaBolt
-          </Link>
-          <div className="flex items-center gap-8">
-            <Link 
-              href="/comprehensive-cash-flow-analysis" 
-              className="text-sm font-medium text-blue-600"
-            >
-              Cash Flow Analysis
-            </Link>
-            <Link 
-              href="/loan-services" 
-              className="text-sm font-medium text-gray-600 hover:text-gray-900"
-            >
-              Loan Services
-            </Link>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-              Check Now—Free & Fast
-            </button>
-          </div>
-        </div>
-      </div>
+  const formatHeroCurrency = (value: number | null | undefined) => {
+    if (value == null || !Number.isFinite(value) || value === 0) return '—';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+  const latestEbitda = Number(financials.year2025?.summary?.ebitda ?? 0);
+  const monthlyDebtService = calculateDebtSummary(debts).monthlyDebtService;
+  const completionPercent = useMemo(() => {
+    const purchasePurposes = ['Purchase Business', 'Purchase Commercial Real Estate'];
+    const step1VisibleFields: Array<keyof LoanInfoData> = [
+      'businessName',
+      'firstName',
+      'lastName',
+      'loanPurpose',
+      'desiredAmount',
+      ...(purchasePurposes.includes(loanInfo.loanPurpose)
+        ? (['downPayment', 'downPayment293', 'proposedLoan', 'term', 'interestRate', 'annualizedLoan'] as Array<keyof LoanInfoData>)
+        : []),
+    ];
+    const step1Completed = step1VisibleFields.filter((field) => hasMeaningfulValue(loanInfo[field])).length;
+    const step1Ratio = step1VisibleFields.length > 0 ? step1Completed / step1VisibleFields.length : 0;
 
-      {/* Main Content */}
+    const countFilledFinancialFields = (values: Partial<FullFinancialData> | undefined) =>
+      FINANCIAL_PROGRESS_FIELDS.filter((field) => hasMeaningfulValue(values?.[field])).length;
+
+    const step2TotalFields = FINANCIAL_PROGRESS_FIELDS.length * 3 + 1;
+    const step2Completed =
+      (financials.year2024?.skip ? FINANCIAL_PROGRESS_FIELDS.length : countFilledFinancialFields(financials.year2024?.input)) +
+      countFilledFinancialFields(financials.year2025?.input) +
+      (financials.year2026YTD?.skip
+        ? FINANCIAL_PROGRESS_FIELDS.length + 1
+        : countFilledFinancialFields(financials.year2026YTD?.input) + (hasMeaningfulValue(financials.year2026YTD?.ytdMonth) ? 1 : 0));
+    const step2Ratio = step2TotalFields > 0 ? step2Completed / step2TotalFields : 0;
+
+    const debtsByCategory = categories.reduce((acc, category) => {
+      acc[category.id as DebtCategory] = debts.filter((debt) => debt.category === category.id);
+      return acc;
+    }, {} as Record<DebtCategory, Debt[]>);
+
+    let step3TotalUnits = 0;
+    let step3CompletedUnits = 0;
+
+    categories.forEach((category) => {
+      const categoryId = category.id as DebtCategory;
+      const configuredCount = debtProgressState.categoryCounts[categoryId] ?? 0;
+      const answered = debtProgressState.answeredCategories[categoryId] ?? false;
+      const categoryEntries = debtsByCategory[categoryId] ?? [];
+
+      step3TotalUnits += 1 + configuredCount * 4;
+      if (answered) step3CompletedUnits += 1;
+
+      for (let index = 0; index < configuredCount; index += 1) {
+        const entry = categoryEntries[index];
+        if (hasMeaningfulValue(entry?.description)) step3CompletedUnits += 1;
+        if (hasMeaningfulValue(entry?.monthlyPayment)) step3CompletedUnits += 1;
+        if (hasMeaningfulValue(entry?.originalLoanAmount)) step3CompletedUnits += 1;
+        if (hasMeaningfulValue(entry?.outstandingBalance)) step3CompletedUnits += 1;
+      }
+    });
+
+    const step3Ratio = step3TotalUnits > 0 ? step3CompletedUnits / step3TotalUnits : 0;
+    const preReviewPercent = (step1Ratio + step2Ratio + step3Ratio) * PROGRESS_STEP_WEIGHT;
+
+    return isReviewConfirmed ? 100 : Math.min(99, Math.round(preReviewPercent));
+  }, [debtProgressState, debts, financials, isReviewConfirmed, loanInfo]);
+
+  return (
+    <div id="__page-root" className="min-h-screen">
       {!hydrated ? (
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-[radial-gradient(circle_at_top,_#dbeafe_0%,_#f8fafc_42%,_#f3f4f6_100%)] px-4">
           <svg className="animate-spin h-10 w-10 text-blue-600 mb-4" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
           </svg>
-          <div className="text-lg font-semibold text-gray-700">Loading your data...</div>
+          <div className="text-lg font-semibold text-gray-700">Loading your analysis draft...</div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="min-h-[400px]">
-  {/* Wizard Header with Blue Background */}
-  <div className="rounded-xl mb-6 p-5 pb-4 shadow-lg border border-blue-900 bg-gradient-to-br from-[#002c55] to-[#02396e]">
-    <h2 className="text-3xl font-bold mb-1 text-center text-white tracking-tight drop-shadow-sm">
-      Comprehensive Cash Flow Analysis
-    </h2>
-    <p className="text-center text-blue-100 mb-3 text-base max-w-4xl mx-auto font-medium">
-    We’ll guide you step-by-step to build a funding-ready cash flow report — perfect for loan applications.    </p>
-    {/* Sleek Stepper with Progress Bar */}
-    <div className="relative mb-0">
-      {/* Progress Bar (background) */}
-      <div className="absolute left-0 right-0 top-1/2 transform -translate-y-1/2 h-1.5 bg-white rounded-full z-0" style={{height: '6px'}} />
-      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 h-1.5 bg-blue-300 rounded-full z-10 transition-all duration-500" style={{width: `${getProgressWidth()}%`, height: '6px'}} />
-      {/* Step Icons and Titles */}
-      <div className="relative flex justify-between items-center z-20 px-2">
-        {steps.map((step, idx) => {
-          // Icon selection
-          let icon = null;
-          if (step.id === 1) icon = (
-            // Identification/User Icon
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A9.004 9.004 0 0112 15c2.003 0 3.868.659 5.293 1.764M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-          );
-          if (step.id === 2) icon = (
-            // Classic Dollar Sign Icon
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 7c0-2.21-2.239-4-5-4s-5 1.79-5 4c0 2.21 2.239 4 5 4s5 1.79 5 4-2.239 4-5 4-5-1.79-5-4" />
-            </svg>
-          );
-          if (step.id === 3) icon = (
-            // Credit Card Icon
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2" strokeLinejoin="round" /><path d="M2 10h20" /></svg>
-          );
-          if (step.id === 4) icon = (
-            // Clipboard Check Icon
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5h6a2 2 0 012 2v12a2 2 0 01-2 2H9a2 2 0 01-2-2V7a2 2 0 012-2zm0 0V3a2 2 0 012-2h2a2 2 0 012 2v2" /><path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2 2 4-4" /></svg>
-          );
-          // Step state
-          const isComplete = currentStep > step.id;
-          const isActive = currentStep === step.id;
-          return (
-            <div key={step.id} className="flex flex-col items-center flex-1">
-              <div className={`relative z-20 flex items-center justify-center w-16 h-16 rounded-full border-4 transition-all duration-300
-                ${isActive ? 'bg-white border-blue-500 shadow-2xl scale-110 ring-4 ring-blue-400 ring-offset-2 ring-offset-[#002c55]' : isComplete ? 'bg-green-500 border-green-300 text-white' : 'bg-blue-900 border-blue-700 text-blue-200'}`}
-              >
-                {isComplete ? (
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                ) : (
-                  <span className={isActive ? 'text-blue-700' : isComplete ? 'text-white' : 'text-blue-200'}>{icon}</span>
-                )}
+        <TemplatePageShell
+          title="Comprehensive Cash Flow Analysis"
+          subtitle="Build the same funding-ready analysis package inside a cleaner, lender-focused workflow."
+          description="Complete loan information, financials, debt details, and final review in one guided flow. We keep every field from the original analysis, but present them in a clearer format so it is easier to know what number to enter."
+          metricLabel="Key Metrics"
+          metricValue=""
+          metricContent={
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-slate-400">2025 EBITDA</p>
+                <p className="mt-2 text-2xl font-bold text-white">{formatHeroCurrency(latestEbitda)}</p>
+                <p className="mt-1 text-xs text-slate-300">Full-year operating earnings snapshot</p>
               </div>
-              <div className={`mt-2 text-xs font-semibold text-center transition-colors duration-300
-                ${isActive ? 'text-blue-100' : isComplete ? 'text-green-100' : 'text-blue-200'}`}
-              >
-                {step.title}
+              <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
+                <p className="text-[11px] uppercase tracking-[0.08em] text-slate-400">Monthly Debt Service</p>
+                <p className="mt-2 text-2xl font-bold text-white">{formatHeroCurrency(monthlyDebtService)}</p>
+                <p className="mt-1 text-xs text-slate-300">Current required monthly business debt payments</p>
               </div>
             </div>
-          );
-        })}
-      </div>
-    </div>
-  </div>
-  {currentStepComponent}
-</div>
-          {/* Navigation Buttons */}
-          <div className="mt-12 flex justify-between items-center">
-            <button
-              onClick={handleBack}
-              className={`group px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2
-                transition-all duration-300 transform
-                ${currentStep === 1 
-                  ? 'invisible' 
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:-translate-x-1'}`}
-                disabled={!hydrated}
-            >
-              <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back
-            </button>
-            <div className="text-sm text-gray-500">
-              Step {currentStep} of {steps.length}
+          }
+          statusLabel="Draft saves automatically while you work"
+          statusTone="saved"
+          hideStatusOnMobile
+          hideMetricOnMobile
+          fullWidthBelowHero={
+            <TemplateHeroProgressBar
+              label={`Step ${currentStep} of ${steps.length}`}
+              percent={completionPercent}
+            />
+          }
+        >
+          <section className="rounded-[1.75rem] border border-slate-200 bg-white/95 p-4 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.35)] sm:p-6">
+            <div className="mb-6 grid gap-3 md:grid-cols-4">
+              {steps.map((step) => {
+                const isActive = step.id === currentStep;
+                const isComplete = step.id < currentStep;
+
+                return (
+                  <div
+                    key={step.id}
+                    className={`rounded-2xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                        : isComplete
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                        : 'border-slate-300 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em]">
+                      Step {step.id}
+                    </div>
+                    <div className="mt-1 text-sm font-semibold sm:text-base">
+                      {isComplete ? '✓ ' : ''}
+                      {step.title}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <button
-              onClick={currentStep === steps.length ? handleSubmit : handleNext}
-              disabled={!hydrated || submitStatus === 'submitting' || (currentStep === steps.length && !isReviewConfirmed)}
-              className="group px-6 py-3 rounded-lg bg-blue-600 text-white text-sm font-medium 
-                flex items-center gap-2 hover:bg-blue-700 transition-all duration-300 transform hover:translate-x-1
-                disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
-            >
-              {submitStatus === 'submitting' && currentStep === steps.length ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+
+            <div className="min-h-[400px]">{currentStepComponent}</div>
+          </section>
+
+          <section className="sticky bottom-0 z-30 rounded-[1.25rem] border border-slate-200 bg-white/95 p-4 shadow-[0_-12px_32px_-24px_rgba(15,23,42,0.45)] backdrop-blur">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-slate-600">
+                Step {currentStep} of {steps.length}
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  onClick={handleBack}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold transition ${
+                    currentStep === 1
+                      ? 'invisible'
+                      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                  disabled={!hydrated}
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                  Generating Reports...
-                </>
-              ) : (
-                <>
-                  {currentStep === steps.length ? 'Submit' : 'Save & Continue'}
-                  <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </>
-              )}
-            </button>
-          </div>
-          {submitStatus === 'error' && (
-            <div className="text-red-600 font-semibold">Error: {submitError}</div>
-          )}
-        </div>
+                  Back
+                </button>
+
+                <button
+                  onClick={currentStep === steps.length ? handleSubmit : handleNext}
+                  disabled={!hydrated || submitStatus === 'submitting' || (currentStep === steps.length && !isReviewConfirmed)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitStatus === 'submitting' && currentStep === steps.length ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                      </svg>
+                      Generating Reports...
+                    </>
+                  ) : (
+                    <>
+                      {currentStep === steps.length ? 'Submit Analysis' : 'Save & Continue'}
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {submitStatus === 'error' ? (
+              <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">
+                Error: {submitError}
+              </div>
+            ) : null}
+          </section>
+        </TemplatePageShell>
       )}
       <Toast message={toastMessage} visible={toastVisible} onClose={closeToast} />
     </div>

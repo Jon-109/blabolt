@@ -1,3 +1,9 @@
+import {
+  formatCreditUtilizationRate,
+  normalizeFinancialsPayload,
+  parseStoredTermMonths,
+} from '@/lib/financial/calculations';
+
 // Utility to parse currency/number fields
 function parseCurrency(value: string | number | undefined | null): number {
   if (typeof value === 'number') return value;
@@ -5,9 +11,39 @@ function parseCurrency(value: string | number | undefined | null): number {
   return parseFloat(value.replace(/[$,]/g, '')) || 0;
 }
 
-export async function getCashFlowAnalysisById(analysisId: string, supabase: any) {
-  console.log(`[getCashFlowAnalysisById] Fetching analysis for ID: ${analysisId}`);
+function normalizeDscr(dscr: any) {
+  if (!dscr || typeof dscr !== 'object') return {};
 
+  return {
+    '2024': dscr['2024'] ?? dscr.dscr2023 ?? null,
+    '2025': dscr['2025'] ?? dscr.dscr2024 ?? null,
+    '2026YTD': dscr['2026YTD'] ?? dscr.dscr2025 ?? null,
+  };
+}
+
+function normalizeDebtSummary(debts: any) {
+  if (!debts || typeof debts !== 'object' || Array.isArray(debts)) return debts;
+
+  const mapYearObject = (value: any) => {
+    if (!value || typeof value !== 'object') return value;
+
+    return {
+      '2024': value['2024'] ?? value['2023'] ?? 0,
+      '2025': value['2025'] ?? value['2024'] ?? 0,
+      '2026YTD': value['2026YTD'] ?? value['2025YTD'] ?? 0,
+    };
+  };
+
+  return {
+    ...debts,
+    annualDebtService: mapYearObject(debts.annualDebtService),
+    annualDebtServices: mapYearObject(debts.annualDebtServices),
+    totalDebtService: mapYearObject(debts.totalDebtService),
+    annualizedLoanPayments: mapYearObject(debts.annualizedLoanPayments),
+  };
+}
+
+export async function getCashFlowAnalysisById(analysisId: string, supabase: any) {
   // Use the provided Supabase client (already authenticated with user's token)
   const { data, error } = await supabase
     .from('cash_flow_analyses')
@@ -24,8 +60,6 @@ export async function getCashFlowAnalysisById(analysisId: string, supabase: any)
 
   if (error || !data) return null;
 
-  console.log(`[getCashFlowAnalysisById] Data found for ID ${analysisId}. Processing...`);
-
   // --- Reconstruct LoanInfo ---
   const loanInfo = {
     businessName: data.business_name || '',
@@ -33,7 +67,7 @@ export async function getCashFlowAnalysisById(analysisId: string, supabase: any)
     desiredAmount: parseCurrency(data.desired_amount),
     estimatedPayment: parseCurrency(data.estimated_payment),
     annualizedLoan: parseCurrency((data as any).annualized_loan),
-    loanTerm: parseInt(String((data as any).term || '0'), 10),
+    loanTerm: parseStoredTermMonths((data as any).term),
     interestRate: (typeof (data as any).interest_rate === 'number' ? (data as any).interest_rate : parseFloat(String((data as any).interest_rate || '0'))) / 100,
     downPaymentPercent: parseFloat(String((data as any).down_payment293 || '0')),
     downPaymentAmount: parseCurrency((data as any).down_payment),
@@ -41,22 +75,16 @@ export async function getCashFlowAnalysisById(analysisId: string, supabase: any)
   };  
 
   // --- Transform Financials ---
+  const normalizedFinancials = normalizeFinancialsPayload(data.financials);
   const years: Record<string, any> = {};
-  if (data.financials) {
-    const financialsObj = typeof data.financials === 'string'
-      ? JSON.parse(data.financials)
-      : data.financials;
-    for (const [key, val] of Object.entries(financialsObj)) {
-      // key: 'year2023', 'year2024', 'year2025YTD' -> '2023', '2024', '2025YTD'
-      const yearKey = key.replace('year', '');
-      years[yearKey] = val;
-    }
-    
+  for (const [key, val] of Object.entries(normalizedFinancials)) {
+    const yearKey = key.replace('year', '');
+    years[yearKey] = val;
   }
   const financials = years;
 
   // --- DSCR ---
-  const dscr = data.dscr || {};
+  const dscr = normalizeDscr(data.dscr);
 
   // --- Debts ---
   // debts may be stored as { entries: Debt[] } or as Debt[]
@@ -68,11 +96,17 @@ export async function getCashFlowAnalysisById(analysisId: string, supabase: any)
     'entries' in data.debts &&
     Array.isArray((data.debts as any).entries)
   ) {
-    debts = (data.debts as any).entries;
+    debts = {
+      ...(data.debts as any),
+      creditUtilizationRate:
+        typeof (data.debts as any).creditUtilizationRate === 'number'
+          ? formatCreditUtilizationRate((data.debts as any).creditUtilizationRate)
+          : (data.debts as any).creditUtilizationRate,
+    };
   } else if (Array.isArray(data.debts)) {
     debts = data.debts;
   } else if (data.debts) {
-    debts = data.debts;
+    debts = normalizeDebtSummary(data.debts);
   }
 
   // --- Debt Summary (optional, for summary page) ---

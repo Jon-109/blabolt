@@ -7,19 +7,27 @@ interface DownloadButtonProps {
   children?: React.ReactNode;
   className?: string;
   ready?: boolean; // Optional: for future use if you want to indicate pre-generated
+  existingUrl?: string;
 }
 
-const DownloadButton: React.FC<DownloadButtonProps> = ({ analysisId, type, children, className, ready }) => {
+const DownloadButton: React.FC<DownloadButtonProps> = ({ analysisId, type, children, className, ready, existingUrl }) => {
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleDownload = async () => {
+    setErrorMessage(null);
+    if (existingUrl) {
+      window.open(existingUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     setLoading(true);
     try {
       // Get the user's Supabase access token
       const session = await supabase.auth.getSession();
       const accessToken = session?.data?.session?.access_token;
       if (!accessToken) {
-        alert('You must be logged in to download the PDF.');
+        setErrorMessage('You must be logged in to download the PDF.');
         setLoading(false);
         return;
       }
@@ -44,7 +52,7 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ analysisId, type, child
           errorMessage = `Failed to generate PDF (${res.status}: ${res.statusText})`;
         }
         console.error('PDF generation failed:', errorMessage);
-        alert(errorMessage);
+        setErrorMessage(errorMessage);
         setLoading(false);
         return;
       }
@@ -60,8 +68,8 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ analysisId, type, child
       setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error('PDF generation error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF';
-      alert(`Error: ${errorMessage}`);
+      const message = error instanceof Error ? error.message : 'Failed to generate PDF';
+      setErrorMessage(`Error: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -107,6 +115,11 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ analysisId, type, child
       {loading && (
         <div className="mt-2 text-xs text-gray-600 text-center">
           Please wait 3–5 seconds for the download to complete.
+        </div>
+      )}
+      {errorMessage && !loading && (
+        <div className="mt-2 text-xs text-red-600 text-center">
+          {errorMessage}
         </div>
       )}
     </div>

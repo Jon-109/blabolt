@@ -12,10 +12,10 @@ export type FormSectionProps = {
 
 export function FormSection({ title, description, children, className }: FormSectionProps) {
   return (
-    <fieldset className={cn("border border-gray-200 rounded-xl p-6 bg-white/50", className)}>
-      <legend className="text-lg font-semibold px-2">{title}</legend>
+    <fieldset className={cn('rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm sm:p-5', className)}>
+      <legend className="px-2 text-base font-semibold text-slate-900">{title}</legend>
       {description ? (
-        <p className="text-sm text-gray-600 mt-1 px-2">{description}</p>
+        <p className="mt-1 px-2 text-sm text-slate-600">{description}</p>
       ) : null}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">{children}</div>
     </fieldset>

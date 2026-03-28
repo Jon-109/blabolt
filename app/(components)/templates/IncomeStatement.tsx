@@ -1,28 +1,29 @@
 'use client';
 import PrintShell from './shared/PrintShell';
 import type { IncomeStatementData } from '@/lib/templates/types';
+import { getIncomeStatementTotals } from '@/lib/templates/income-statement-calculations';
 
 export default function IncomeStatement({ data }: { data: IncomeStatementData }) {
-  const totalRevenue =
-    (data.revenue.grossSales ?? 0) +
-    (data.revenue.serviceRevenue ?? 0) +
-    (data.revenue.otherRevenue ?? 0);
-
-  const totalExpenses =
-    (data.expenses.costOfGoodsSold ?? 0) +
-    (data.expenses.salariesWages ?? 0) +
-    (data.expenses.rent ?? 0) +
-    (data.expenses.utilities ?? 0) +
-    (data.expenses.marketing ?? 0) +
-    (data.expenses.insurance ?? 0) +
-    (data.expenses.depreciation ?? 0) +
-    (data.expenses.interestExpense ?? 0) +
-    (data.expenses.otherExpenses ?? 0);
-
-  const netIncome = totalRevenue - totalExpenses;
+  const {
+    cogs,
+    operatingExpenses,
+    interestExpense,
+    totalRevenue,
+    totalCogs,
+    grossProfit,
+    totalOperatingExpenses,
+    operatingProfit,
+    netProfit,
+  } = getIncomeStatementTotals(data);
 
   return (
     <PrintShell title={`Income Statement — ${data.periodStart} to ${data.periodEnd}`}>
+      {(data.statementLabel || data.statementType) ? (
+        <section style={{ marginBottom: 12, fontSize: 11 }}>
+          {data.statementLabel ? <div><strong>Statement Label:</strong> {data.statementLabel}</div> : null}
+          {data.statementType ? <div><strong>Type:</strong> {data.statementType.toUpperCase()}</div> : null}
+        </section>
+      ) : null}
       <section style={{ maxWidth: '600px' }}>
         <div style={{ marginBottom: 16 }}>
           <h2 style={{ fontSize: 14, marginBottom: 8, marginTop: 0 }}>Revenue</h2>
@@ -65,89 +66,169 @@ export default function IncomeStatement({ data }: { data: IncomeStatementData })
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <h2 style={{ fontSize: 14, marginBottom: 8, marginTop: 0 }}>Expenses</h2>
+          <h2 style={{ fontSize: 14, marginBottom: 8, marginTop: 0 }}>Cost of Goods Sold</h2>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
-              {data.expenses.costOfGoodsSold != null && (
+              {cogs.inventoryMaterialsCost != null && (
                 <tr>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Cost of Goods Sold</td>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Inventory or Materials Cost</td>
                   <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                    ${data.expenses.costOfGoodsSold.toLocaleString()}
+                    ${cogs.inventoryMaterialsCost.toLocaleString()}
                   </td>
                 </tr>
               )}
-              {data.expenses.salariesWages != null && (
+              {cogs.directLabor != null && (
                 <tr>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Salaries & Wages</td>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Direct Labor</td>
                   <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                    ${data.expenses.salariesWages.toLocaleString()}
+                    ${cogs.directLabor.toLocaleString()}
                   </td>
                 </tr>
               )}
-              {data.expenses.rent != null && (
+              {cogs.shippingPackaging != null && (
                 <tr>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Rent</td>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Shipping & Packaging</td>
                   <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                    ${data.expenses.rent.toLocaleString()}
+                    ${cogs.shippingPackaging.toLocaleString()}
                   </td>
                 </tr>
               )}
-              {data.expenses.utilities != null && (
+              {cogs.otherDirectCosts != null && (
                 <tr>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Utilities</td>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Other Direct Costs</td>
                   <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                    ${data.expenses.utilities.toLocaleString()}
-                  </td>
-                </tr>
-              )}
-              {data.expenses.marketing != null && (
-                <tr>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Marketing</td>
-                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                    ${data.expenses.marketing.toLocaleString()}
-                  </td>
-                </tr>
-              )}
-              {data.expenses.insurance != null && (
-                <tr>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Insurance</td>
-                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                    ${data.expenses.insurance.toLocaleString()}
-                  </td>
-                </tr>
-              )}
-              {data.expenses.depreciation != null && (
-                <tr>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Depreciation</td>
-                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                    ${data.expenses.depreciation.toLocaleString()}
-                  </td>
-                </tr>
-              )}
-              {data.expenses.interestExpense != null && (
-                <tr>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Interest Expense</td>
-                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                    ${data.expenses.interestExpense.toLocaleString()}
-                  </td>
-                </tr>
-              )}
-              {data.expenses.otherExpenses != null && (
-                <tr>
-                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Other Expenses</td>
-                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                    ${data.expenses.otherExpenses.toLocaleString()}
+                    ${cogs.otherDirectCosts.toLocaleString()}
                   </td>
                 </tr>
               )}
               <tr>
                 <td style={{ padding: '8px 0 4px 0', fontWeight: 'bold', borderTop: '2px solid #333' }}>
-                  <b>Total Expenses</b>
+                  <b>Total Cost of Goods Sold</b>
                 </td>
                 <td style={{ textAlign: 'right', padding: '8px 0 4px 0', fontWeight: 'bold', borderTop: '2px solid #333' }}>
-                  <b>${totalExpenses.toLocaleString()}</b>
+                  <b>${totalCogs.toLocaleString()}</b>
                 </td>
               </tr>
+              <tr>
+                <td style={{ padding: '8px 0 4px 0', fontWeight: 'bold' }}>
+                  <b>Gross Profit</b>
+                </td>
+                <td style={{ textAlign: 'right', padding: '8px 0 4px 0', fontWeight: 'bold' }}>
+                  <b>${grossProfit.toLocaleString()}</b>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <h2 style={{ fontSize: 14, marginBottom: 8, marginTop: 0 }}>Operating Expenses</h2>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tbody>
+              {operatingExpenses.payrollContractorPayments != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Payroll and Contractor Payments</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.payrollContractorPayments.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              {operatingExpenses.rentFacilityCosts != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Rent or Facility Costs</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.rentFacilityCosts.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              {operatingExpenses.utilitiesInternet != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Utilities and Internet</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.utilitiesInternet.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              {operatingExpenses.marketingAdvertising != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Marketing and Advertising</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.marketingAdvertising.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              {operatingExpenses.softwareSubscriptions != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Software and Subscriptions</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.softwareSubscriptions.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              {operatingExpenses.professionalServices != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Professional Services</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.professionalServices.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              {operatingExpenses.insurance != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Insurance</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.insurance.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              {operatingExpenses.officeAdministrative != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Office and Administrative</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.officeAdministrative.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              {operatingExpenses.vehicleTravel != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Vehicle and Travel</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.vehicleTravel.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              {operatingExpenses.otherOperatingExpenses != null && (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Other Operating Expenses</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${operatingExpenses.otherOperatingExpenses.toLocaleString()}
+                  </td>
+                </tr>
+              )}
+              <tr>
+                <td style={{ padding: '8px 0 4px 0', fontWeight: 'bold', borderTop: '2px solid #333' }}>
+                  <b>Total Operating Expenses</b>
+                </td>
+                <td style={{ textAlign: 'right', padding: '8px 0 4px 0', fontWeight: 'bold', borderTop: '2px solid #333' }}>
+                  <b>${totalOperatingExpenses.toLocaleString()}</b>
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '8px 0 4px 0', fontWeight: 'bold' }}>
+                  <b>Operating Profit</b>
+                </td>
+                <td style={{ textAlign: 'right', padding: '8px 0 4px 0', fontWeight: 'bold' }}>
+                  <b>${operatingProfit.toLocaleString()}</b>
+                </td>
+              </tr>
+              {interestExpense ? (
+                <tr>
+                  <td style={{ padding: '4px 0', borderBottom: '1px solid #eee' }}>Interest Expense</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                    ${interestExpense.toLocaleString()}
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -157,10 +238,10 @@ export default function IncomeStatement({ data }: { data: IncomeStatementData })
             <tbody>
               <tr>
                 <td style={{ padding: '12px 0 8px 0', fontWeight: 'bold', borderTop: '3px solid #000', fontSize: 14 }}>
-                  <b>Net Income</b>
+                  <b>Net Profit</b>
                 </td>
-                <td style={{ textAlign: 'right', padding: '12px 0 8px 0', fontWeight: 'bold', borderTop: '3px solid #000', fontSize: 14, color: netIncome >= 0 ? '#059669' : '#dc2626' }}>
-                  <b>${netIncome.toLocaleString()}</b>
+                <td style={{ textAlign: 'right', padding: '12px 0 8px 0', fontWeight: 'bold', borderTop: '3px solid #000', fontSize: 14, color: netProfit >= 0 ? '#059669' : '#dc2626' }}>
+                  <b>${netProfit.toLocaleString()}</b>
                 </td>
               </tr>
             </tbody>

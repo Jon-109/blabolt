@@ -3,25 +3,39 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
 
-export async function GET(request: Request) {
+async function createSupabaseClientFromCookies() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
   const cookieStore = await cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  return createServerClient<Database>(
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value
         },
-        set(name: string, value: string, options: any) {
+        set(name: string, value: string, options: Record<string, unknown>) {
           cookieStore.set(name, value, options)
         },
-        remove(name: string, options: any) {
+        remove(name: string, options: Record<string, unknown>) {
           cookieStore.set(name, '', { ...options, maxAge: 0 })
         },
       },
     }
   )
+}
+
+export async function GET() {
+  const supabase = await createSupabaseClientFromCookies()
+  if (!supabase) {
+    return NextResponse.json({ error: 'Server auth configuration is missing' }, { status: 500 })
+  }
 
   try {
     const { data: session } = await supabase.auth.getSession()
@@ -32,30 +46,16 @@ export async function GET(request: Request) {
 
     // Return the authenticated user's info directly
     return NextResponse.json(session.session.user)
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
 
-export async function PUT(request: Request) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set(name, value, options)
-        },
-        remove(name: string, options: any) {
-          cookieStore.set(name, '', { ...options, maxAge: 0 })
-        },
-      },
-    }
-  )
+export async function PUT() {
+  const supabase = await createSupabaseClientFromCookies()
+  if (!supabase) {
+    return NextResponse.json({ error: 'Server auth configuration is missing' }, { status: 500 })
+  }
 
   try {
     const { data: session } = await supabase.auth.getSession()
@@ -66,7 +66,7 @@ export async function PUT(request: Request) {
 
     // Profile updates are not supported as there is no 'profiles' table
     return NextResponse.json({ error: 'Profile updates are not supported.' }, { status: 501 })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

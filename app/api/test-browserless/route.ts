@@ -1,6 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
+export async function POST() {
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   try {
     console.log('[test-browserless] Testing Browserless.io connection...');
     
@@ -67,11 +71,12 @@ export async function POST(req: NextRequest) {
       responseStatus: browserlessResponse.status
     });
     
-  } catch (error: any) {
-    console.error('[test-browserless] Error:', error);
+  } catch (error: unknown) {
+    const details = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[test-browserless] Error:', details);
     return NextResponse.json({ 
       error: 'Failed to test Browserless connection',
-      details: error.message,
+      details,
       hasApiKey: !!process.env.BROWSERLESS_API_KEY
     }, { status: 500 });
   }

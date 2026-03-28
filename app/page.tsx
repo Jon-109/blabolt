@@ -1,330 +1,708 @@
 "use client";
+
 export const dynamic = 'force-dynamic';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/supabase/helpers/client';
-
-// Temporarily remove complex components to isolate the issue
-import Testimonials from '@/app/(components)/shared/Testimonials';
-import FundingProcessSteps from '@/app/(components)/shared/FundingProcessSteps';
-import LoanPaymentCalculator from '@/app/(components)/LoanPaymentCalculator';
-import ContactFormModal from '@/app/(components)/shared/ContactFormModal';
-
+import { Sora } from 'next/font/google';
 import {
-  BarChart3,
-  Clock,
-  FileCheck,
-  HandshakeIcon,
-  CheckCircle,
-  XCircle,
   ArrowRight,
-  DollarSign,
-  Users,
-  Award,
-  HelpCircle,
-  ArrowRight as ArrowRightIcon,
-  Rocket,
+  BadgeDollarSign,
+  BarChart3,
+  Building2,
+  Calculator,
+  CheckCircle2,
+  ClipboardCheck,
+  Handshake,
+  Info,
+  Search,
+  ShieldCheck,
   TrendingUp,
-  Shield
+  Workflow,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+import { supabase } from '@/supabase/helpers/client';
+import DscrQuickCalculator from '@/app/(components)/cash-flow/DscrQuickCalculator';
+import Testimonials from '@/app/(components)/shared/Testimonials';
+import LoanPackagingExplainer from '@/app/(components)/shared/LoanPackagingExplainer';
+
+const headingFont = Sora({
+  subsets: ['latin'],
+  weight: ['600', '700', '800'],
+  display: 'swap',
+});
+
+const marqueeItems = [
+  'Free DSCR Check',
+  'Comprehensive Cash Flow Review',
+  'Loan Packaging Dashboard',
+  'Guided Templates',
+  'Cover Letter Drafting',
+  'Package ZIP Export',
+  'Secure Lender Links',
+  'Loan Brokering',
+];
+
+const serviceCards = [
+  {
+    badge: 'FREE START',
+    stage: 'Start here',
+    title: 'Quick DSCR Check',
+    description: 'DSCR stands for Debt Service Coverage Ratio, and it is one of the main numbers lenders use to decide whether your business cash flow can safely handle a loan payment.',
+    bullets: [
+      'Understand the number lenders look at to judge repayment ability',
+      'See whether your cash flow looks strong, borderline, or risky before you go further',
+      'Use a fast first-pass check to decide if the deal may be worth packaging and shopping',
+    ],
+    ctaLabel: 'Start Free Check',
+    ctaHref: '#dscr-calculator',
+    icon: BarChart3,
+  },
+  {
+    badge: 'FULL ANALYSIS',
+    stage: 'Go deeper',
+    title: 'Comprehensive Cash Flow Review',
+    description: 'A deeper financial review for owners who want a clearer picture of how lenders may evaluate cash flow, debt, and repayment capacity.',
+    bullets: [
+      'Review historical and year-to-date performance',
+      'Analyze debt obligations and repayment capacity in more detail',
+      'Get clearer lender-facing insights before moving forward',
+    ],
+    ctaLabel: 'Explore Full Analysis',
+    ctaHref: '/cash-flow-analysis',
+    icon: TrendingUp,
+  },
+  {
+    badge: 'DONE-WITH-YOU',
+    stage: 'Get organized',
+    title: 'Loan Packaging Dashboard + Templates',
+    description: 'Our guided packaging system helps you organize documents, complete lender-ready templates, and generate a professional cover letter for your loan request.',
+    bullets: [
+      'Guided checklist, uploads, and shared business profile data',
+      'Five lender-ready templates with PDF generation',
+      'AI-assisted cover letter generation, package exports, and secure lender links',
+    ],
+    ctaLabel: 'Explore Loan Packaging',
+    ctaHref: '/loan-services',
+    icon: Workflow,
+  },
+  {
+    badge: 'BROKERING',
+    stage: 'Reach the finish line',
+    title: 'Loan Brokering',
+    description: 'This is everything in Loan Packaging Dashboard + Templates, plus we help find a lender willing to take on your deal and keep it moving toward a real closing.',
+    bullets: [
+      'Includes the full dashboard, guided templates, cover letter, exports, and lender-ready package',
+      'We help place your deal with lenders that fit the request instead of leaving you to cold-apply',
+      'We stay in it through lender conversations, underwriting follow-up, and closing steps',
+    ],
+    ctaLabel: 'Explore Loan Brokering',
+    ctaHref: '/loan-services',
+    icon: Handshake,
+  },
+];
+
+type ProcessStep = {
+  step: string;
+  summaryLabel: string;
+  title: string;
+  description: string;
+  pain: string;
+  icon: LucideIcon;
+  featured?: boolean;
+  ctaLabel?: string;
+  ctaHref?: string;
+};
+
+const processSteps: ProcessStep[] = [
+  {
+    step: '01',
+    summaryLabel: 'Need',
+    title: 'Find a business need worth financing',
+    description: 'A loan can help you buy equipment, hire staff, expand, take on bigger jobs, or create more revenue if the opportunity is there.',
+    pain: 'If you do not know what the money will help you do, it is hard to know whether borrowing makes sense.',
+    icon: Search,
+  },
+  {
+    step: '02',
+    summaryLabel: 'Qualify',
+    title: 'Know if you can afford a loan right now',
+    description: 'Before applying, check whether your current cash flow can realistically handle another monthly payment.',
+    pain: 'This helps you avoid applying too early or taking on a payment the business cannot support yet.',
+    icon: Calculator,
+    featured: true,
+  },
+  {
+    step: '03',
+    summaryLabel: 'Package',
+    title: 'Build the complete loan package and cover letter',
+    description: 'This can mean a lot of documents: tax returns, financials, bank statements, debt schedules, ownership info, and a cover letter explaining the request.',
+    pain: 'This is where missing files, messy folders, and mismatched numbers slow people down.',
+    icon: Workflow,
+  },
+  {
+    step: '04',
+    summaryLabel: 'Apply',
+    title: 'Find banks and apply strategically',
+    description: 'That could be your current business bank if you already have a relationship, or another lender that is a better fit for the deal.',
+    pain: 'Not every bank wants every type of loan, so random outreach usually wastes time.',
+    icon: Building2,
+  },
+  {
+    step: '05',
+    summaryLabel: 'Review',
+    title: 'Work through underwriting',
+    description: 'After you apply, lenders review the file and ask follow-up questions, updated documents, and explanations behind the numbers.',
+    pain: 'Even good deals can stall here when replies are late, incomplete, or unorganized.',
+    icon: ClipboardCheck,
+  },
+  {
+    step: '06',
+    summaryLabel: 'Fund',
+    title: 'Close and get the funds',
+    description: 'If approved, the last step is clearing final conditions, signing documents, and getting the money released.',
+    pain: 'Approval is not the finish line. There is usually still paperwork before funds hit the account.',
+    icon: BadgeDollarSign,
+  },
+];
+
+function userPrefersReducedMotion() {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function supportsInteractiveMotion() {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.matchMedia('(hover:hover) and (pointer:fine)').matches &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
 
 function HomeContent() {
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  
-  // Simplify client-side functionality
-  const scrollToCalculator = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    // Temporarily disable scrolling functionality
-    console.log('Scroll to calculator clicked');
-  };
-
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check for Supabase login callback with code param
     const code = searchParams.get('code');
     if (code && typeof window !== 'undefined') {
       const redirectFlag = localStorage.getItem('redirectToComprehensive');
       if (redirectFlag === 'true') {
-        // Clear the flag so it doesn't trigger again
         localStorage.removeItem('redirectToComprehensive');
-        // Complete the Supabase session and redirect
-        supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
-          const { session } = data;
-          if (session) {
-            router.replace('/comprehensive-cash-flow-analysis');
-          } else {
-            // If no session, stay on the page or handle error
-          }
-        });
+        supabase.auth
+          .getSession()
+          .then(({ data }: { data: { session: unknown } }) => {
+            if (data.session) {
+              router.replace('/comprehensive-cash-flow-analysis');
+            }
+          })
+          .catch((error: unknown) => {
+            console.error('Unable to read auth session during redirect check:', error);
+          });
       }
     }
   }, [searchParams, router]);
 
+  useEffect(() => {
+    const elements = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
+    if (!elements.length) return;
+
+    const revealElement = (root: HTMLElement) => {
+      root.classList.add('home-reveal-visible');
+
+      const revealNodes = Array.from(root.querySelectorAll<HTMLElement>('.home-reveal'));
+      revealNodes.forEach((node, index) => {
+        node.style.transitionDelay = `${Math.min(index * 70, 280)}ms`;
+        node.classList.add('home-reveal-visible');
+      });
+
+      const staggerNodes = Array.from(root.querySelectorAll<HTMLElement>('.home-stagger'));
+      staggerNodes.forEach((node, index) => {
+        node.style.transitionDelay = `${Math.min(index * 75, 420)}ms`;
+        node.classList.add('home-reveal-visible');
+      });
+    };
+
+    if (userPrefersReducedMotion() || !('IntersectionObserver' in window)) {
+      elements.forEach(revealElement);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            revealElement(entry.target as HTMLElement);
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+    );
+
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!supportsInteractiveMotion()) return;
+    const magnets = Array.from(document.querySelectorAll<HTMLElement>('[data-magnetic]'));
+    if (!magnets.length) return;
+
+    const cleanups = magnets.map((element) => {
+      const handleMove = (event: MouseEvent) => {
+        const rect = element.getBoundingClientRect();
+        const x = event.clientX - rect.left - rect.width / 2;
+        const y = event.clientY - rect.top - rect.height / 2;
+        const moveX = (x / rect.width) * 12;
+        const moveY = (y / rect.height) * 10;
+        element.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+      };
+
+      const handleLeave = () => {
+        element.style.transform = 'translate3d(0, 0, 0)';
+      };
+
+      element.addEventListener('mousemove', handleMove);
+      element.addEventListener('mouseleave', handleLeave);
+
+      return () => {
+        element.removeEventListener('mousemove', handleMove);
+        element.removeEventListener('mouseleave', handleLeave);
+      };
+    });
+
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }, []);
+
+  useEffect(() => {
+    if (!supportsInteractiveMotion()) return;
+    const hero = document.querySelector<HTMLElement>('[data-hero]');
+    if (!hero) return;
+
+    const handleMove = (event: MouseEvent) => {
+      const rect = hero.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width - 0.5) * 26;
+      const y = ((event.clientY - rect.top) / rect.height - 0.5) * 20;
+      hero.style.setProperty('--hero-mx', `${x.toFixed(2)}px`);
+      hero.style.setProperty('--hero-my', `${y.toFixed(2)}px`);
+    };
+
+    const handleLeave = () => {
+      hero.style.setProperty('--hero-mx', '0px');
+      hero.style.setProperty('--hero-my', '0px');
+    };
+
+    hero.addEventListener('mousemove', handleMove);
+    hero.addEventListener('mouseleave', handleLeave);
+
+    return () => {
+      hero.removeEventListener('mousemove', handleMove);
+      hero.removeEventListener('mouseleave', handleLeave);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen">
-      {/* Hero Section - Simplified */}
-      <section className="relative min-h-[50vh] md:min-h-[70vh] flex items-center justify-center text-white bg-[url('/images/hero.png')] bg-cover bg-center bg-no-repeat">
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black opacity-50 z-10"></div>
-        {/* Content */}
-        <div className="container mx-auto px-2 py-4 md:px-4 md:py-8 relative z-20">
-          <div className="max-w-2xl mx-auto text-center">
-            <h1 className="text-3xl md:text-6xl font-extrabold mb-4 drop-shadow-lg" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.25)' }}>
-              Secure the Business Funding You Need<br className="block sm:hidden" /> — Faster and Easier
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <section
+        data-hero
+        className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,#155e75_0%,#0b2640_32%,#07111d_72%,#020617_100%)] text-white"
+      >
+        <div className="home-hero-mesh pointer-events-none absolute inset-0" />
+        <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(to_right,rgba(148,163,184,0.10)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.10)_1px,transparent_1px)] [background-size:66px_66px]" />
+        <div className="pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl home-parallax-soft" />
+        <div className="pointer-events-none absolute right-[-5rem] top-16 h-80 w-80 rounded-full bg-amber-300/[0.14] blur-3xl home-parallax-soft-reverse" />
+        <div className="pointer-events-none absolute left-1/2 top-1/3 h-56 w-56 -translate-x-1/2 rounded-full bg-sky-400/10 blur-3xl home-float" />
+
+        <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-10 sm:px-6 sm:pb-12 sm:pt-12 md:pb-14 md:pt-14">
+          <div className="mx-auto flex max-w-[52rem] flex-col items-center text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.16] bg-white/[0.08] px-4 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-slate-100 backdrop-blur-sm sm:text-xs">
+                <ShieldCheck className="h-4 w-4 text-cyan-200" />
+                Business loan guidance for small-business owners
+            </div>
+
+            <h1
+              className={`${headingFont.className} mt-5 max-w-[17ch] text-4xl font-extrabold leading-[1.02] text-white sm:max-w-[18ch] sm:text-[2.7rem] lg:max-w-[22ch] lg:text-[3rem]`}
+            >
+              Get your business approved for funding, without the guesswork.
             </h1>
-            <p className="text-base md:text-2xl mb-6 text-white font-normal drop-shadow-md" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.20)' }}>
-              Get expert help to package your loan application, connect with top lenders, and grow your business with confidence.
+
+            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-200 sm:text-lg sm:leading-8">
+              We help small business owners organize their finances, prepare strong loan applications, and secure
+              funding with clear, step-by-step guidance.
             </p>
-            <div className="flex flex-col sm:flex-row gap-2 md:gap-4 justify-center items-stretch md:items-center">
+
+            <div className="mt-8 flex w-full max-w-3xl flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center">
               <Link
-                href="/cash-flow-analysis?showCalculator=true#dscr-calculator"
-                className="px-6 py-3 min-h-[44px] min-w-[220px] bg-[#002c55] hover:bg-[#001a33] rounded-xl font-bold text-lg shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#002c55] border border-white border-[0.5px] w-full sm:w-auto"
-                id="home-hero-cta-check-afford-loan"
+                href="/loan-services"
+                className="home-magnetic group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-bold text-slate-950 shadow-[0_20px_45px_-28px_rgba(255,255,255,0.85)] transition hover:-translate-y-0.5 hover:bg-slate-100 sm:w-auto sm:px-7 sm:text-base"
+                id="home-hero-cta-loan-process"
+                data-magnetic
               >
-                Check If You Can Afford Loan
+                Start Your Loan Process
+                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
               </Link>
-              <Link href="/loan-services" className="focus:outline-none w-full sm:w-auto" id="home-hero-link-loan-services">
-                <button className="px-6 py-3 min-h-[44px] min-w-[220px] bg-white text-[#002c55] rounded-xl font-bold text-lg border border-[#002c55] shadow-md hover:bg-gray-50 transition-colors w-full sm:w-auto" id="home-hero-btn-loan-services">
-                  Explore Loan Services
-                </button>
+              <Link
+                href="#dscr-calculator"
+                className="home-magnetic inline-flex w-full flex-col items-center justify-center rounded-2xl border border-white/[0.18] bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/[0.16] sm:w-auto sm:px-7"
+                id="home-hero-cta-check-qualify"
+                data-magnetic
+              >
+                <span className="text-sm font-semibold sm:text-base">Check If You Qualify</span>
+                <span className="mt-0.5 text-[11px] font-medium text-cyan-200 sm:text-xs">Free • Takes 60 seconds</span>
               </Link>
+            </div>
+
+            <p className="mt-5 max-w-none text-sm leading-6 text-slate-300 sm:text-base md:whitespace-nowrap">
+              Everything you need, from financial templates to a guided loan packaging dashboard, all in one place.
+            </p>
+
+            <div className="mt-4 flex max-w-4xl flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-slate-200">
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+                Guided loan packaging dashboard
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+                Built-in financial templates
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+                Optional expert help when you need it
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Getting funded shouldn't feel impossible section */}
-      <div className="w-full bg-[#002c55] py-1 md:py-3">
-      <section className="w-full flex justify-center py-2 md:py-6 px-2 md:px-0 bg-white rounded-3xl max-w-5xl mx-auto mt-6 mb-10 shadow-xl border border-muted/40">
-        <div className="w-full flex flex-col gap-3">
-          {/* Heading and subheadline */}
-          <div className="text-center px-6">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-0.5 md:mb-1 text-[#002c55] tracking-tight drop-shadow-sm">Getting funded shouldn’t feel impossible.</h2>
-            <p className="text-base md:text-lg text-gray-700 font-normal w-full mx-auto mb-0.5 md:mb-0 text-center">
-              Most small business owners struggle with paperwork, unclear loan terms, and radio silence from lenders. We bring structure, strategy, and support to move you forward with confidence.
+      <section className="border-y border-slate-200 bg-white py-3" data-reveal>
+        <div className="home-marquee home-reveal">
+          <div className="home-marquee-track">
+            {[...marqueeItems, ...marqueeItems].map((item, index) => (
+              <span key={`${item}-${index}`} className="home-marquee-item">
+                <ShieldCheck className="h-4 w-4" />
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-50 py-10 sm:py-12" data-reveal>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 home-reveal">
+          <div className="max-w-5xl">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">What We Offer</p>
+            <h2 className="mt-2 max-w-none text-3xl font-black text-slate-900 sm:text-4xl lg:whitespace-nowrap">
+              From quick loan-readiness checks to full funding support
+            </h2>
+            <p className="mt-3 max-w-4xl text-base leading-7 text-slate-600 sm:text-lg">
+              Start with a fast high-level check, move into deeper financial analysis, organize your documents in one
+              place, and get hands-on help pursuing the right lenders when you&apos;re ready.
             </p>
           </div>
-          {/* Problem vs Solution Grid */}
-          <div className="relative grid grid-cols-1 md:grid-cols-2 bg-white border border-muted/30 rounded-xl shadow-lg px-2 md:px-12 pt-2 pb-3 md:pt-3 md:pb-5 gap-y-3 md:gap-y-0 md:gap-x-12">
-            {/* Vertical divider for desktop */}
-            <div className="hidden md:block absolute top-4 bottom-8 left-1/2 -translate-x-1/2 w-px bg-muted/30" aria-hidden="true"></div>
-            {/* Problem Column */}
-            <div className="flex flex-col md:pr-0">
-              <h3 className="text-lg font-semibold text-red-700 mb-4 underline">The Problem</h3>
-              <ul className="flex flex-col gap-3">
-                <li className="inline-flex items-start gap-2 group text-base">
-                  <span className="mt-0.5"><XCircle className="w-5 h-5 text-red-500 group-hover:scale-110 group-hover:text-red-600 transition-transform" /></span>
-                  <span className="text-gray-800">Unclear what lenders are actually looking for</span>
-                </li>
-                <li className="inline-flex items-start gap-2 group text-base">
-                  <span className="mt-0.5"><XCircle className="w-5 h-5 text-red-500 group-hover:scale-110 group-hover:text-red-600 transition-transform" /></span>
-                  <span className="text-gray-800">Don't know if you can qualify for loan</span>
-                </li>
-                <li className="inline-flex items-start gap-2 group text-base">
-                  <span className="mt-0.5"><XCircle className="w-5 h-5 text-red-500 group-hover:scale-110 group-hover:text-red-600 transition-transform" /></span>
-                  <span className="text-gray-800">Applications are time-consuming and frustrating</span>
-                </li>
-                <li className="inline-flex items-start gap-2 group text-base">
-                  <span className="mt-0.5"><XCircle className="w-5 h-5 text-red-500 group-hover:scale-110 group-hover:text-red-600 transition-transform" /></span>
-                  <span className="text-gray-800">Financial paperwork is hard to gather and organize</span>
-                </li>
-              </ul>
-            </div>
-            {/* Mobile divider */}
-            <div className="block md:hidden my-3 h-px bg-muted/30 rounded-full" />
-            {/* Solution Column */}
-            <div className="flex flex-col md:pl-0">
-              <h3 className="text-lg font-semibold text-green-700 mb-4 underline">Our Solution</h3>
-              <ul className="flex flex-col gap-3">
-                <li className="inline-flex items-start gap-2 group text-base">
-                  <span className="mt-0.5"><CheckCircle className="w-5 h-5 text-green-500 group-hover:scale-110 group-hover:text-green-600 transition-transform" /></span>
-                  <span className="text-gray-800">Step-by-step guidance through the entire process</span>
-                </li>
-                <li className="inline-flex items-start gap-2 group text-base">
-                  <span className="mt-0.5"><CheckCircle className="w-5 h-5 text-green-500 group-hover:scale-110 group-hover:text-green-600 transition-transform" /></span>
-                  <span className="text-gray-800">Cash flow analysis tailored to lender expectations</span>
-                </li>
-                <li className="inline-flex items-start gap-2 group text-base">
-                  <span className="mt-0.5"><CheckCircle className="w-5 h-5 text-green-500 group-hover:scale-110 group-hover:text-green-600 transition-transform" /></span>
-                  <span className="text-gray-800">We handle and prepare your financial documents</span>
-                </li>
-                <li className="inline-flex items-start gap-2 group text-base">
-                  <span className="mt-0.5"><CheckCircle className="w-5 h-5 text-green-500 group-hover:scale-110 group-hover:text-green-600 transition-transform" /></span>
-                  <span className="text-gray-800">We connect you to vetted, relevant lending partners</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-          {/* CTA / Scroll prompt */}
-          <div className="flex justify-center mt-1">
-            <a href="#funding-process" className="text-[#002c55] text-base md:text-lg font-medium hover:underline hover:text-[#001a33] transition-colors opacity-80 flex items-center gap-2" id="home-problem-solution-scroll-funding-process">
-              See how it works <span className="animate-bounce-slow">↓</span>
-            </a>
-          </div>
-        </div>
-      </section>
-      </div>
 
-      {/* Funding Process Steps */}
-      <FundingProcessSteps />
-
-      {/* Enhanced CTA */}
-      <section className="py-8 bg-[#002c55] text-white">
-        <div className="container mx-auto px-4">
-          <div className="w-full mx-auto rounded-3xl shadow-2xl border border-white/10 bg-white/5 backdrop-blur-md px-4 sm:px-8 md:px-16 lg:px-32 py-6 flex flex-col items-center text-center relative overflow-hidden">
-            <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-64 h-64 bg-gradient-to-br from-white/20 via-blue-300/10 to-transparent rounded-full blur-3xl opacity-60 pointer-events-none" />
-            <h2 className="text-4xl md:text-5xl font-extrabold mb-2 drop-shadow-lg tracking-tight">
-  Lenders Look at One Number First — <span className="text-blue-200">Your DSCR</span>
-</h2>
-<p className="text-xl md:text-2xl mb-4 text-white/90 font-semibold max-w-2xl mx-auto">
-  Find Out Where You Stand in Under 2 Minutes
-</p>
-<p className="text-lg md:text-xl mb-8 text-white/90 font-medium max-w-2xl mx-auto">
-  Your Debt Service Coverage Ratio (DSCR) tells lenders if your business can afford a loan. Our free check gives you a quick snapshot — no credit pull, no obligations, just clarity.
-</p>
-<Link
-  href="/cash-flow-analysis?showCalculator=true#dscr-calculator"
-  className="inline-flex items-center gap-3 px-10 py-5 rounded-full bg-white text-[#002c55] font-bold text-xl shadow-xl border-2 border-white/70 hover:bg-gray-100 hover:scale-105 focus-visible:ring-4 focus-visible:ring-white/60 transition-all duration-200 ease-out drop-shadow-lg group"
-  aria-label="Get Your Free DSCR Check"
-  id="home-dscr-cta-get-free-check"
->
-  <span className="text-2xl">→</span> Get Your Free DSCR Check
-</Link>
-<span className="block mt-5 text-base text-white/70 font-light">Instant results. No credit impact.</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Moved LoanPaymentCalculator above Testimonials */}
-      <LoanPaymentCalculator />
-      
-      {/* Add Testimonials back */}
-      <Testimonials />
-
-      {/* FAQ Section - Enhanced */}
-      <section className="py-8 bg-gradient-to-br from-[#e6ecf2] to-[#c9d7e6]">
-        <div className="container mx-auto px-6 text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <HelpCircle className="w-8 h-8 text-primary-blue" />
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-              Have Questions?
-            </h2>
-          </div>
-          <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-            We've compiled answers to the most common questions about our services and the business lending process. Find the information you need quickly and easily.
-          </p>
-          <Link
-            href="/faq"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-primary-blue hover:bg-primary-blue/90 text-white rounded-lg font-semibold text-lg transition-colors shadow-md"
-            id="home-faq-link"
-          >
-            Visit Our FAQ Page
-            <ArrowRightIcon className="w-5 h-5" />
-          </Link>
-        </div>
-      </section>
-
-      {/* Interest Form Section - NEW */}
-      <section className="py-8 bg-gradient-to-br from-[#002c55] via-[#003d73] to-[#002c55] text-white relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-400 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="container mx-auto px-4 sm:px-6 relative z-10">
-          <div className="max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-full mb-4 backdrop-blur-sm">
-                <Rocket className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">
-                Ready to Get Your Business Funded?
-              </h2>
-              <p className="text-lg sm:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
-                Take the first step toward securing the capital you need. Share your information with us, and we'll guide you through every step of the process.
-              </p>
-            </div>
-
-            {/* Benefits Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                    <CheckCircle className="w-6 h-6 text-green-300" />
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            {serviceCards.map((service) => {
+              const Icon = service.icon;
+              return (
+                <article
+                  key={service.title}
+                  className="home-tilt home-stagger group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-lg sm:p-6"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
+                      {service.badge}
+                    </span>
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700">
+                      <Icon className="h-5 w-5" />
+                    </div>
                   </div>
-                  <h3 className="font-bold text-lg">Expert Guidance</h3>
-                </div>
-                <p className="text-blue-100 text-sm">
-                  Get personalized support from experienced lending professionals who understand your needs.
-                </p>
-              </div>
 
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-blue-300" />
-                  </div>
-                  <h3 className="font-bold text-lg">Fast Response</h3>
-                </div>
-                <p className="text-blue-100 text-sm">
-                  Receive a detailed response within 24 hours. We value your time and move quickly.
-                </p>
-              </div>
+                  <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">{service.stage}</p>
+                  <h3 className="mt-4 max-w-md text-xl font-extrabold text-slate-900 sm:text-2xl">{service.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">{service.description}</p>
 
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-purple-300" />
+                  <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-700">
+                    {service.bullets.map((point) => (
+                      <li key={point} className="flex items-start gap-2.5">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    href={service.ctaHref}
+                    className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-cyan-800 transition group-hover:text-cyan-600 sm:text-base"
+                  >
+                    {service.ctaLabel}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="dscr-calculator"
+        className="scroll-mt-24 bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_50%,#f8fafc_100%)] py-8 sm:py-10"
+        data-reveal
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 home-reveal">
+          <div className="relative overflow-hidden rounded-[2rem] border border-cyan-100 bg-white shadow-[0_32px_90px_-46px_rgba(14,116,144,0.35)]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+            <div className="pointer-events-none absolute -left-12 top-8 h-40 w-40 rounded-full bg-cyan-200/45 blur-3xl" />
+            <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-amber-100/60 blur-3xl" />
+
+            <div className="relative border-b border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] px-5 py-5 sm:px-6 sm:py-6">
+              <div className="mx-auto max-w-6xl text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">Free Tool</p>
+                <div className="mt-2 flex justify-center gap-2">
+                  <h2 className="max-w-4xl text-3xl font-black text-slate-900 sm:text-[2.2rem]">
+                    Free High-Level DSCR Calculator
+                  </h2>
+                  <div className="group relative mt-1 shrink-0">
+                    <button
+                      type="button"
+                      aria-label="What is DSCR?"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-200 bg-white/90 text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-200"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                    <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm leading-6 text-slate-100 opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 translate-y-1">
+                      DSCR compares your cash flow to your debt payments. It is one of the first ratios lenders use to decide whether a deal looks repayable.
+                    </div>
                   </div>
-                  <h3 className="font-bold text-lg">No Obligation</h3>
                 </div>
-                <p className="text-blue-100 text-sm">
-                  Free consultation with no strings attached. Learn your options without any commitment.
+                <p className="mx-auto mt-2 max-w-5xl text-sm leading-6 text-slate-600 sm:text-base">
+                  Start here to see the ratio lenders care about most. A weak DSCR can slow down or kill a deal early, while a strong one can tell you it is worth digging deeper.
                 </p>
+                <div className="mt-3 flex flex-wrap justify-center gap-2">
+                  <div className="rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-lg sm:text-sm">
+                    100% Free • Instant Results • No Credit Impact
+                  </div>
+                  <div className="rounded-2xl border border-cyan-200 bg-white/80 px-4 py-2.5 text-xs font-semibold text-cyan-800 sm:text-sm">
+                    Built for a fast first-pass qualification check
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-white/80 px-3 py-2 text-sm font-medium text-slate-700">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    Takes 30-60 seconds. No documents needed.
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* CTA Button */}
-            <div className="text-center">
-              <button
-                onClick={() => setIsContactModalOpen(true)}
-                className="group relative inline-flex items-center gap-3 px-10 py-5 bg-white text-[#002c55] rounded-full font-bold text-xl shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300 overflow-hidden"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-blue-50 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                <span className="relative flex items-center gap-3">
-                  <Rocket className="w-6 h-6" />
-                  Get Started Today
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </button>
-              <p className="mt-4 text-sm text-blue-200 whitespace-nowrap">
-                ✓ Free consultation • 24hr response • No credit check
-              </p>
+            <div className="relative px-4 py-4 sm:px-6 sm:py-5">
+              <DscrQuickCalculator embedded />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Contact Form Modal */}
-      <ContactFormModal 
-        isOpen={isContactModalOpen} 
-        onClose={() => setIsContactModalOpen(false)} 
-      />
+      <section className="bg-slate-950 py-10 text-white sm:py-12" data-reveal>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 home-reveal">
+          <div className="max-w-3xl">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Typical Loan Process</p>
+            <h2 className="mt-2 text-3xl font-black sm:text-4xl">What usually has to happen before a small business gets funded</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-300 sm:text-base">
+              Most owners picture one application. In reality, there are several steps and a lot of follow-up.
+            </p>
+          </div>
 
+          <div className="mt-6 rounded-[2rem] border border-white/10 bg-white/[0.04] px-2 py-4 shadow-[0_24px_50px_-34px_rgba(8,47,73,0.85)] backdrop-blur-sm sm:px-4">
+            <div className="relative grid grid-cols-6 gap-1 sm:gap-2">
+              <div className="pointer-events-none absolute left-[8.333%] right-[8.333%] top-9 h-px bg-gradient-to-r from-cyan-300/25 via-cyan-200/70 to-cyan-300/25 sm:top-10" />
+
+              {processSteps.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <div key={`summary-${item.step}`} className="relative flex min-w-0 flex-col items-center text-center">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200 sm:text-[11px]">
+                      {item.step}
+                    </span>
+                    <span
+                      className={`relative mt-2 flex h-9 w-9 items-center justify-center rounded-2xl border sm:h-10 sm:w-10 ${
+                        item.featured
+                          ? 'border-cyan-200/30 bg-cyan-300/15 text-cyan-100 shadow-[0_0_0_6px_rgba(8,47,73,0.45)]'
+                          : 'border-white/10 bg-slate-900 text-cyan-100 shadow-[0_0_0_6px_rgba(2,6,23,0.82)]'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+                    </span>
+                    <span className="mt-2 max-w-[5.25rem] text-[10px] font-semibold leading-tight text-slate-100 sm:max-w-none sm:text-xs">
+                      {item.summaryLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {processSteps.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <article
+                  key={item.step}
+                  className={`home-stagger rounded-3xl border p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.8)] ${
+                    item.featured
+                      ? 'border-cyan-300/40 bg-[linear-gradient(180deg,rgba(34,211,238,0.14)_0%,rgba(255,255,255,0.06)_100%)]'
+                      : 'border-white/[0.14] bg-white/[0.05]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Step {item.step}</span>
+                    <span
+                      className={`flex h-11 w-11 items-center justify-center rounded-2xl border ${
+                        item.featured
+                          ? 'border-cyan-200/30 bg-cyan-300/15 text-cyan-100'
+                          : 'border-white/10 bg-white/10 text-cyan-100'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </span>
+                  </div>
+
+                  <h3 className="mt-4 text-lg font-bold text-white">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-200">{item.description}</p>
+
+                  <div className="mt-3 rounded-2xl border border-amber-200/10 bg-amber-300/[0.07] px-3 py-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-200">Tedious part</p>
+                    <p className="mt-1.5 text-sm leading-6 text-slate-200">{item.pain}</p>
+                  </div>
+
+                  {item.ctaHref && item.ctaLabel ? (
+                    <Link
+                      href={item.ctaHref}
+                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+                    >
+                      {item.ctaLabel}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
+
+        </div>
+      </section>
+
+      <LoanPackagingExplainer />
+
+      <section data-reveal>
+        <div className="home-reveal">
+          <Testimonials />
+        </div>
+      </section>
+
+      <section
+        className="relative overflow-hidden bg-[radial-gradient(circle_at_top,#164e63_0%,#0f172a_45%,#020617_100%)] py-6 text-white sm:py-8"
+        data-reveal
+      >
+        <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(to_right,rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.12)_1px,transparent_1px)] [background-size:72px_72px]" />
+        <div className="pointer-events-none absolute -left-12 top-6 h-40 w-40 rounded-full bg-cyan-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute right-0 top-8 h-44 w-44 rounded-full bg-sky-400/12 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-1/2 h-32 w-32 -translate-x-1/2 rounded-full bg-amber-300/10 blur-3xl" />
+
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="home-reveal relative overflow-hidden rounded-[1.75rem] border border-white/12 bg-white/[0.06] p-4 shadow-[0_36px_90px_-50px_rgba(8,47,73,0.95)] backdrop-blur-sm sm:p-5 lg:p-6">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+            <div className="grid gap-5 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-[0.64rem] font-bold uppercase tracking-[0.22em] text-cyan-100">
+                  <ShieldCheck className="h-4 w-4" />
+                  Ready To Move Forward
+                </div>
+
+                <h2 className="mt-4 max-w-[16ch] text-[1.9rem] font-black leading-[1.03] text-white sm:text-3xl lg:text-[2.65rem]">
+                  Turn a maybe into a lender-ready file.
+                </h2>
+
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200 sm:text-base sm:leading-7">
+                  Start with a fast DSCR check if you want a first signal, or move straight into the guided loan
+                  process when you are ready to organize documents, tighten the story, and approach lenders more
+                  strategically.
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-2.5">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Start Here</p>
+                    <p className="mt-1.5 text-sm font-semibold text-white">Get a quick qualification read</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Build Better</p>
+                    <p className="mt-1.5 text-sm font-semibold text-white">Package the deal the right way</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-3.5 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Move Forward</p>
+                    <p className="mt-1.5 text-sm font-semibold text-white">Apply with more confidence</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1.6rem] border border-white/12 bg-slate-950/70 p-4 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.95)] sm:p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-200">Your Next Best Step</p>
+                    <h3 className="mt-1.5 text-xl font-black text-white sm:text-[1.4rem]">Choose the path that matches where you are today.</h3>
+                  </div>
+                  <div className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100 sm:flex">
+                    <Workflow className="h-5 w-5" />
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2.5">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Option 1</p>
+                    <p className="mt-1 text-sm font-semibold text-white">Use the free DSCR calculator for a fast first-pass answer.</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Option 2</p>
+                    <p className="mt-1 text-sm font-semibold text-white">Start the loan process and build a cleaner, stronger package.</p>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-xs leading-5 text-slate-300">
+                  No guesswork. No messy handoff. Just a clearer path from qualification to lender review.
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <Link
+                    href="#dscr-calculator"
+                    className="home-magnetic group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-100 sm:text-base"
+                    id="home-bottom-cta-free-dscr"
+                    data-magnetic
+                  >
+                    Start Free DSCR Check
+                    <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
+                  </Link>
+                  <Link
+                    href="/loan-services"
+                    className="home-magnetic inline-flex items-center justify-center rounded-2xl border border-white/80 bg-white/[0.06] px-6 py-3.5 text-sm font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28),0_18px_40px_-28px_rgba(255,255,255,0.35)] transition hover:-translate-y-0.5 hover:bg-white/[0.12] sm:text-base"
+                    id="home-bottom-cta-contact"
+                    data-magnetic
+                  >
+                    Start Loan Process
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
-import { Suspense } from 'react';
 export default function Home() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen" />}>
       <HomeContent />
     </Suspense>
   );

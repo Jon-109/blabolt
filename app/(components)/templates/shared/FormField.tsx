@@ -8,9 +8,10 @@ export type FormFieldProps = {
   label: string;
   htmlFor?: string;
   required?: boolean;
-  help?: string;
+  help?: React.ReactNode;
   error?: string;
   className?: string;
+  labelClassName?: string;
   labelHint?: string; // short subheader under the label
   children: React.ReactElement | React.ReactElement[];
 };
@@ -22,6 +23,7 @@ export function FormField({
   help,
   error,
   className,
+  labelClassName,
   labelHint,
   children,
 }: FormFieldProps) {
@@ -33,11 +35,12 @@ export function FormField({
   const enhancedChild = React.isValidElement(children)
     ? React.cloneElement(children as React.ReactElement<any>, {
         id: controlId,
+        name: (children as any).props?.name ?? controlId,
         "aria-invalid": !!error || undefined,
         "aria-describedby": cn(helpId, errorId) || undefined,
         className: cn(
           (children as any).props?.className,
-          error && "border-red-500 ring-1 ring-red-500 focus-visible:ring-red-500"
+          error && "border-red-600 bg-red-50/40 ring-2 ring-red-500 focus-visible:ring-red-600"
         ),
       })
     : children;
@@ -45,7 +48,7 @@ export function FormField({
   return (
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <Label htmlFor={controlId} className="text-sm font-semibold text-gray-800">
+        <Label htmlFor={controlId} className={cn("text-sm font-semibold text-gray-800", labelClassName)}>
           {label}
           {required ? <span className="text-red-600 ml-1">*</span> : null}
         </Label>
@@ -57,9 +60,9 @@ export function FormField({
       {enhancedChild}
 
       {help ? (
-        <p id={helpId} className="text-xs text-gray-500 mt-1">
+        <div id={helpId} className="mt-1 text-xs text-gray-500">
           {help}
-        </p>
+        </div>
       ) : null}
       {error ? (
         <p id={errorId} className="text-xs text-red-600 mt-1">

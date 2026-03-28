@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import BalanceSheet from '@/app/(components)/templates/BalanceSheet';
 import IncomeStatement from '@/app/(components)/templates/IncomeStatement';
@@ -10,7 +11,35 @@ import type { SubmissionDataMap, TemplateType } from '@/lib/templates/types';
 
 export const dynamic = 'force-dynamic';
 
-async function getSubmission(submissionId: string) {
+async function getSubmission(submissionId: string, accessToken?: string) {
+  if (accessToken) {
+    const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = process.env;
+    if (!NEXT_PUBLIC_SUPABASE_URL || !NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      return null;
+    }
+
+    const tokenClient = createClient(
+      NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        auth: { persistSession: false },
+        global: { headers: { Authorization: `Bearer ${accessToken}` } },
+      }
+    );
+
+    const { data: { user }, error } = await tokenClient.auth.getUser(accessToken);
+    if (error || !user) return null;
+
+    const { data } = await tokenClient
+      .from('template_submissions')
+      .select('id,user_id,template_type,form_data,pdf_url,created_at,updated_at')
+      .eq('id', submissionId)
+      .eq('user_id', user.id)
+      .single();
+
+    return data || null;
+  }
+
   const supabase = createServerComponentClient({ cookies });
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -25,11 +54,13 @@ async function getSubmission(submissionId: string) {
   return data;
 }
 
-export default async function PrintPage({ params }: {
-  params: Promise<{ submissionId: string; templateType: TemplateType }>
+export default async function PrintPage({ params, searchParams }: {
+  params: Promise<{ submissionId: string; templateType: TemplateType }>;
+  searchParams: Promise<{ token?: string }>;
 }) {
   const { submissionId, templateType } = await params;
-  const submission = await getSubmission(submissionId);
+  const { token } = await searchParams;
+  const submission = await getSubmission(submissionId, token);
   if (!submission) return notFound();
   if (submission.template_type !== templateType) return notFound();
 

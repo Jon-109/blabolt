@@ -2,138 +2,217 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCashFlowAnalysisById } from '@/lib/getCashFlowAnalysisById';
 import { uploadPdfToSupabase } from '@/lib/uploadPdfToSupabase';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { randomUUID } from 'crypto';
+import { createClient as createServerSupabase } from '@/supabase/helpers/server';
+import { cookies as nextCookies } from 'next/headers';
+import { generateAndStoreTemplatePdf } from '@/lib/templates/pdf';
+import type { TemplateType } from '@/lib/templates/types';
+import { TEMPLATE_REQUIREMENT_KEY_BY_TEMPLATE, type TemplateKey } from '@/lib/loan-packaging/constants';
+import { createPdfRenderToken } from '@/lib/server/pdf-render-token';
 
-// Helper to get absolute URL for print route
-function getPrintUrl(req: NextRequest, analysisId: string, type: string, accessToken?: string) {
-  const origin = process.env.SITE_URL || req.headers.get('origin') || 'http://localhost:3000';
-  let url = `${origin}/report/print/${analysisId}/${type}`;
-  if (accessToken) {
-    url += `?token=${encodeURIComponent(accessToken)}`;
+export const runtime = 'nodejs';
+const PDF_REQUEST_TIMEOUT_MS = 60000;
+const TEMPLATE_TYPES = new Set([
+  'balance_sheet',
+  'income_statement',
+  'personal_financial_statement',
+  'personal_debt_summary',
+  'business_debt_summary',
+]);
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function getOrigin(req: NextRequest) {
+  const configuredOrigin = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
+  if (configuredOrigin) {
+    return configuredOrigin;
   }
-  console.log('[generate-pdf] Print page origin:', origin);
-  console.log('[generate-pdf] Constructed print URL:', url);
-  return url;
+
+  const forwardedProto = req.headers.get('x-forwarded-proto');
+  const forwardedHost = req.headers.get('x-forwarded-host') || req.headers.get('host');
+  if (forwardedProto && forwardedHost) {
+    const forwardedOrigin = `${forwardedProto}://${forwardedHost}`;
+    if (!forwardedOrigin.includes('localhost') && !forwardedOrigin.includes('127.0.0.1')) {
+      return forwardedOrigin;
+    }
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  const origin = req.nextUrl.origin;
+  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    throw new Error(
+      'Localhost is not reachable by Browserless. Set SITE_URL (or NEXT_PUBLIC_APP_URL) to a public tunnel URL (for example ngrok) and retry PDF generation.',
+    );
+  }
+
+  return origin;
+}
+
+function getUserSupabase(accessToken: string) {
+  const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = process.env;
+
+  if (!NEXT_PUBLIC_SUPABASE_URL || !NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    throw new Error('Supabase client configuration is missing');
+  }
+
+  return createSupabaseClient(
+    NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    }
+  );
+}
+
+async function requireUser(accessToken: string) {
+  const supabase = getUserSupabase(accessToken);
+  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+
+  if (error || !user) {
+    return null;
+  }
+
+  return { supabase, user, accessToken };
+}
+
+async function resolveAuthContext(accessToken: string | null) {
+  if (accessToken) {
+    return requireUser(accessToken);
+  }
+
+  const serverSupabase = createServerSupabase(await nextCookies());
+  const { data, error } = await serverSupabase.auth.getSession();
+  if (error || !data.session?.access_token || !data.session.user) {
+    return null;
+  }
+
+  return requireUser(data.session.access_token);
+}
+
+function getBrowserlessApiKey() {
+  const apiKey = process.env.BROWSERLESS_API_KEY;
+  if (!apiKey) {
+    throw new Error('PDF generation service is not configured');
+  }
+  return apiKey;
+}
+
+async function generatePdfBuffer(printUrl: string, browserlessApiKey: string) {
+  const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
+  const requestBody = {
+    url: printUrl,
+    options: {
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' },
+    },
+  };
+
+  const browserlessResponse = await fetch(browserlessUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(PDF_REQUEST_TIMEOUT_MS),
+  });
+
+  if (!browserlessResponse.ok) {
+    const errorText = await browserlessResponse.text();
+    throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} - ${errorText}`);
+  }
+
+  return Buffer.from(await browserlessResponse.arrayBuffer());
+}
+
+function getLegacyPrintUrl(req: NextRequest, analysisId: string, type: string) {
+  const origin = getOrigin(req);
+  const renderToken = createPdfRenderToken(analysisId, type as 'full' | 'summary');
+  return `${origin}/report/print/${analysisId}/${type}?renderToken=${encodeURIComponent(renderToken)}`;
 }
 
 export async function POST(req: NextRequest) {
-  console.log('[generate-pdf] POST handler initiated.');
   try {
-    const body = await req.json();
-    
-    // Branch: Templates system
-    if (body?.submissionId && body?.templateType) {
-      return await handleTemplatesPdfGeneration(req, body);
-    }
-    
-    // Legacy: Cash-flow analysis system
-    const { analysisId, type, accessToken } = body;
-    console.log(`[generate-pdf] Received analysisId: ${analysisId}, type: ${type}, accessToken: ${!!accessToken}`);
+    const body = (await req.json()) as Record<string, unknown>;
 
-    if (!analysisId || !type || !accessToken) {
-      console.error('[generate-pdf] Error: Missing analysisId, type, or accessToken.');
+    if (isNonEmptyString(body.submissionId) && isNonEmptyString(body.templateType)) {
+      return handleTemplatesPdfGeneration(req, body);
+    }
+
+    const analysisId = isNonEmptyString(body.analysisId) ? body.analysisId : null;
+    const type = body.type === 'full' || body.type === 'summary' ? body.type : null;
+    const accessToken = isNonEmptyString(body.accessToken) ? body.accessToken : null;
+    const shouldDownload = body.download !== false;
+
+    if (!analysisId || !type) {
       return NextResponse.json({ error: 'Missing analysisId, type, or accessToken' }, { status: 400 });
     }
 
-    // Create a Supabase client with the user's access token for RLS
-    const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = process.env;
-    const supabase = createSupabaseClient(
-      NEXT_PUBLIC_SUPABASE_URL!,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-    );
+    const authContext = await resolveAuthContext(accessToken);
+    if (!authContext) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    console.log('[generate-pdf] Step 1: Fetching analysis...');
-    const analysis = await getCashFlowAnalysisById(analysisId, supabase);
+    const analysis = await getCashFlowAnalysisById(analysisId, authContext.supabase);
     if (!analysis) {
-      console.error(`[generate-pdf] Error: Analysis not found for ID: ${analysisId}`);
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
-    console.log('[generate-pdf] Step 1: Analysis fetched successfully.');
 
-    console.log('[generate-pdf] Step 2: Preparing Browserless.io request...');
-    const printUrl = getPrintUrl(req, analysisId, type, accessToken);
-    console.log(`[generate-pdf] Using print URL: ${printUrl}`);
+    const browserlessApiKey = getBrowserlessApiKey();
+    const printUrl = getLegacyPrintUrl(req, analysisId, type);
+    const pdfBuffer = await generatePdfBuffer(printUrl, browserlessApiKey);
 
-    // Check if Browserless API key is available
-    const browserlessApiKey = process.env.BROWSERLESS_API_KEY;
-    if (!browserlessApiKey) {
-      console.error('[generate-pdf] Error: BROWSERLESS_API_KEY environment variable is not set');
-      throw new Error('PDF generation service is not configured. Please contact support.');
-    }
-
-    // Use Browserless.io API to generate PDF
-    console.log('[generate-pdf] Step 3: Sending request to Browserless.io...');
-    const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
-    console.log(`[generate-pdf] Browserless URL (without token): https://production-sfo.browserless.io/pdf`);
-    
-    const requestBody = {
-      url: printUrl,
-      options: {
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }
-      }
-    };
-    console.log('[generate-pdf] Request body:', JSON.stringify(requestBody, null, 2));
-    
-    const browserlessResponse = await fetch(browserlessUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    console.log(`[generate-pdf] Browserless response status: ${browserlessResponse.status}`);
-    console.log(`[generate-pdf] Browserless response headers:`, Object.fromEntries(browserlessResponse.headers.entries()));
-
-    if (!browserlessResponse.ok) {
-      const errorText = await browserlessResponse.text();
-      console.error(`[generate-pdf] Browserless error response: ${errorText}`);
-      throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} - ${errorText}`);
-    }
-
-    const pdfBuffer = Buffer.from(await browserlessResponse.arrayBuffer());
-    console.log('[generate-pdf] Step 3: PDF generated successfully via Browserless.');
-
-    console.log('[generate-pdf] Step 4: Uploading PDF to Supabase...');
     let pdfUrl: string | null = null;
     try {
-      const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
-      pdfUrl = await uploadPdfToSupabase(buffer, analysisId, type);
-      console.log(`[generate-pdf] Step 4: PDF uploaded to Supabase. URL: ${pdfUrl}`);
-    } catch (uploadErr: any) {
-      console.error('[generate-pdf] PDF upload error:', uploadErr.message, uploadErr.stack);
-      // Continue, but pdfUrl will be null. The main PDF generation succeeded.
+      pdfUrl = await uploadPdfToSupabase(pdfBuffer, analysisId, type);
+    } catch (uploadErr: unknown) {
+      const message = uploadErr instanceof Error ? uploadErr.message : 'Unknown upload error';
+      console.error('[generate-pdf] PDF upload error:', message);
     }
 
-    console.log('[generate-pdf] Step 5: Updating database with PDF URL (if available)...');
     try {
       if (pdfUrl) {
         const { createClient } = await import('@/supabase/helpers/server');
-        const { cookies: nextCookies } = await import('next/headers'); // Renamed to avoid conflict
+        const { cookies: nextCookies } = await import('next/headers');
         const supabase = createClient(await nextCookies());
-        const updateData: any = {};
-        if (type === 'full') updateData.cash_flow_pdf_url = pdfUrl;
-        else updateData.debt_summary_pdf_url = pdfUrl;
+        const updateData: Record<string, string> = {};
+
+        if (type === 'full') {
+          updateData.cash_flow_pdf_url = pdfUrl;
+        } else {
+          updateData.debt_summary_pdf_url = pdfUrl;
+        }
+
         const { error: dbUpdateError } = await supabase
           .from('cash_flow_analyses')
           .update(updateData)
           .eq('id', analysisId);
+
         if (dbUpdateError) {
-          console.error('[generate-pdf] DB update error:', dbUpdateError.message, dbUpdateError.details);
-        } else {
-          console.log('[generate-pdf] Step 5: Database updated successfully with PDF URL.');
+          console.error('[generate-pdf] Failed to update analysis PDF URL:', dbUpdateError.message);
         }
-      } else {
-        console.log('[generate-pdf] Step 5: No PDF URL to update in database (upload might have failed).');
       }
-    } catch (dbErr: any) {
-      console.error('[generate-pdf] Failed to update analysis record with PDF URL:', dbErr.message, dbErr.stack);
+    } catch (dbErr: unknown) {
+      const message = dbErr instanceof Error ? dbErr.message : 'Unknown DB error';
+      console.error('[generate-pdf] Failed to update analysis record:', message);
     }
 
-    console.log('[generate-pdf] Step 6: Preparing PDF response...');
+    if (!shouldDownload) {
+      if (!pdfUrl) {
+        return NextResponse.json({ error: 'Failed to store generated PDF' }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        pdfUrl,
+      });
+    }
+
     const filename =
       type === 'full'
         ? `CashFlowAnalysis-${analysis.loanInfo?.businessName?.replace(/\s+/g, '_') ?? 'Business'}.pdf`
@@ -147,111 +226,139 @@ export async function POST(req: NextRequest) {
         'X-PDF-URL': pdfUrl || '',
       },
     });
+
     response.headers.set('Access-Control-Expose-Headers', 'X-PDF-URL');
-    console.log('[generate-pdf] PDF response prepared. Sending...');
     return response;
-  } catch (err: any) {
-    console.error('[generate-pdf] Overall PDF generation error:', err.message, err.stack);
-    return NextResponse.json({ error: 'Failed to generate PDF', details: err?.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[generate-pdf] Overall PDF generation error:', message);
+    return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
   }
 }
 
-// Handle PDF generation for templates system
-async function handleTemplatesPdfGeneration(req: NextRequest, body: any) {
-  const { submissionId, templateType } = body;
-  console.log(`[generate-pdf] Templates: submissionId: ${submissionId}, templateType: ${templateType}`);
+async function handleTemplatesPdfGeneration(req: NextRequest, body: Record<string, unknown>) {
+  const submissionId = isNonEmptyString(body.submissionId) ? body.submissionId : null;
+  const templateType =
+    isNonEmptyString(body.templateType) && TEMPLATE_TYPES.has(body.templateType)
+      ? body.templateType
+      : null;
+  const accessToken = isNonEmptyString(body.accessToken) ? body.accessToken : null;
+  const loanRequestId = isNonEmptyString(body.loanRequestId) ? body.loanRequestId : null;
 
-  // Create Supabase client using service role for server-side operations
+  if (!submissionId || !templateType) {
+    return NextResponse.json({ error: 'Missing submissionId or templateType' }, { status: 400 });
+  }
+
+  const authContext = await resolveAuthContext(accessToken);
+  if (!authContext) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
-  const supabase = createSupabaseClient(
-    NEXT_PUBLIC_SUPABASE_URL!,
-    SUPABASE_SERVICE_ROLE_KEY!,
+  if (!NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Supabase service configuration is missing' }, { status: 500 });
+  }
+
+  const serviceSupabase = createSupabaseClient(
+    NEXT_PUBLIC_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } }
   );
 
-  // Verify submission exists and get user_id for RLS check
-  const { data: submission, error: fetchError } = await supabase
+  const { data: submission, error: fetchError } = await serviceSupabase
     .from('template_submissions')
     .select('id,user_id,template_type')
     .eq('id', submissionId)
+    .is('archived_at', null)
     .single();
 
-  if (fetchError || !submission) {
-    console.error('[generate-pdf] Templates: Submission not found:', fetchError);
+  if (fetchError || !submission || submission.user_id !== authContext.user.id) {
     return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
   }
 
   if (submission.template_type !== templateType) {
-    console.error('[generate-pdf] Templates: Template type mismatch');
     return NextResponse.json({ error: 'Template type mismatch' }, { status: 400 });
   }
 
-  // Build print URL
-  const origin = process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL || req.headers.get('origin') || 'http://localhost:3000';
-  const printUrl = `${origin}/report/template/${submissionId}/${templateType}`;
-  console.log(`[generate-pdf] Templates: Print URL: ${printUrl}`);
+  try {
+    const result = await generateAndStoreTemplatePdf({
+      req,
+      admin: serviceSupabase,
+      accessToken: authContext.accessToken,
+      userId: authContext.user.id,
+      submissionId,
+      templateType: templateType as TemplateType,
+      fileNamePrefix: `legacy-template-${templateType}`,
+      bucket: 'pdfs',
+    });
 
-  // Check if Browserless API key is available
-  const browserlessApiKey = process.env.BROWSERLESS_API_KEY;
-  if (!browserlessApiKey) {
-    console.error('[generate-pdf] Templates: BROWSERLESS_API_KEY environment variable is not set');
-    return NextResponse.json({ error: 'PDF generation service is not configured. Please contact support.' }, { status: 500 });
-  }
+    await serviceSupabase
+      .from('template_submissions')
+      .update({ pdf_url: result.signedUrl })
+      .eq('id', submissionId)
+      .eq('user_id', authContext.user.id);
 
-  // Generate PDF using Browserless
-  console.log('[generate-pdf] Templates: Generating PDF via Browserless...');
-  const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
-  
-  const requestBody = {
-    url: printUrl,
-    options: {
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' }
+    if (loanRequestId) {
+      const { data: loanRequest } = await serviceSupabase
+        .from('loan_requests')
+        .select('id,user_id,service_type')
+        .eq('id', loanRequestId)
+        .eq('user_id', authContext.user.id)
+        .maybeSingle();
+
+      if (loanRequest) {
+        const requirementKey =
+          TEMPLATE_REQUIREMENT_KEY_BY_TEMPLATE[templateType as TemplateKey] ?? templateType;
+        const nowIso = new Date().toISOString();
+
+        await serviceSupabase.from('loan_request_documents').upsert(
+          {
+            loan_request_id: loanRequestId,
+            user_id: authContext.user.id,
+            requirement_key: requirementKey,
+            status: 'generated',
+            source: 'template',
+            file_path: result.filePath,
+            mime_type: 'application/pdf',
+            file_size_bytes: result.bytes,
+            uploaded_at: nowIso,
+            metadata: {
+              bucket: 'pdfs',
+              template_submission_id: submissionId,
+              template_key: templateType,
+              generated_at: nowIso,
+              original_file_name: `${templateType}.pdf`,
+            },
+          },
+          {
+            onConflict: 'loan_request_id,requirement_key',
+          },
+        );
+
+        await serviceSupabase.from('generated_reports').insert({
+          user_id: authContext.user.id,
+          loan_request_id: loanRequestId,
+          report_type: `${templateType}_pdf`,
+          source_type: 'template',
+          source_id: submissionId,
+          file_path: result.filePath,
+          mime_type: 'application/pdf',
+          file_size_bytes: result.bytes,
+          visibility: 'private',
+        });
+
+        await serviceSupabase
+          .from('loan_requests')
+          .update({ updated_at: nowIso })
+          .eq('id', loanRequestId)
+          .eq('user_id', authContext.user.id);
+      }
     }
-  };
-  console.log('[generate-pdf] Templates: Request body:', JSON.stringify(requestBody, null, 2));
-  
-  const browserlessResponse = await fetch(browserlessUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestBody)
-  });
 
-  console.log(`[generate-pdf] Templates: Browserless response status: ${browserlessResponse.status}`);
-
-  if (!browserlessResponse.ok) {
-    const errorText = await browserlessResponse.text();
-    console.error('[generate-pdf] Templates: Browserless error:', errorText);
-    throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} - ${errorText}`);
+    return NextResponse.json({ pdfUrl: result.signedUrl || null });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to create template PDF';
+    console.error('[generate-pdf] Templates generation error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const pdfBuffer = Buffer.from(await browserlessResponse.arrayBuffer());
-  console.log('[generate-pdf] Templates: PDF generated successfully');
-
-  // Upload to Supabase Storage
-  console.log('[generate-pdf] Templates: Uploading to Supabase Storage...');
-  const filename = `template_${templateType}_${submissionId}_${randomUUID()}.pdf`;
-  const { data: uploaded, error: uploadErr } = await supabase.storage
-    .from('pdfs')
-    .upload(filename, pdfBuffer, { contentType: 'application/pdf', upsert: false });
-
-  if (uploadErr) {
-    console.error('[generate-pdf] Templates: Upload error:', uploadErr);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
-  }
-
-  // Create signed URL
-  const { data: signed } = await supabase
-    .storage
-    .from('pdfs')
-    .createSignedUrl(uploaded.path, 60 * 60 * 24 * 7); // 7 days
-
-  const pdfUrl = signed?.signedUrl || null;
-  console.log(`[generate-pdf] Templates: PDF uploaded, signed URL: ${pdfUrl}`);
-
-  // Return JSON response with PDF URL (different from legacy cash-flow which returns the PDF buffer)
-  return NextResponse.json({ pdfUrl });
 }

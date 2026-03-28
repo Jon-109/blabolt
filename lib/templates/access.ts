@@ -1,6 +1,8 @@
 /** lib/templates/access.ts */
 
 import type { TemplateType } from './types';
+import { supabase } from '@/supabase/helpers/client';
+import { getTemplateServicePagePath } from '@/lib/template-offers';
 
 export interface AccessResult {
   allowed: boolean;
@@ -8,60 +10,124 @@ export interface AccessResult {
   redirectUrl?: string;
 }
 
-/**
- * Check if a user has access to a specific template type.
- * In dev mode, all authenticated users have access to all templates.
- * Later, this will check for:
- * - Loan packaging subscription
- * - Template bundle purchase
- * - Individual template purchase
- */
+type AccessPayload = {
+  availableTemplates: TemplateType[];
+  isAuthenticated: boolean;
+  canAccessTemplates: boolean;
+};
+
+async function getAccessPayload(): Promise<AccessPayload | null> {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const response = await fetch('/api/access/me', {
+      cache: 'no-store',
+      headers: session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : undefined,
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const json = await response.json();
+    return {
+      availableTemplates: Array.isArray(json?.availableTemplates) ? json.availableTemplates : [],
+      isAuthenticated: Boolean(json?.isAuthenticated),
+      canAccessTemplates: Boolean(json?.canAccessTemplates),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function checkUserTemplateAccess(
-  userId: string, 
-  templateType: TemplateType
+  userId: string,
+  _templateType: TemplateType,
 ): Promise<AccessResult> {
-  // DEV MODE: no paywall, all authenticated users have access
-  if (userId) {
-    return { 
-      allowed: true, 
-      reason: 'dev-mode' 
+  if (!userId) {
+    return {
+      allowed: false,
+      reason: 'not-authenticated',
+      redirectUrl: '/login',
     };
   }
 
-  // User not authenticated
+  const access = await getAccessPayload();
+  if (!access?.isAuthenticated) {
+    return {
+      allowed: false,
+      reason: 'not-authenticated',
+      redirectUrl: '/login',
+    };
+  }
+
+  if (!access.canAccessTemplates) {
+    return {
+      allowed: false,
+      reason: 'templates-access-required',
+      redirectUrl: '/services/templates-bundle',
+    };
+  }
+
+  if (!access.availableTemplates.includes(_templateType)) {
+    return {
+      allowed: false,
+      reason: 'template-access-required',
+      redirectUrl: getTemplateServicePagePath(_templateType),
+    };
+  }
+
   return {
-    allowed: false,
-    reason: 'not-authenticated',
-    redirectUrl: '/login'
+    allowed: true,
+    reason: 'templates-access-granted',
   };
 }
 
-/**
- * Check if a user has access to the templates hub.
- * In dev mode, all authenticated users have access.
- */
 export async function checkTemplatesHubAccess(userId: string): Promise<AccessResult> {
-  return checkUserTemplateAccess(userId, 'balance_sheet'); // Use any template for hub access
+  if (!userId) {
+    return {
+      allowed: false,
+      reason: 'not-authenticated',
+      redirectUrl: '/login',
+    };
+  }
+
+  const access = await getAccessPayload();
+  if (!access?.isAuthenticated) {
+    return {
+      allowed: false,
+      reason: 'not-authenticated',
+      redirectUrl: '/login',
+    };
+  }
+
+  if (!access.canAccessTemplates || access.availableTemplates.length === 0) {
+    return {
+      allowed: false,
+      reason: 'templates-access-required',
+      redirectUrl: '/services/templates-bundle',
+    };
+  }
+
+  return {
+    allowed: true,
+    reason: 'templates-access-granted',
+  };
 }
 
-/**
- * Get available templates for a user.
- * In dev mode, returns all templates.
- * Later, will filter based on user's purchases/subscriptions.
- */
 export async function getAvailableTemplates(userId: string): Promise<TemplateType[]> {
-  const access = await checkTemplatesHubAccess(userId);
-  
-  if (!access.allowed) {
+  if (!userId) {
     return [];
   }
 
-  // DEV MODE: return all templates
-  return [
-    'balance_sheet',
-    'income_statement', 
-    'personal_financial_statement',
-    'personal_debt_summary',
-    'business_debt_summary'
-  ];
+  const access = await getAccessPayload();
+  if (!access?.isAuthenticated || !access.canAccessTemplates) {
+    return [];
+  }
+
+  return access.availableTemplates;
 }

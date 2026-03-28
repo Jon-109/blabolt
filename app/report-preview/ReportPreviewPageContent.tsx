@@ -15,6 +15,7 @@ import { Button } from '@/app/(components)/ui/button';
 import ServiceCard from '@/app/(components)/analysis/ServiceCard';
 import Testimonials from '@/app/(components)/shared/Testimonials';
 import { HelpCircle, ArrowRight as ArrowRightIcon } from 'lucide-react';
+import { normalizeFinancialsPayload, parseStoredTermMonths } from '@/lib/financial/calculations';
 
 // --- Type Definitions for Local Use ---
 // These are not exported from shared or CashFlowReport, so define here for type safety.
@@ -174,58 +175,44 @@ export default function ReportPreviewPageContent() {
           if (typeof value !== 'string') return 0;
           return parseFloat(value.replace(/[$,]/g, '')) || 0;
         };
+        const normalizeYearMap = (value: any) => {
+          if (!value || typeof value !== 'object') return value;
+
+          return {
+            '2024': value['2024'] ?? value['2023'] ?? 0,
+            '2025': value['2025'] ?? value['2024'] ?? 0,
+            '2026YTD': value['2026YTD'] ?? value['2025YTD'] ?? 0,
+          };
+        };
+        const normalizedDscr = {
+          '2024': data.dscr?.['2024'] ?? data.dscr?.dscr2023 ?? null,
+          '2025': data.dscr?.['2025'] ?? data.dscr?.dscr2024 ?? null,
+          '2026YTD': data.dscr?.['2026YTD'] ?? data.dscr?.dscr2025 ?? null,
+        };
         const reconstructedLoanInfo: LoanInfo = {
           businessName: data.business_name || '',
           loanPurpose: data.loan_purpose || '',
           desiredAmount: parseCurrency(data.desired_amount), 
           estimatedPayment: parseCurrency(data.estimated_payment), 
           annualizedLoan: parseCurrency(data.annualized_loan),
-          loanTerm: parseInt(String(data.term || '0'), 10),
+          loanTerm: parseStoredTermMonths(data.term),
           interestRate: (typeof data.interest_rate === 'number' ? data.interest_rate : parseFloat(String(data.interest_rate || '0'))) / 100,
           downPaymentPercent: parseFloat(String(data.down_payment293 || '0')),
           downPaymentAmount: parseCurrency(data.down_payment),
           proposedLoanAmount: parseCurrency(data.proposed_loan ?? data.desired_amount)
         };
-        const transformedFinancials: Financials = {};
-        for (const yearKey of ['year2023', 'year2024', 'year2025YTD']) {
-          const yearShort = yearKey.replace('year', '');
-          const rawYearData = data.financials?.[yearKey];
-          transformedFinancials[yearShort] = {
-            input: {
-              revenue: parseCurrency(rawYearData?.input?.revenue),
-              cogs: parseCurrency(rawYearData?.input?.cogs),
-              operatingExpenses: parseCurrency(rawYearData?.input?.operatingExpenses),
-              nonRecurringIncome: parseCurrency(rawYearData?.input?.nonRecurringIncome),
-              nonRecurringExpenses: parseCurrency(rawYearData?.input?.nonRecurringExpenses),
-              depreciation: parseCurrency(rawYearData?.input?.depreciation),
-              amortization: parseCurrency(rawYearData?.input?.amortization),
-              interest: parseCurrency(rawYearData?.input?.interest),
-              taxes: parseCurrency(rawYearData?.input?.taxes),
-            },
-            summary: {
-              revenue: rawYearData?.summary?.revenue ?? parseCurrency(rawYearData?.input?.revenue) ?? 0,
-              cogs: rawYearData?.summary?.cogs ?? parseCurrency(rawYearData?.input?.cogs) ?? 0,
-              grossProfit: rawYearData?.summary?.grossProfit ?? (rawYearData?.summary?.revenue ?? parseCurrency(rawYearData?.input?.revenue) ?? 0) - (rawYearData?.summary?.cogs ?? parseCurrency(rawYearData?.input?.cogs) ?? 0),
-              operatingExpenses: rawYearData?.summary?.operatingExpenses ?? parseCurrency(rawYearData?.input?.operatingExpenses) ?? 0,
-              netIncome: rawYearData?.summary?.netIncome ?? 0,
-              nonRecurringIncome: rawYearData?.summary?.nonRecurringIncome ?? parseCurrency(rawYearData?.input?.nonRecurringIncome) ?? 0,
-              nonRecurringExpenses: rawYearData?.summary?.nonRecurringExpenses ?? parseCurrency(rawYearData?.input?.nonRecurringExpenses) ?? 0,
-              depreciation: rawYearData?.summary?.depreciation ?? parseCurrency(rawYearData?.input?.depreciation) ?? 0,
-              amortization: rawYearData?.summary?.amortization ?? parseCurrency(rawYearData?.input?.amortization) ?? 0,
-              interest: rawYearData?.summary?.interest ?? parseCurrency(rawYearData?.input?.interest) ?? 0,
-              taxes: rawYearData?.summary?.taxes ?? parseCurrency(rawYearData?.input?.taxes) ?? 0,
-              ebitda: rawYearData?.summary?.ebitda ?? (
-                (rawYearData?.summary?.grossProfit ?? (rawYearData?.summary?.revenue ?? parseCurrency(rawYearData?.input?.revenue) ?? 0) - (rawYearData?.summary?.cogs ?? parseCurrency(rawYearData?.input?.cogs) ?? 0))
-                - (rawYearData?.summary?.operatingExpenses ?? parseCurrency(rawYearData?.input?.operatingExpenses) ?? 0)
-                + (rawYearData?.summary?.depreciation ?? parseCurrency(rawYearData?.input?.depreciation) ?? 0)
-                + (rawYearData?.summary?.amortization ?? parseCurrency(rawYearData?.input?.amortization) ?? 0)
-              ),
-              adjustedEbitda: rawYearData?.summary?.adjustedEbitda ?? rawYearData?.summary?.ebitda ?? 0,
-            },...(yearShort === '2025YTD' && rawYearData?.ytdMonth ? { ytdMonth: rawYearData.ytdMonth } : {})
-          };
+        const normalizedFinancials = normalizeFinancialsPayload(data.financials);
+        const transformedFinancials: Financials = {
+          '2024': normalizedFinancials.year2024,
+          '2025': normalizedFinancials.year2025,
+          '2026YTD': normalizedFinancials.year2026YTD,
         };
         const transformedDebts = {
           ...data.debts,
+          annualDebtService: normalizeYearMap(data.debts?.annualDebtService),
+          annualDebtServices: normalizeYearMap(data.debts?.annualDebtServices),
+          totalDebtService: normalizeYearMap(data.debts?.totalDebtService),
+          annualizedLoanPayments: normalizeYearMap(data.debts?.annualizedLoanPayments),
           entries: (data.debts?.entries ?? []).map((debt: any, index: number) => ({
             ...debt,
             id: index.toString(),
@@ -246,7 +233,7 @@ export default function ReportPreviewPageContent() {
         setReportData({
           loanInfo: reconstructedLoanInfo,
           financials: transformedFinancials,
-          dscr: data.dscr ?? {},
+          dscr: normalizedDscr,
           debts: transformedDebts,
           cashFlowPdfUrl: data.cash_flow_pdf_url ?? undefined,
           debtSummaryPdfUrl: data.debt_summary_pdf_url ?? undefined,
@@ -292,9 +279,15 @@ export default function ReportPreviewPageContent() {
         </div>
         {/* Download Buttons */}
         <div className="flex justify-center mb-2 gap-4 flex-col sm:flex-row">
+          <Button asChild variant="outline" className="w-full sm:w-auto px-4 py-2 font-semibold">
+            <Link href={`/comprehensive-cash-flow-analysis?analysisId=${analysisId}&edit=1`}>
+              Edit Analysis Inputs
+            </Link>
+          </Button>
           <DownloadButton
             analysisId={analysisId as string}
             type="full"
+            existingUrl={reportData.cashFlowPdfUrl}
             className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700"
           >
             Download Cash Flow Analysis
@@ -302,6 +295,7 @@ export default function ReportPreviewPageContent() {
           <DownloadButton
             analysisId={analysisId as string}
             type="summary"
+            existingUrl={reportData.debtSummaryPdfUrl}
             className="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded font-semibold hover:bg-gray-700"
           >
             Download Business Debt Summary
@@ -311,9 +305,15 @@ export default function ReportPreviewPageContent() {
         <CashFlowReport {...reportData} />
         {/* Download Buttons (Bottom) */}
         <div className="flex justify-center mt-10 mb-4 gap-4 flex-col sm:flex-row">
+          <Button asChild variant="outline" className="w-full sm:w-auto px-4 py-2 font-semibold">
+            <Link href={`/comprehensive-cash-flow-analysis?analysisId=${analysisId}&edit=1`}>
+              Edit Analysis Inputs
+            </Link>
+          </Button>
           <DownloadButton
             analysisId={analysisId as string}
             type="full"
+            existingUrl={reportData.cashFlowPdfUrl}
             className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700"
           >
             Download Cash Flow Analysis
@@ -321,6 +321,7 @@ export default function ReportPreviewPageContent() {
           <DownloadButton
             analysisId={analysisId as string}
             type="summary"
+            existingUrl={reportData.debtSummaryPdfUrl}
             className="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded font-semibold hover:bg-gray-700"
           >
             Download Business Debt Summary

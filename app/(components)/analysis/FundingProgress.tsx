@@ -10,10 +10,11 @@ interface FundingProgressProps {
 const steps = [
   { id: 1, label: 'Define Need', description: 'Clarify your funding goals and amount.' },
   { id: 2, label: 'Check Affordability', description: 'Assess your capacity based on cash flow.' },
-  { id: 3, label: 'Loan Package', description: 'Compile documents including cover letter.' }, 
-  { id: 4, label: 'Match Lenders', description: 'Identify lenders aligned with your profile.' },
-  { id: 5, label: 'Submit & Follow-Up', description: 'Present your package and manage communication.' },
-  { id: 6, label: 'Secure Funding', description: 'Finalize terms and receive funds.' },
+  { id: 3, label: 'Cover Letter', description: 'Shape the narrative lenders read before the documents.' },
+  { id: 4, label: 'Loan Package', description: 'Build the lender-ready package and supporting file order.' },
+  { id: 5, label: 'Match Lenders', description: 'Identify lenders aligned with your profile.' },
+  { id: 6, label: 'Submit & Follow-Up', description: 'Present your package and manage communication.' },
+  { id: 7, label: 'Secure Funding', description: 'Finalize terms and receive funds.' },
 ];
 
 const FundingProgress: React.FC<FundingProgressProps> = ({ currentStep }) => {

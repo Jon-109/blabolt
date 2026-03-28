@@ -1,18 +1,11 @@
 import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Button } from '@/app/(components)/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/app/(components)/ui/card';
 import { Input } from "@/app/(components)/ui/input"; 
-import { Label } from "@/app/(components)/ui/label"; 
 import { useToast } from '@/app/(components)/shared/Toast'; 
 import { cn } from '@/lib/utils'; 
 // Correct the import path for loan purposes
 import { loanPurposes } from '@/lib/loanPurposes'; 
+import FormField from '@/app/(components)/templates/shared/FormField';
+import FormSection from '@/app/(components)/templates/shared/FormSection';
 
 // Define the structure for loan info data
 export interface LoanInfoData {
@@ -253,12 +246,25 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ onNext, i
     return isValid;
   }, [formData, showToast, isFormValid]);
 
-  // Inline error messages for required fields
-  const requiredError = (field: keyof LoanInfoData) =>
-    errorFields[`loanInfo-${field}`] && (!formData[field] || formData[field].toString().trim() === '')
-      ? (
-        <div className="text-xs text-red-500 mt-1">This field is required.</div>
-      ) : null;
+  const fieldError = (field: keyof LoanInfoData): string | undefined => {
+    const hasError = errorFields[`loanInfo-${field}`];
+    if (!hasError) return undefined;
+
+    const value = formData[field];
+    if (!value || value.toString().trim() === '') return 'This field is required.';
+
+    if (field === 'firstName' && /[0-9]/.test(formData.firstName)) return 'First name cannot contain numbers.';
+    if (field === 'lastName' && /[0-9]/.test(formData.lastName)) return 'Last name cannot contain numbers.';
+    if (field === 'businessName' && formData.businessName.length > 60) return 'Business name cannot exceed 60 characters.';
+    if (field === 'businessName' && formData.businessName.length > 0 && formData.businessName.length < 2) return 'Business name must be at least 2 characters.';
+    if (field === 'firstName' && formData.firstName.length > 30) return 'First name cannot exceed 30 characters.';
+    if (field === 'firstName' && formData.firstName.length > 0 && formData.firstName.length < 2) return 'First name must be at least 2 characters.';
+    if (field === 'lastName' && formData.lastName.length > 30) return 'Last name cannot exceed 30 characters.';
+    if (field === 'lastName' && formData.lastName.length > 0 && formData.lastName.length < 2) return 'Last name must be at least 2 characters.';
+    if (field === 'desiredAmount') return 'Enter a valid loan amount up to $100,000,000.';
+
+    return 'Please review this field.';
+  };
 
   // Expose validate function via ref
   useImperativeHandle(ref, () => ({
@@ -273,16 +279,6 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ onNext, i
       onNext();
     }
   }, [validate, onNext]);
-
-  const formatCurrency = (value: number | null | undefined): string => {
-    if (value == null || isNaN(value)) return '$0';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   // --- Fix: Calculation bug, ensure correct types for calculateMonthlyPayment ---
   const calculateMonthlyPayment = (amount: number, term: number, rate: number) => {
@@ -304,11 +300,6 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ onNext, i
     const payment = amount * monthlyRate;
     return isFinite(payment) ? Math.round(payment) : 0;
   };
-
-  const initialPaymentString = initialData?.estimatedPayment;
-  const initialPaymentNumber = initialPaymentString ? parseFloat(initialPaymentString) : null;
-
-  const [estimatedPayment, setEstimatedPayment] = useState<number>(0);
 
   useEffect(() => {
     if (formData.loanPurpose && formData.desiredAmount) {
@@ -339,13 +330,8 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ onNext, i
           annualizedLoan: (payment * 12).toString(),
         };
         setFormData(prev => ({ ...prev, ...updated, desiredAmount: formatCurrencyInput(amount.toString()) }));
-        setEstimatedPayment(payment); // <-- keep as number
         onFormDataChange(updated);
-      } else {
-        setEstimatedPayment(0);
       }
-    } else {
-      setEstimatedPayment(0);
     }
   }, [formData.loanPurpose, formData.desiredAmount]);
 
@@ -353,79 +339,86 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ onNext, i
   const showPurchaseFields = relevantPurchasePurposes.includes(formData.loanPurpose);
 
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-lg">
-      <CardHeader>
-        <CardTitle>Step 1: Loan Information</CardTitle>
-        <CardDescription>Please provide details about your business and the loan request.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Business Name */}
-        <div className="space-y-2">
-          <Label htmlFor="loanInfo-businessName">Business Name*</Label>
-          <Input 
-            id="loanInfo-businessName"
+    <div className="space-y-6">
+      <section className="rounded-[1.5rem] border border-slate-200 bg-white/95 p-5 shadow-[0_16px_35px_-24px_rgba(15,23,42,0.3)]">
+        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Step 1</div>
+        <h2 className="mt-1 text-2xl font-bold text-slate-900">Business & Loan Information</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          Start with the borrower, business name, and loan request. If you know exact lender terms, use them. If you do not, that is okay. Use your best current estimate and we will still build the analysis around it.
+        </p>
+      </section>
+
+      <FormSection
+        title="Business And Borrower"
+        description="Enter the borrower and business identity details exactly how you want them to appear in the final report."
+        className="!rounded-[1.5rem] !border-slate-200 !shadow-[0_16px_35px_-24px_rgba(15,23,42,0.3)]"
+      >
+        <FormField
+          label="Business Name"
+          htmlFor="loanInfo-businessName"
+          required
+          help="Use the legal or DBA name lenders will recognize."
+          error={fieldError('businessName')}
+        >
+          <Input
             type="text"
             maxLength={60}
             value={formData.businessName}
             onChange={handleInputChange('businessName')}
-            className={cn(errorFields['loanInfo-businessName'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')}
           />
-          {requiredError('businessName')}
-          {formData.businessName.length === 60 && (
-            <div className="text-xs text-red-500 mt-1">Business name cannot exceed 60 characters.</div>
-          )}
-        </div>
+        </FormField>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* First Name */}
-          <div className="space-y-2">
-            <Label htmlFor="loanInfo-firstName">First Name*</Label>
-            <Input 
-              id="loanInfo-firstName"
-              type="text"
-              maxLength={30}
-              value={formData.firstName}
-              onChange={handleInputChange('firstName')}
-              className={cn(errorFields['loanInfo-firstName'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')}
-            />
-            {requiredError('firstName')}
-            {formData.firstName.length === 30 && (
-              <div className="text-xs text-red-500 mt-1">First name cannot exceed 30 characters.</div>
-            )}
-          </div>
-          {/* Last Name */}
-          <div className="space-y-2">
-            <Label htmlFor="loanInfo-lastName">Last Name*</Label>
-            <Input 
-              id="loanInfo-lastName"
-              type="text"
-              maxLength={30}
-              value={formData.lastName}
-              onChange={handleInputChange('lastName')}
-              className={cn(errorFields['loanInfo-lastName'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')}
-            />
-            {requiredError('lastName')}
-            {formData.lastName.length === 30 && (
-              <div className="text-xs text-red-500 mt-1">Last name cannot exceed 30 characters.</div>
-            )}
-          </div>
-        </div>
+        <FormField
+          label="First Name"
+          htmlFor="loanInfo-firstName"
+          required
+          help="Primary contact for this financing request."
+          error={fieldError('firstName')}
+        >
+          <Input
+            type="text"
+            maxLength={30}
+            value={formData.firstName}
+            onChange={handleInputChange('firstName')}
+          />
+        </FormField>
 
-        {/* Loan Purpose */}
-        <div className="space-y-2">
-          <Label htmlFor="loanInfo-loanPurpose">Loan Purpose*</Label>
-          <p className="text-sm text-gray-600 mb-1">
-            Please select the primary reason for your loan request. This helps us understand your needs and recommend the best loan options for you.
-          </p>
-          <select 
-            id="loanInfo-loanPurpose"
+        <FormField
+          label="Last Name"
+          htmlFor="loanInfo-lastName"
+          required
+          help="Primary contact for this financing request."
+          error={fieldError('lastName')}
+        >
+          <Input
+            type="text"
+            maxLength={30}
+            value={formData.lastName}
+            onChange={handleInputChange('lastName')}
+          />
+        </FormField>
+      </FormSection>
+
+      <FormSection
+        title="Loan Request"
+        description="Choose the reason for the loan and enter the main request amount first. We use that to estimate the supporting loan figures below."
+        className="!rounded-[1.5rem] !border-slate-200 !shadow-[0_16px_35px_-24px_rgba(15,23,42,0.3)]"
+      >
+        <FormField
+          label="Loan Purpose"
+          htmlFor="loanInfo-loanPurpose"
+          required
+          help="Pick the closest match to the main use of funds."
+          error={fieldError('loanPurpose')}
+          className="sm:col-span-2"
+        >
+          <select
             value={formData.loanPurpose}
-            onChange={handleSelectChange('loanPurpose')} // Use specific handler
+            onChange={handleSelectChange('loanPurpose')}
             className={cn(
-              'block w-full rounded-md border border-gray-300 shadow-sm py-2 px-3 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm',
-              errorFields['loanInfo-loanPurpose'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500'
+              'block h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+              errorFields['loanInfo-loanPurpose'] && 'border-red-600 bg-red-50/40 ring-2 ring-red-500 focus:ring-red-600'
             )}
-            required
           >
             <option value="">Select a purpose</option>
             {Object.keys(loanPurposes).map((purpose) => (
@@ -434,184 +427,119 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ onNext, i
               </option>
             ))}
           </select>
-          {requiredError('loanPurpose')}
-        </div>
+        </FormField>
 
-        {/* Desired Loan Amount */}
-        <div className="space-y-2">
-          <Label htmlFor="loanInfo-desiredAmount">Desired Loan Amount*</Label>
-          <p className="text-sm text-gray-600 mb-1">
-            Please enter your best estimate of the total amount you would like to borrow. This should reflect how much funding you believe you’ll need to accomplish your goal (such as purchasing equipment, property, or covering working capital). 
-          </p>
-          <Input 
-            id="loanInfo-desiredAmount"
-            type="text" 
+        <FormField
+          label="Desired Loan Amount"
+          htmlFor="loanInfo-desiredAmount"
+          required
+          help="Use the total amount you are requesting from the lender, before any down payment. You can usually get this from a purchase contract, project budget, quote package, or your financing target."
+          error={fieldError('desiredAmount')}
+          className="sm:col-span-2"
+        >
+          <Input
+            type="text"
             inputMode="numeric"
             pattern="[0-9,]*"
             value={formData.desiredAmount ?? ''}
             onChange={handleCurrencyInputChange('desiredAmount')}
-            onBlur={e => setFormData(prev => ({ ...prev, desiredAmount: formatCurrencyInput(prev.desiredAmount) }))}
-            className={cn(errorFields['loanInfo-desiredAmount'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')} 
+            onBlur={() => setFormData(prev => ({ ...prev, desiredAmount: formatCurrencyInput(prev.desiredAmount) }))}
             maxLength={15}
+            placeholder="$250,000"
           />
-          {requiredError('desiredAmount')}
-          {(() => {
-            const amountString = (formData.desiredAmount || '').toString();
-            const digits = amountString.replace(/[^\d]/g, '');
-            // Only show the warning if the max value is hit, never show 0 or null
-            const num = digits && digits.length > 0 ? parseInt(digits, 10) : null;
-            return num === 100_000_000 && formData.desiredAmount.length > 0 ? (
-              <div className="text-xs text-red-500 mt-1">Maximum allowed loan amount is $100,000,000.</div>
-            ) : null;
-          })()}
-        </div>
+        </FormField>
 
-        {/* Conditionally Render Purchase-Related Fields */}
-        {showPurchaseFields && (
+        {showPurchaseFields ? (
           <>
-            {/* Down Payment */}
-            <div className="space-y-2">
-              <Label htmlFor="loanInfo-downPayment">Down Payment*</Label>
-              <Input 
-                id="loanInfo-downPayment"
-                type="text" 
-                inputMode='numeric'
+            <FormField
+              label="Down Payment"
+              htmlFor="loanInfo-downPayment"
+              help="Enter the dollar amount you expect to contribute yourself. If you do not know it yet, it is okay to leave the estimate already shown."
+            >
+              <Input
+                type="text"
+                inputMode="numeric"
                 placeholder="$30,000"
-                value={formData.downPayment} 
+                value={formData.downPayment}
                 onChange={handleInputChange('downPayment')}
-                className={cn(errorFields['loanInfo-downPayment'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')} 
               />
-            </div>
+            </FormField>
 
-            {/* Down Payment 293 */}
-            <div className="space-y-2">
-              <Label htmlFor="loanInfo-downPayment293">Down Payment 293*</Label>
-              <Input 
-                id="loanInfo-downPayment293"
-                type="text" 
-                inputMode='numeric'
-                placeholder="10%" 
-                value={formData.downPayment293} 
+            <FormField
+              label="Down Payment %"
+              htmlFor="loanInfo-downPayment293"
+              help="If you know the percent but not the exact dollars, enter the percent here instead."
+            >
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="10%"
+                value={formData.downPayment293}
                 onChange={handleInputChange('downPayment293')}
-                className={cn(errorFields['loanInfo-downPayment293'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')} 
               />
-            </div>
+            </FormField>
 
-            {/* Proposed Loan */}
-            <div className="space-y-2">
-              <Label htmlFor="loanInfo-proposedLoan">Proposed Loan Amount*</Label>
-              <Input 
-                id="loanInfo-proposedLoan"
-                type="text" 
-                inputMode='numeric'
+            <FormField
+              label="Proposed Loan Amount"
+              htmlFor="loanInfo-proposedLoan"
+              help="This is usually the amount being financed after subtracting any down payment or cash injection."
+            >
+              <Input
+                type="text"
+                inputMode="numeric"
                 placeholder="$120,000"
-                value={formData.proposedLoan} 
+                value={formData.proposedLoan}
                 onChange={handleInputChange('proposedLoan')}
-                className={cn(errorFields['loanInfo-proposedLoan'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')} 
               />
-            </div>
+            </FormField>
 
-            {/* Term */}
-            <div className="space-y-2">
-              <Label htmlFor="loanInfo-term">Loan Term (Months)*</Label>
-              <Input 
-                id="loanInfo-term"
-                type="number" // Can use number here if no formatting needed
-                inputMode='numeric'
-                placeholder="120" 
-                value={formData.term} 
+            <FormField
+              label="Loan Term (Months)"
+              htmlFor="loanInfo-term"
+              help="Enter the repayment term in months. Common examples are 60, 84, 120, or 240 depending on the deal."
+            >
+              <Input
+                type="number"
+                inputMode="numeric"
+                placeholder="120"
+                value={formData.term}
                 onChange={handleInputChange('term')}
-                className={cn(errorFields['loanInfo-term'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')} 
               />
-            </div>
+            </FormField>
 
-            {/* Interest Rate */}
-            <div className="space-y-2">
-              <Label htmlFor="loanInfo-interestRate">Estimated Interest Rate (%)*</Label>
-              <Input 
-                id="loanInfo-interestRate"
-                type="number" // Can use number here 
+            <FormField
+              label="Estimated Interest Rate (%)"
+              htmlFor="loanInfo-interestRate"
+              help="Use the actual quoted rate if you have it. If you do not, it is okay to keep the estimated rate."
+            >
+              <Input
+                type="number"
                 step="0.01"
-                inputMode='decimal'
+                inputMode="decimal"
                 placeholder="7.5"
-                value={formData.interestRate} 
+                value={formData.interestRate}
                 onChange={handleInputChange('interestRate')}
-                className={cn(errorFields['loanInfo-interestRate'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')} 
               />
-            </div>
+            </FormField>
 
-            {/* Annualized Loan */}
-            <div className="space-y-2">
-              <Label htmlFor="loanInfo-annualizedLoan">Annualized Loan Payment*</Label>
-              <Input 
-                id="loanInfo-annualizedLoan"
-                type="text" 
-                inputMode='numeric'
+            <FormField
+              label="Annualized Loan Payment"
+              htmlFor="loanInfo-annualizedLoan"
+              help="This is the yearly loan-payment amount. If you only know the monthly payment, this should be monthly payment times 12."
+            >
+              <Input
+                type="text"
+                inputMode="numeric"
                 placeholder="$18,000"
-                value={formData.annualizedLoan} 
+                value={formData.annualizedLoan}
                 onChange={handleInputChange('annualizedLoan')}
-                className={cn(errorFields['loanInfo-annualizedLoan'] && 'border-red-500 ring-1 ring-red-500 focus:ring-red-500')} 
               />
-            </div>
+            </FormField>
           </>
-        )}
+        ) : null}
+      </FormSection>
 
-        {/* Estimated Payment Display */}
-        {estimatedPayment && (
-          <div className="mt-10 bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-blue-200 shadow-lg overflow-hidden">
-            <div className="px-8 py-6 bg-blue-50 border-b border-blue-200">
-              <h3 className="text-center text-xl font-extrabold text-blue-800 tracking-tight uppercase">
-                Estimated Monthly Payment
-              </h3>
-            </div>
-            <div className="p-8 text-center">
-              <div className="mb-6">
-                <div className="text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-blue-400 drop-shadow-sm">
-                  {formatCurrency(estimatedPayment)}
-                </div>
-                <div className="text-base font-medium text-gray-600 mt-2">per month</div>
-              </div>
-              {formData.loanPurpose && (() => {
-                const purpose = loanPurposes[formData.loanPurpose];
-                if (!purpose) return null;
-                const downPaymentPercent = formData.loanPurpose === 'Real Estate Acquisition or Development' ? 20 : 10;
-                const desiredAmount = parseInt(parseCurrencyInput(formData.desiredAmount), 10) || 0;
-                const downPaymentAmount = Math.round(desiredAmount * (downPaymentPercent / 100));
-                const proposedLoan = desiredAmount - downPaymentAmount;
-                return (
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-5 text-left max-w-xl mx-auto space-y-2 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-blue-900">Term:</span>
-                      <span>{purpose.defaultTerm} months <span className="text-xs text-gray-500">(typical for this loan purpose, but may vary)</span></span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-blue-900">Interest Rate:</span>
-                      <span>{(purpose.defaultRate * 100).toFixed(1)}% APR <span className="text-xs text-gray-500">(typical for this loan purpose, but may vary)</span></span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-blue-900">Down Payment %:</span>
-                      <span>{downPaymentPercent}% <span className="text-xs text-gray-500">(typical for this loan purpose, but may vary)</span></span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-blue-900">Down Payment Amount:</span>
-                      <span>${downPaymentAmount.toLocaleString('en-US')}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-blue-900">Proposed Loan Amount:</span>
-                      <span>${proposedLoan.toLocaleString('en-US')}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-              <div className="text-xs text-gray-500 mt-4 max-w-md mx-auto">
-                This is an approximate calculation. Actual terms and rates may vary based on your business profile and market conditions.
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-      {/* Footer removed – navigation handled by page-level buttons */}
-    </Card>
+    </div>
   );
 });
 

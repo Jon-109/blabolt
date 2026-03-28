@@ -1,33 +1,47 @@
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
-// Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
 
+function safeRedirectPath(value: string | null): string {
+  if (!value) return '/';
+  if (!value.startsWith('/')) return '/';
+  if (value.startsWith('//')) return '/';
+  return value;
+}
+
 export async function GET(request: Request) {
-  console.log('Auth callback triggered');
-  
   const requestUrl = new URL(request.url);
-  
-  // Get both code and redirectTo parameters
   const code = requestUrl.searchParams.get('code');
-  const redirectTo = requestUrl.searchParams.get('redirectTo') || '/';
-  
-  console.log('Code present:', !!code);
-  console.log('RedirectTo:', redirectTo);
-  
-  // Check if this is a checkout flow
-  const isCheckoutFlow = redirectTo.includes('checkout=true');
-  const redirectUrl = isCheckoutFlow ? '/cash-flow-analysis?checkout=true' : redirectTo;
-  
-  // If there's a code, it means we're in an OAuth callback flow
+  const requestedRedirect = safeRedirectPath(requestUrl.searchParams.get('redirectTo'));
+  const redirectUrl = requestedRedirect.includes('checkout=true')
+    ? '/cash-flow-analysis?checkout=true'
+    : requestedRedirect;
+
   if (code) {
-    console.log('Processing OAuth callback with code');
-    // We don't need to do anything with the code - it will be automatically 
-    // processed by the Supabase client on the client side
+    const cookieStore = await cookies();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (supabaseUrl && supabaseAnonKey) {
+      const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options });
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+          },
+        },
+      });
+
+      await supabase.auth.exchangeCodeForSession(code);
+    }
   }
-  
-  // Redirect to the final destination
-  console.log('Redirecting to:', redirectUrl);
+
   return NextResponse.redirect(new URL(redirectUrl, requestUrl.origin));
 }

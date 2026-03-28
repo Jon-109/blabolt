@@ -1,7 +1,8 @@
 import React from 'react';
-import Link from 'next/link';
 import { Card, CardContent } from '@/app/(components)/ui/card';
-import { Check } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
+import AuthAwareCheckoutButton from '@/app/services/components/AuthAwareCheckoutButton';
+import AuthAwareRouteButton from '@/app/services/components/AuthAwareRouteButton';
 
 const checklist = [
   'Custom cover letter that tells your business story and clearly explains your funding request',
@@ -47,12 +48,13 @@ const ServiceCard = () => (
             <span className="block text-sm text-gray-600 font-medium">One-time fee</span>
           </div>
           <div className="flex justify-center">
-            <Link
-              href="#get-guidance"
-              className="inline-block bg-[#002c55] text-white font-semibold rounded px-5 py-2 shadow hover:bg-[#002c55]/90 transition"
+            <AuthAwareCheckoutButton
+              productType="loan_packaging"
+              className="inline-flex items-center justify-center gap-2 bg-[#002c55] text-white font-semibold rounded px-5 py-2 shadow hover:bg-[#002c55]/90 transition"
             >
-              Get Step-by-Step Guidance →
-            </Link>
+              Begin Loan Packaging
+              <ArrowRight className="h-4 w-4" />
+            </AuthAwareCheckoutButton>
           </div>
         </div>
       </CardContent>
@@ -86,12 +88,13 @@ const ServiceCard = () => (
             <span className="block text-sm text-gray-600 font-medium">Only if you’re approved</span>
           </div>
           <div className="flex justify-center">
-            <Link
-              href="#find-offer"
-              className="inline-block bg-[#002c55] text-white font-semibold rounded px-5 py-2 shadow hover:bg-[#002c55]/90 transition"
+            <AuthAwareRouteButton
+              route="/loan-brokering/agreement"
+              className="inline-flex items-center justify-center gap-2 bg-[#002c55] text-white font-semibold rounded px-5 py-2 shadow hover:bg-[#002c55]/90 transition"
             >
-              Find My Best Loan Offer →
-            </Link>
+              Begin Loan Brokering
+              <ArrowRight className="h-4 w-4" />
+            </AuthAwareRouteButton>
           </div>
         </div>
       </CardContent>

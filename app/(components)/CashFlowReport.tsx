@@ -1,7 +1,9 @@
 import React from 'react';
 import { InfoIcon } from 'lucide-react';
 import { DscrGauge } from '@/app/(components)/cash-flow/DscrQuickCalculator';
+import CashFlowBusinessDebtSummaryTemplate from '@/app/(components)/cash-flow/CashFlowBusinessDebtSummaryTemplate';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/app/(components)/ui/tooltip';
+import { calculateFinancialSummary, formatLoanTermLabel } from '@/lib/financial/calculations';
 
 // --- Type Definitions ---
 
@@ -71,7 +73,7 @@ export interface DscrYearData {
 }
 
 export interface DscrResults {
-  [key: string]: DscrYearData | undefined; // e.g., '2023', '2024', '2025'
+  [key: string]: DscrYearData | undefined; // e.g., '2024', '2025', '2026YTD'
 }
 
 export interface CashFlowReportProps {
@@ -121,30 +123,11 @@ const getYearData = <T extends FinancialYearData | DscrYearData>(data: { [key: s
 // Function to calculate derived financial values
 const calculateFinancials = (yearData: FinancialYearData | null): FinancialYearData | null => {
     if (!yearData) return null;
-    const revenue = yearData.revenue ?? 0;
-    const cogs = yearData.cogs ?? 0;
-    const operatingExpenses = yearData.operatingExpenses ?? 0;
-    const depreciation = yearData.depreciation ?? 0;
-    const amortization = yearData.amortization ?? 0;
-    const interest = yearData.interest ?? 0;
-    const taxes = yearData.taxes ?? 0;
-    const nonRecurringIncome = yearData.nonRecurringIncome ?? 0;
-    const nonRecurringExpenses = yearData.nonRecurringExpenses ?? 0;
-
-    const grossProfit = revenue - cogs;
-    // Net Income = grossProfit - operatingExpenses
-    const netIncome = grossProfit - operatingExpenses;
-    // EBITDA = Net Income + Depreciation + Amortization + Interest + Taxes
-    const ebitda = netIncome + depreciation + amortization + interest + taxes;
-    // Adjusted EBITDA = EBITDA - Non-Recurring Income + Non-Recurring Expenses
-    const adjustedEbitda = ebitda - nonRecurringIncome + nonRecurringExpenses;
+    const summary = calculateFinancialSummary(yearData);
 
     return {
         ...yearData,
-        grossProfit,
-        netIncome,
-        ebitda,
-        adjustedEbitda,
+        ...summary,
     };
 };
 
@@ -191,11 +174,11 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
   });
 
   // Robust YTD column header logic
-  const ytdKey = '2025YTD';
+  const ytdKey = '2026YTD';
   // Only index into the flat financials object, which is type-safe
   const ytdMonthRaw = safeFinancials?.[ytdKey]?.ytdMonth;
   let ytdMonthName = '';
-  let ytdColumnHeader = '2025 YTD';
+  let ytdColumnHeader = '2026 YTD';
   if (ytdMonthRaw) {
     const monthNum = parseInt(ytdMonthRaw, 10);
     const monthNames = [
@@ -204,34 +187,31 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
     ];
     if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
       ytdMonthName = monthNames[monthNum - 1] ?? '';
-      ytdColumnHeader = `2025 YTD - ${ytdMonthName}`;
+      ytdColumnHeader = `2026 YTD - ${ytdMonthName}`;
     } else {
       // If user entered a string month (e.g., "March"), use it directly
-      ytdColumnHeader = `2025 YTD - ${ytdMonthRaw}`;
+      ytdColumnHeader = `2026 YTD - ${ytdMonthRaw}`;
     }
   }
-
-  // --- User's YTD Month Input Display ---
-  const usersYtdMonthInput = ytdMonthRaw || 'N/A';
 
   const financialYears = safeFinancials;
 
   // Get calculated financials for each year using safeFinancialsYears
-  const financials2023 = calculateFinancials(getYearData<FinancialYearWrapped>(financialYears, '2023')?.summary ?? null); 
   const financials2024 = calculateFinancials(getYearData<FinancialYearWrapped>(financialYears, '2024')?.summary ?? null); 
-  const financials2025 = calculateFinancials(getYearData<FinancialYearWrapped>(financialYears, ytdKey)?.summary ?? null); 
+  const financials2025 = calculateFinancials(getYearData<FinancialYearWrapped>(financialYears, '2025')?.summary ?? null); 
+  const financials2026 = calculateFinancials(getYearData<FinancialYearWrapped>(financialYears, ytdKey)?.summary ?? null); 
 
   // Get DSCR data for each year (DSCR structure not changed, uses safeDscr directly)
-  const dscr2023 = getYearData<DscrYearData>(safeDscr, '2023'); 
   const dscr2024 = getYearData<DscrYearData>(safeDscr, '2024'); 
-  const dscr2025 = getYearData<DscrYearData>(safeDscr, ytdKey); 
+  const dscr2025 = getYearData<DscrYearData>(safeDscr, '2025'); 
+  const dscr2026 = getYearData<DscrYearData>(safeDscr, ytdKey); 
 
   const bankPreference = 1.25;
 
   // --- Determine which columns to show ---
-  const show2023 = !isYearSkipped(financials2023);
-  const show2024 = !isYearSkipped(financials2024); // 2024 cannot be skipped, but keep logic consistent
+  const show2024 = !isYearSkipped(financials2024);
   const show2025 = !isYearSkipped(financials2025);
+  const show2026 = !isYearSkipped(financials2026);
 
   // Helper to get summary object for each year
   const getSummary = (year: string) => financialYears?.[year]?.summary ?? null;
@@ -260,33 +240,10 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
   const annualDebtService = debtSummaryObj.annualDebtService || debtSummaryObj.annualDebtServices || {};
   const annualizedLoanPayments = debtSummaryObj.annualizedLoanPayments || {};
 
-  // --- Debt Calculations --- 
-  const groupedDebts: { [key: string]: DebtDetail[] } = safeDebts.reduce((acc: { [key: string]: DebtDetail[] }, debt: DebtDetail) => {
-    const category = debt.category || 'Uncategorized';
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(debt);
-    return acc;
-  }, {});
-
-  const totalMonthlyPayment = safeDebts.reduce((sum: number, debt: DebtDetail) => sum + Number(debt.monthlyPayment ?? 0), 0);
-  const totalAnnualPayment = totalMonthlyPayment * 12;
-  const totalOutstandingBalance = safeDebts.reduce((sum: number, debt: DebtDetail) => sum + Number(debt.outstandingBalance ?? 0), 0);
-
-  // Only credit card and line of credit count toward credit balance and limit
-  const totalCreditBalance = safeDebts
-    .filter(debt => debt.category === 'CREDIT_CARD' || debt.category === 'LINE_OF_CREDIT')
-    .reduce((sum, debt) => sum + Number(debt.outstandingBalance ?? 0), 0);
-  const totalCreditLimit = safeDebts
-    .filter(debt => debt.category === 'CREDIT_CARD' || debt.category === 'LINE_OF_CREDIT')
-    .reduce((sum, debt) => sum + Number(debt.creditLimit ?? 0), 0);
-  const creditUtilization = totalCreditLimit > 0 ? (totalCreditBalance / totalCreditLimit) : 0;
-
   // --- Component Rendering ---
 
   return (
-    <div className="pt-0 pb-4 px-3 bg-white rounded-lg shadow-md max-w-4xl mx-auto print:pt-0 print:mt-0">
+    <div className="pt-0 pb-4 px-3 bg-white rounded-lg shadow-md max-w-4xl mx-auto print:mt-0 print:pt-0 print:pb-0 print:px-0 print:rounded-none print:shadow-none">
       {/* --- Report Header --- */}
       <header className="mt-0 mb-1 text-center border-b pb-1 print:mt-0 print:pt-0">
         <h1 className="text-2xl font-bold text-gray-800">Comprehensive Cash Flow Analysis</h1>
@@ -301,7 +258,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
         <h3 className="text-lg font-semibold border-b pb-1 mb-2">Loan Purpose & Details</h3>
         <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
           <div><strong>Loan Purpose:</strong> {safeLoanInfo?.loanPurpose ?? 'N/A'}</div>
-          <div><strong>Estimated Term:</strong> {safeLoanInfo?.loanTerm ? `${safeLoanInfo.loanTerm} Years` : 'N/A'}</div>
+          <div><strong>Estimated Term:</strong> {formatLoanTermLabel(safeLoanInfo?.loanTerm)}</div>
           <div><strong>Estimated Interest Rate:</strong> {formatPercentage(safeLoanInfo?.interestRate ?? 0, 2)}</div>
           <div><strong>Down Payment %:</strong> {formatPercentage((safeLoanInfo?.downPaymentPercent ?? 0) / 100, 2)}</div>         
           <div><strong>Estimated Monthly Payment:</strong> {formatCurrency(safeLoanInfo?.estimatedPayment ?? 0)}</div>
@@ -317,50 +274,50 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
         <table className="w-full border-collapse border text-sm table-fixed">
           <colgroup>
             <col className="w-[30%]" />
-            {show2023 && <col className="w-[23.3%]" />}
             {show2024 && <col className="w-[23.3%]" />}
             {show2025 && <col className="w-[23.3%]" />}
+            {show2026 && <col className="w-[23.3%]" />}
           </colgroup>
           <thead>
             <tr className="bg-blue-100">
               <th className="border p-0.5 text-left">Metric</th>
-              {show2023 && <th className="border p-0.5 text-center">2023</th>}
               {show2024 && <th className="border p-0.5 text-center">2024</th>}
-              {show2025 && <th className="border p-0.5 text-center">{ytdColumnHeader}</th>}
+              {show2025 && <th className="border p-0.5 text-center">2025</th>}
+              {show2026 && <th className="border p-0.5 text-center">{ytdColumnHeader}</th>}
             </tr>
           </thead>
           <tbody>
             <tr className="bg-green-50">
               {/* Changed label to Adjusted EBITDA */}
               <td className="border p-1 text-center">Adjusted EBITDA</td>
-              {show2023 && <td className="border p-1 text-center">{formatCurrency(financials2023?.adjustedEbitda ?? 0)}</td>}
               {show2024 && <td className="border p-1 text-center">{formatCurrency(financials2024?.adjustedEbitda ?? 0)}</td>}
               {show2025 && <td className="border p-1 text-center">{formatCurrency(financials2025?.adjustedEbitda ?? 0)}</td>}
+              {show2026 && <td className="border p-1 text-center">{formatCurrency(financials2026?.adjustedEbitda ?? 0)}</td>}
             </tr>
             <tr className="bg-orange-50">
               <td className="border p-1 text-center">Annualized Existing Debt (-)</td>
-              {show2023 && <td className="border p-1 text-center">{formatCurrency(annualDebtService['2023'] ?? dscr2023?.debtService ?? 0)}</td>}
               {show2024 && <td className="border p-1 text-center">{formatCurrency(annualDebtService['2024'] ?? dscr2024?.debtService ?? 0)}</td>}
-              {show2025 && <td className="border p-1 text-center">{formatCurrency(annualDebtService[ytdKey] ?? dscr2025?.debtService ?? 0)}</td>}
+              {show2025 && <td className="border p-1 text-center">{formatCurrency(annualDebtService['2025'] ?? dscr2025?.debtService ?? 0)}</td>}
+              {show2026 && <td className="border p-1 text-center">{formatCurrency(annualDebtService[ytdKey] ?? dscr2026?.debtService ?? 0)}</td>}
             </tr>
             <tr className="bg-orange-50">
               <td className="border p-1 text-center">Annualized Loan Payment (-)</td>
-              {show2023 && <td className="border p-1 text-center">{formatCurrency(annualizedLoanPayments['2023'] ?? 0)}</td>}
-              {show2024 && <td className="border p-1 text-center">{formatCurrency(annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0)}</td>}
-              {show2025 && <td className="border p-1 text-center">{formatCurrency(annualizedLoanPayments[ytdKey] ?? safeLoanInfo?.annualizedLoan ?? 0)}</td>}
+              {show2024 && <td className="border p-1 text-center">{formatCurrency(annualizedLoanPayments['2024'] ?? 0)}</td>}
+              {show2025 && <td className="border p-1 text-center">{formatCurrency(annualizedLoanPayments['2025'] ?? safeLoanInfo?.annualizedLoan ?? 0)}</td>}
+              {show2026 && <td className="border p-1 text-center">{formatCurrency(annualizedLoanPayments[ytdKey] ?? safeLoanInfo?.annualizedLoan ?? 0)}</td>}
             </tr>
             <tr className="font-semibold bg-orange-100">
               <td className="border p-1 text-center">Total Debt Service</td>
               {/* Assuming dscr.debtService already includes proposed loan payment, adjust if needed */}
-              {show2023 && <td className="border p-1 text-center">{formatCurrency((annualDebtService['2023'] ?? dscr2023?.debtService ?? 0) + (annualizedLoanPayments['2023'] ?? 0))}</td>}
-              {show2024 && <td className="border p-1 text-center">{formatCurrency((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0))}</td>}
-              {show2025 && <td className="border p-1 text-center">{formatCurrency((annualDebtService[ytdKey] ?? dscr2025?.debtService ?? 0) + (annualizedLoanPayments[ytdKey] ?? safeLoanInfo?.annualizedLoan ?? 0))}</td>}
+              {show2024 && <td className="border p-1 text-center">{formatCurrency((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? 0))}</td>}
+              {show2025 && <td className="border p-1 text-center">{formatCurrency((annualDebtService['2025'] ?? dscr2025?.debtService ?? 0) + (annualizedLoanPayments['2025'] ?? safeLoanInfo?.annualizedLoan ?? 0))}</td>}
+              {show2026 && <td className="border p-1 text-center">{formatCurrency((annualDebtService[ytdKey] ?? dscr2026?.debtService ?? 0) + (annualizedLoanPayments[ytdKey] ?? safeLoanInfo?.annualizedLoan ?? 0))}</td>}
             </tr>
             <tr className="bg-blue-100 font-bold">
               <td className="border p-1 text-center">Business DSCR</td>
-              {show2023 && renderDSCRCell((financials2023?.adjustedEbitda ?? 0) / ((annualDebtService['2023'] ?? dscr2023?.debtService ?? 0) + (annualizedLoanPayments['2023'] ?? 0)), 'p-1')}
-              {show2024 && renderDSCRCell((financials2024?.adjustedEbitda ?? 0) / ((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0)), 'p-1')}
-              {show2025 && renderDSCRCell((financials2025?.adjustedEbitda ?? 0) / ((annualDebtService[ytdKey] ?? dscr2025?.debtService ?? 0) + (annualizedLoanPayments[ytdKey] ?? safeLoanInfo?.annualizedLoan ?? 0)), 'p-1')}
+              {show2024 && renderDSCRCell((financials2024?.adjustedEbitda ?? 0) / ((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? 0)), 'p-1')}
+              {show2025 && renderDSCRCell((financials2025?.adjustedEbitda ?? 0) / ((annualDebtService['2025'] ?? dscr2025?.debtService ?? 0) + (annualizedLoanPayments['2025'] ?? safeLoanInfo?.annualizedLoan ?? 0)), 'p-1')}
+              {show2026 && renderDSCRCell((financials2026?.adjustedEbitda ?? 0) / ((annualDebtService[ytdKey] ?? dscr2026?.debtService ?? 0) + (annualizedLoanPayments[ytdKey] ?? safeLoanInfo?.annualizedLoan ?? 0)), 'p-1')}
             
             </tr>
           </tbody>
@@ -369,22 +326,22 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
           Bank Preference: At Least {bankPreference.toFixed(2)}x
         </p>
       </section>
-      {/* --- Understanding Your Debt Service Coverage Ratio (DSCR) - 2024 (Optimized) --- */}
+      {/* --- Understanding Your Debt Service Coverage Ratio (DSCR) - 2025 (Optimized) --- */}
       <section className="mb-2 print:mb-1">
-        <h3 className="text-lg font-semibold border-b pb-1 mb-1">Understanding Your DSCR for 2024</h3>
+        <h3 className="text-lg font-semibold border-b pb-1 mb-1">Understanding Your DSCR for 2025</h3>
         <div className="bg-white rounded-xl shadow-md p-3 md:p-4 flex flex-col md:flex-row print:flex-row gap-4 items-stretch">
           {/* Gauge and Score */}
           <div className="md:w-1/3 print:w-1/3 flex flex-col items-center justify-center mb-6 md:mb-0">
-            {/* Calculate DSCR for 2024 once and reuse */}
+            {/* Calculate DSCR for 2025 once and reuse */}
             {(() => {
-              const dscr2024Calc = (financials2024?.adjustedEbitda ?? 0) /
-                ((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0));
-              const numerator = financials2024?.adjustedEbitda ?? 0;
-              const denominator = (annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0);
+              const dscr2025Calc = (financials2025?.adjustedEbitda ?? 0) /
+                ((annualDebtService['2025'] ?? dscr2025?.debtService ?? 0) + (annualizedLoanPayments['2025'] ?? safeLoanInfo?.annualizedLoan ?? 0));
+              const numerator = financials2025?.adjustedEbitda ?? 0;
+              const denominator = (annualDebtService['2025'] ?? dscr2025?.debtService ?? 0) + (annualizedLoanPayments['2025'] ?? safeLoanInfo?.annualizedLoan ?? 0);
               return (
                 <>
-                  <DscrGauge value={dscr2024Calc} />
-                  {Number.isFinite(dscr2024Calc) && denominator > 0 ? (
+                  <DscrGauge value={dscr2025Calc} />
+                  {Number.isFinite(dscr2025Calc) && denominator > 0 ? (
                     <div className="mt-2 flex flex-col items-center">
                       <div className="border-l-4 border-blue-400 bg-blue-50 p-2 w-full">
                         <span className="block text-sm text-blue-900 font-semibold mb-1">How We Calculated Your Score:</span>
@@ -396,7 +353,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                             <span className="mx-2 text-blue-700 font-bold">÷</span>
                             {formatCurrency(denominator)}
                             <span className="mx-2 text-blue-700 font-bold">=</span>
-                            <span className="font-bold text-blue-900">{dscr2024Calc.toFixed(2)}</span>
+                            <span className="font-bold text-blue-900">{dscr2025Calc.toFixed(2)}</span>
                           </span>
                         </span>
                       </div>
@@ -416,10 +373,10 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
             </p>
             {/* Use calculated DSCR for conditional rendering */}
             {(() => {
-              const dscr2024Calc = (financials2024?.adjustedEbitda ?? 0) /
-                ((annualDebtService['2024'] ?? dscr2024?.debtService ?? 0) + (annualizedLoanPayments['2024'] ?? safeLoanInfo?.annualizedLoan ?? 0));
-              if (!Number.isFinite(dscr2024Calc)) return null;
-              if (dscr2024Calc >= 1.25) {
+              const dscr2025Calc = (financials2025?.adjustedEbitda ?? 0) /
+                ((annualDebtService['2025'] ?? dscr2025?.debtService ?? 0) + (annualizedLoanPayments['2025'] ?? safeLoanInfo?.annualizedLoan ?? 0));
+              if (!Number.isFinite(dscr2025Calc)) return null;
+              if (dscr2025Calc >= 1.25) {
                 return (
                   <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-4 text-gray-800 text-sm">
                     <div className="flex items-center mb-1">
@@ -436,7 +393,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                     <div className="text-green-800 font-semibold">✅ Bottom line: You’re in a great position to borrow — and possibly even refinance existing debt on better terms.</div>
                   </div>
                 );
-              } else if (dscr2024Calc >= 1.0) {
+              } else if (dscr2025Calc >= 1.0) {
                 return (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-4 text-gray-800 text-sm">
                     <div className="flex items-center mb-1">
@@ -454,7 +411,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                     <div className="text-yellow-800 font-semibold">⚠️ Recommendation: Focus on boosting cash flow and reducing non-essential debt to strengthen your future borrowing power.</div>
                   </div>
                 );
-              } else if (dscr2024Calc < 1.0) {
+              } else if (dscr2025Calc < 1.0) {
                 return (
                   <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded mb-4 text-gray-800 text-sm">
                     <div className="flex items-center mb-1">
@@ -491,50 +448,45 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
           <table className="w-full border-collapse border text-sm table-fixed">
             <colgroup>
               <col className="w-[30%]" />
-              {show2023 && <col className="w-[23.3%]" />}
               {show2024 && <col className="w-[23.3%]" />}
               {show2025 && <col className="w-[23.3%]" />}
+              {show2026 && <col className="w-[23.3%]" />}
             </colgroup>
             <thead>
               <tr className="bg-green-100">
                 <th className="border p-2 text-left"></th>
-                {show2023 && <th className="border p-2 text-center">2023</th>}
                 {show2024 && <th className="border p-2 text-center">2024</th>}
-                {show2025 && <th className="border p-2 text-center">{ytdColumnHeader}</th>}
+                {show2025 && <th className="border p-2 text-center">2025</th>}
+                {show2026 && <th className="border p-2 text-center">{ytdColumnHeader}</th>}
               </tr>
             </thead>
             <tbody>
             <tr>
               <td className="border p-2 text-left">Revenue (Sales)</td>
-              {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.revenue ?? 0)}</td>}
               {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.revenue ?? 0)}</td>}
-              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.revenue ?? 0)}</td>}
+              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.revenue ?? 0)}</td>}
+              {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.revenue ?? 0)}</td>}
             </tr>
             <tr>
               <td className="border p-2 text-left">Cost of Goods Sold (-)</td>
-              {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.cogs ?? 0)}</td>}
               {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.cogs ?? 0)}</td>}
-              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.cogs ?? 0)}</td>}
+              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.cogs ?? 0)}</td>}
+              {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.cogs ?? 0)}</td>}
             </tr>
             <tr className="font-semibold bg-gray-50">
               <td className="border p-2 text-left">Gross Profit</td>
-              {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.grossProfit ?? 0)}</td>}
               {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.grossProfit ?? 0)}</td>}
-              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.grossProfit ?? 0)}</td>}
+              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.grossProfit ?? 0)}</td>}
+              {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.grossProfit ?? 0)}</td>}
             </tr>
             <tr>
               <td className="border p-2 text-left">Operating Expenses (-)</td>
-              {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.operatingExpenses ?? 0)}</td>}
               {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.operatingExpenses ?? 0)}</td>}
-              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.operatingExpenses ?? 0)}</td>}
+              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.operatingExpenses ?? 0)}</td>}
+              {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.operatingExpenses ?? 0)}</td>}
             </tr>
             <tr className="font-semibold bg-gray-50">
               <td className="border p-2 text-left">Net Income</td>
-              {show2023 && (
-                <td className="border p-2 text-center">
-                  {formatCurrency(getSummary('2023')?.netIncome ?? 0)}
-                </td>
-              )}
               {show2024 && (
                 <td className="border p-2 text-center">
                   {formatCurrency(getSummary('2024')?.netIncome ?? 0)}
@@ -542,51 +494,56 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
               )}
               {show2025 && (
                 <td className="border p-2 text-center">
+                  {formatCurrency(getSummary('2025')?.netIncome ?? 0)}
+                </td>
+              )}
+              {show2026 && (
+                <td className="border p-2 text-center">
                   {formatCurrency(getSummary(ytdKey)?.netIncome ?? 0)}
                 </td>
               )}
             </tr>
             <tr>
               <td className="border p-2 text-left">Interest (+)</td>
-              {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.interest ?? 0)}</td>}
               {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.interest ?? 0)}</td>}
-              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.interest ?? 0)}</td>}
+              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.interest ?? 0)}</td>}
+              {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.interest ?? 0)}</td>}
             </tr>
             <tr>
               <td className="border p-2 text-left">Taxes (+)</td>
-              {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.taxes ?? 0)}</td>}
               {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.taxes ?? 0)}</td>}
-              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.taxes ?? 0)}</td>}
+              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.taxes ?? 0)}</td>}
+              {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.taxes ?? 0)}</td>}
             </tr>
             <tr>
               <td className="border p-2 text-left">Depreciation (+)</td>
-              {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.depreciation ?? 0)}</td>}
               {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.depreciation ?? 0)}</td>}
-              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.depreciation ?? 0)}</td>}
+              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.depreciation ?? 0)}</td>}
+              {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.depreciation ?? 0)}</td>}
             </tr>
             <tr>
               <td className="border p-2 text-left">Amortization (+)</td>
-              {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.amortization ?? 0)}</td>}
               {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.amortization ?? 0)}</td>}
-              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.amortization ?? 0)}</td>}
+              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.amortization ?? 0)}</td>}
+              {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.amortization ?? 0)}</td>}
             </tr>
             <tr className="font-bold bg-green-100">
               <td className="border p-2 text-left">EBITDA</td>
-              {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.ebitda ?? 0)}</td>}
               {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.ebitda ?? 0)}</td>}
-              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.ebitda ?? 0)}</td>}
+              {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.ebitda ?? 0)}</td>}
+              {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.ebitda ?? 0)}</td>}
             </tr>
             <tr>
   <td className="border p-2 text-left">Non-Recurring Income (-)</td>
-  {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.nonRecurringIncome ?? 0)}</td>}
   {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.nonRecurringIncome ?? 0)}</td>}
-  {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.nonRecurringIncome ?? 0)}</td>}
+  {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.nonRecurringIncome ?? 0)}</td>}
+  {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.nonRecurringIncome ?? 0)}</td>}
 </tr>
 <tr>
   <td className="border p-2 text-left">Non-Recurring Expenses (+)</td>
-  {show2023 && <td className="border p-2 text-center">{formatCurrency(getSummary('2023')?.nonRecurringExpenses ?? 0)}</td>}
   {show2024 && <td className="border p-2 text-center">{formatCurrency(getSummary('2024')?.nonRecurringExpenses ?? 0)}</td>}
-  {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.nonRecurringExpenses ?? 0)}</td>}
+  {show2025 && <td className="border p-2 text-center">{formatCurrency(getSummary('2025')?.nonRecurringExpenses ?? 0)}</td>}
+  {show2026 && <td className="border p-2 text-center">{formatCurrency(getSummary(ytdKey)?.nonRecurringExpenses ?? 0)}</td>}
 </tr>
 <tr className="font-bold bg-green-200">
   <td className="border p-2 flex items-center gap-2">
@@ -608,13 +565,6 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
       </Tooltip>
     </TooltipProvider>
   </td>
-  {show2023 && (
-    <td className="border p-2 text-center font-bold">
-      {formatCurrency((getSummary('2023')?.ebitda ?? 0)
-        - (getSummary('2023')?.nonRecurringIncome ?? 0)
-        + (getSummary('2023')?.nonRecurringExpenses ?? 0))}
-    </td>
-  )}
   {show2024 && (
     <td className="border p-2 text-center font-bold">
       {formatCurrency((getSummary('2024')?.ebitda ?? 0)
@@ -623,6 +573,13 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
     </td>
   )}
   {show2025 && (
+    <td className="border p-2 text-center font-bold">
+      {formatCurrency((getSummary('2025')?.ebitda ?? 0)
+        - (getSummary('2025')?.nonRecurringIncome ?? 0)
+        + (getSummary('2025')?.nonRecurringExpenses ?? 0))}
+    </td>
+  )}
+  {show2026 && (
     <td className="border p-2 text-center font-bold">
       {formatCurrency((getSummary(ytdKey)?.ebitda ?? 0)
         - (getSummary(ytdKey)?.nonRecurringIncome ?? 0)
@@ -689,211 +646,11 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
       </section>
       <div className="page-break" />
       {/* --- Business Debt Summary --- */}
-      <section className="mb-8 print:mb-4">
-        <h3 className="text-2xl font-bold text-center mb-2 border-b pb-2 tracking-wide print:text-base print:pb-1 print:mb-2">BUSINESS DEBT SUMMARY</h3>
-        <div className="text-center text-base text-gray-700 mb-6 print:text-sm">
-          <div><span className="font-semibold">Prepared for:</span> {safeLoanInfo.businessName || '__________'}</div>
-          <div><span className="font-semibold">As of:</span> {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-        </div>
-        {/* --- Debt Service & Credit Metrics Summary --- */}
-        <div className="mt-6">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-blue-50">
-                <th className="border p-2 text-center font-semibold">
-                  <span className="flex items-center gap-0.5">
-                    Monthly Debt Service
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="ml-1 cursor-pointer text-blue-500">&#9432;</span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          Total of all monthly debt payments. Key for banks to assess if your business can handle new loan payments.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </span>
-                </th>
-                <th className="border p-2 text-center font-semibold">
-                  <span className="flex items-center gap-0.5">
-                    Annual Debt Service
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="ml-1 cursor-pointer text-blue-500">&#9432;</span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          Total yearly debt payments. Used to calculate DSCR and assess annual repayment burden.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </span>
-                </th>
-                <th className="border p-2 text-center font-semibold">
-                  <span className="flex items-center gap-0.5">
-                    Total Credit Balance
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="ml-1 cursor-pointer text-blue-500">&#9432;</span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          Sum of all outstanding balances on credit lines/cards. High balances can signal risk to lenders.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </span>
-                </th>
-                <th className="border p-2 text-center font-semibold">
-                  <span className="flex items-center gap-0.5">
-                    Total Credit Limit
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="ml-1 cursor-pointer text-blue-500">&#9432;</span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          Combined credit limit for all credit cards/lines. Shows your available borrowing capacity.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </span>
-                </th>
-                <th className="border p-2 text-center font-semibold">
-                  <span className="flex items-center gap-0.5">
-                    Credit Utilization Rate
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="ml-1 cursor-pointer text-blue-500">&#9432;</span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          Ratio of your balances to your limits. Lower is better; high utilization can hurt loan eligibility.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="bg-blue-100 font-semibold">
-                <td className="border p-2 text-center text-lg">{formatCurrency(totalMonthlyPayment)}</td>
-                <td className="border p-2 text-center text-lg">{formatCurrency(totalAnnualPayment)}</td>
-                <td className="border p-2 text-center text-lg">{formatCurrency(totalCreditBalance)}</td>
-                <td className="border p-2 text-center text-lg">{formatCurrency(totalCreditLimit)}</td>
-                <td className="border p-2 text-center text-lg">{totalCreditLimit > 0 ? formatPercentage(creditUtilization, 1) : 'N/A'}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        {/* Add spacing between metrics and debt entries */}
-        <div className="mb-8" />
-        <div className="flex flex-col gap-6 print:gap-4">
-        {/* Render category tables */}
-          {/* Render category tables */}
-          {[
-            { key: 'REAL_ESTATE', label: 'REAL ESTATE', columns: ['Property Address', 'Monthly Payment', 'Original Loan Amount', 'Outstanding Balance', 'Notes'] },
-            { key: 'CREDIT_CARD', label: 'CREDIT CARD', columns: ['Name of Lender', 'Monthly Payment', 'Credit Limit', 'Outstanding Balance', 'Notes'] },
-            { key: 'VEHICLE_EQUIPMENT', label: 'VEHICLE / EQUIPMENT', columns: ['Description', 'Monthly Payment', 'Original Loan Amount', 'Outstanding Balance', 'Notes'] },
-            { key: 'LINE_OF_CREDIT', label: 'LINE OF CREDIT', columns: ['Name of Lender', 'Monthly Payment', 'Credit Limit', 'Outstanding Balance', 'Notes'] },
-            { key: 'OTHER', label: 'OTHER DEBT', columns: ['Description', 'Monthly Payment', 'Original Loan Amount', 'Outstanding Balance', 'Notes'] },
-          ].map(({ key, label, columns }) => {
-            const debtsInCat = groupedDebts[key] || [];
-            if (debtsInCat.length === 0) return null;
-            return (
-              <div key={key}>
-                <div className="font-semibold text-blue-900 bg-blue-50 px-2 py-1 rounded-t border border-b-0">{label}</div>
-                <table className="w-full border-collapse border text-sm md:text-base">
-                  <colgroup>
-  <col className="w-[26%]" />
-  <col className="w-[11%]" />
-  <col className="w-[14%]" />
-  <col className="w-[14%]" />
-  <col className="w-[21%]" />
-</colgroup>
-                  <thead>
-                    <tr className="bg-gray-100">
-                      {columns.map((col, idx) => {
-                        // Center columns 1, 2, 3 (Monthly Payment, Original Loan Amount/Credit Limit, Outstanding Balance)
-                        const centerCols = [1, 2, 3];
-                        return (
-                          <th
-                            key={col}
-                            className={`border p-0.5 font-semibold ${centerCols.includes(idx) ? 'text-center' : 'text-left'}`}
-                          >
-                            {col === 'Outstanding Balance' ? (
-                              <span>Outstanding<br/>Balance</span>
-                            ) : col === 'Original Loan Amount' ? (
-                              <span>Original<br/>Loan Amount</span>
-                            ) : col === 'Credit Limit' ? (
-                              <span>Credit<br/>Limit</span>
-                            ) : col}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {debtsInCat.map((debt, i) => (
-                      <tr key={i} className={i % 2 ? 'bg-gray-50' : ''}>
-                        <td className="border p-0.5">{debt.lenderName ?? debt.description ?? debt.debtType ?? '-'}</td>
-                        <td className="border p-0.5 text-center">{formatCurrency(Number(debt.monthlyPayment))}</td>
-                        <td className="border p-0.5 text-center">{key.includes('CREDIT') ? formatCurrency(Number(debt.creditLimit)) : formatCurrency(Number(debt.originalLoanAmount))}</td>
-                        <td className="border p-0.5 text-center">{formatCurrency(Number(debt.outstandingBalance))}</td>
-                        <td className="border p-0.5">{debt.notes ?? '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })}
-        </div>
-        {/* --- Category Summary Table --- */}
-        <div className="mt-8 max-w-xl mx-auto">
-          <table className="w-full border-collapse text-sm">
-            <colgroup>
-              <col className="w-[48%]" />
-              <col className="w-[26%]" />
-              <col className="w-[26%]" />
-            </colgroup>
-            <thead>
-              <tr className="bg-blue-100">
-                <th className="border p-2 text-left">Business Debt</th>
-                <th className="border p-2 text-center">Monthly Payment</th>
-                <th className="border p-2 text-center">Annual Payment</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { label: 'Total Real Estate', key: 'REAL_ESTATE' },
-                { label: 'Total Credit Card', key: 'CREDIT_CARD' },
-                { label: 'Total Vehicle / Equipment', key: 'VEHICLE_EQUIPMENT' },
-                { label: 'Total Line of Credit', key: 'LINE_OF_CREDIT' },
-                { label: 'Total Other Debt', key: 'OTHER' },
-              ].map(({ label, key }) => {
-                const debtsInCat = groupedDebts[key] || [];
-                const monthly = debtsInCat.reduce((sum, d) => sum + Number(d.monthlyPayment ?? 0), 0);
-                const annual = monthly * 12;
-                return (
-                  <tr key={key}>
-                    <td className="border p-2 text-left">{label}</td>
-                    <td className="border p-2 text-center">{formatCurrency(monthly)}</td>
-                    <td className="border p-2 text-center">{formatCurrency(annual)}</td>
-                  </tr>
-                );
-              })}
-              {/* Final total row */}
-              <tr className="bg-orange-100 font-bold">
-                <td className="border p-2 text-left">Total Existing Debt:</td>
-                <td className="border p-2 text-center font-bold">{formatCurrency(totalMonthlyPayment)}</td>
-                <td className="border p-2 text-center font-bold">{formatCurrency(totalAnnualPayment)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <section className="mb-8 print:mb-0">
+        <CashFlowBusinessDebtSummaryTemplate
+          debts={safeDebts}
+          businessName={safeLoanInfo.businessName}
+        />
       </section>
     </div>
   );

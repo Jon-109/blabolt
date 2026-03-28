@@ -32,13 +32,6 @@ export const createClient = () => {
     
     // Log successful client creation
     console.log('Supabase client created successfully');
-    
-    // Force refresh auth on client init
-    setTimeout(async () => {
-      const { data } = await client.auth.getSession();
-      console.log('Initial auth check:', !!data.session);
-    }, 100);
-    
     return client;
   } catch (error) {
     console.error('Error creating Supabase client:', error)
