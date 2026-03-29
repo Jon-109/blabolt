@@ -197,9 +197,9 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       borderClassName: 'border-rose-200',
       panelClassName: 'bg-rose-50/70',
       summary:
-        'that is a weak result for this request. The payment looks too high for the business’s monthly cash flow, and on this quick check the business does not appear to have enough room to carry it.',
+        'This payment looks too heavy for the cash flow entered here. The business is not showing enough monthly income to support the full debt load with any real margin.',
       lenderRead:
-        'at this level, most lenders would see the request as unaffordable unless the amount is reduced, the payment is lowered, or the business shows stronger cash flow elsewhere in the file. This quick DSCR also does not include possible income adjustments that can sometimes improve the result.',
+        'Most lenders would read this as a decline-or-restructure situation unless the request gets smaller, the payment gets lower, or a fuller review shows stronger usable cash flow through valid add-backs or structure changes.',
     },
     nextStep: {
       title: 'Strengthen The File Before You Apply',
@@ -254,9 +254,9 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       borderClassName: 'border-orange-200',
       panelClassName: 'bg-orange-50/70',
       summary:
-        'that is a very tight result. The business may be able to cover the payment on paper, but there is almost no room for a slower month or an unexpected expense.',
+        'This payment is technically covered on paper, but only barely. One softer month, unexpected expense, or lender adjustment could wipe out the cushion.',
       lenderRead:
-        'at this level, most lenders would still see the request as too tight. Even if the business nearly covers the payment, the deal can still feel risky because there is not much room for error. A fuller review can sometimes improve the DSCR if there are valid items that should be added back to income.',
+        'Most lenders would still call this tight because there is almost no room for error. This is often a range where a deeper analysis matters before you package or apply.',
     },
     nextStep: {
       title: 'Get The Structure Tighter First',
@@ -310,9 +310,9 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       borderClassName: 'border-amber-200',
       panelClassName: 'bg-amber-50/70',
       summary:
-        'that is a borderline result. The business is getting closer to a comfortable level, but the request still looks a little high for the current cash flow.',
+        'This request looks close to workable, but it is still tighter than most lenders prefer. The business is covering the payment, just not with a very comfortable cushion yet.',
       lenderRead:
-        'at this level, a lender may see potential, but would often want a lower request, a lower payment, or stronger file support before feeling comfortable moving forward. This is also the range where a fuller review can make a meaningful difference if there are valid items that should be added back to income.',
+        'A lender may see potential here, but often wants a smaller request, lower payment, or stronger overall file before feeling comfortable moving forward. This is one of the most important ranges for a lender-style review.',
     },
     nextStep: {
       title: 'You May Be Close, But Not Quite Ready',
@@ -367,9 +367,9 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       borderClassName: 'border-emerald-200',
       panelClassName: 'bg-emerald-50/80',
       summary:
-        'that is a good starting result. The business appears to bring in enough income each month to cover the debt payments with some room left over.',
+        'This request looks reasonably supportable on a first pass. The business appears to have enough monthly income to cover debt and still keep a modest cushion.',
       lenderRead:
-        'at this level, a lender may view the payment as affordable at a first look. Approval would still depend on credit, tax returns, bank statements, and the full strength of the file.',
+        'Many lenders would view this as a workable starting point, but they will still test the consistency of the cash flow, credit quality, tax returns, and the overall story of the file.',
     },
     nextStep: {
       title: 'You Look Close To Packaging-Ready',
@@ -384,8 +384,8 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       serviceDescription:
         'Turn this high-level result into a polished lender-ready file with the right documents, summaries, and story.',
       serviceSupportLine:
-        'Best for businesses that look financeable and want to present the request professionally.',
-      primaryCtaLabel: 'Explore Loan Packaging',
+        'Best for businesses that look financeable and want lender-ready packaging, with brokering available if they want help approaching lenders.',
+      primaryCtaLabel: 'Explore Loan Packaging Or Brokering',
       primaryCtaKind: 'packaging',
     },
     card: {
@@ -424,9 +424,9 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       borderClassName: 'border-teal-200',
       panelClassName: 'bg-teal-50/80',
       summary:
-        'that is a strong result. The business appears to have a good amount of room above the required debt payments, which makes the request look more comfortable.',
+        'This request looks comfortably supportable based on the numbers entered. The business appears to have meaningful room above the required debt payments.',
       lenderRead:
-        'at this level, a lender will often read this as a business that can handle the payment with solid room to spare. If the rest of the file is consistent, this usually supports a stronger first impression.',
+        'A lender will often read this as a stronger repayment position, especially if the documents and business profile tell the same story. Good packaging can help that strength come through clearly.',
     },
     nextStep: {
       title: 'You Look Ready To Package This Well',
@@ -440,8 +440,8 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       serviceTitle: 'Package The File Before You Apply',
       serviceDescription:
         'A strong DSCR deserves a polished submission. We help organize the numbers, documents, and narrative the way lenders want to see them.',
-      serviceSupportLine: 'Best for borrowers who look solid on paper and want to maximize approval odds.',
-      primaryCtaLabel: 'Explore Loan Packaging',
+      serviceSupportLine: 'Best for borrowers who look solid on paper and want lender-ready packaging, with brokering available if they want help taking it to lenders.',
+      primaryCtaLabel: 'Explore Loan Packaging Or Brokering',
       primaryCtaKind: 'packaging',
     },
     card: {
@@ -479,9 +479,9 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       borderClassName: 'border-cyan-200',
       panelClassName: 'bg-cyan-50/80',
       summary:
-        'that is an excellent result. The business appears to have a wide gap between its monthly income and its required debt payments.',
+        'This request looks very comfortably supportable from a cash flow standpoint. The business appears to have a wide margin between income and required debt payments.',
       lenderRead:
-        'at this level, many lenders would read this as a strong sign that the business can comfortably afford the payment. DSCR alone does not decide approval, but it can make the request easier to support if the rest of the file looks clean.',
+        'Many lenders would see this as a strong repayment signal. It does not guarantee approval, but it can make the request easier to support when the rest of the file is clean.',
     },
     nextStep: {
       title: 'You Are In A Strong Position To Package',
@@ -495,8 +495,8 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       serviceTitle: 'Turn A Strong File Into A Lender-Ready Package',
       serviceDescription:
         'If the business is performing this well, the next smart move is packaging the request cleanly so the strength of the file comes through.',
-      serviceSupportLine: 'Best for borrowers who appear ready and want a more polished, lender-facing package.',
-      primaryCtaLabel: 'Explore Loan Packaging',
+      serviceSupportLine: 'Best for borrowers who appear ready and want lender-ready packaging, with brokering available if they want help carrying the file to lenders.',
+      primaryCtaLabel: 'Explore Loan Packaging Or Brokering',
       primaryCtaKind: 'packaging',
     },
     card: {

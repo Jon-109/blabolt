@@ -32,6 +32,7 @@ import {
   DSCR_GAUGE_MAX,
   getDscrBand,
   loanPurposes,
+  type DscrBandDefinition,
   type LoanPurpose,
 } from '@/lib/financial/dscr';
 import {
@@ -72,6 +73,27 @@ const formatCurrency = (value: number): string => {
 
 const parseCurrencyInput = (value: string): number => {
   return parseInt(value.replace(/[$,]/g, '')) || 0;
+};
+
+const formatRatioDollarAmount = (value: number): string => {
+  return `$${value.toFixed(2)}`;
+};
+
+const getMeaningHeadline = (bandId: DscrBandDefinition['id']): string => {
+  switch (bandId) {
+    case 'needs-improvement':
+      return 'This payment looks too heavy right now.';
+    case 'very-tight':
+      return 'This payment is only barely covered.';
+    case 'borderline':
+      return 'This payment looks close, but still tight.';
+    case 'solid-start':
+      return 'This payment looks reasonably supportable.';
+    case 'strong-position':
+      return 'This payment looks comfortably supportable.';
+    case 'excellent-cushion':
+      return 'This payment looks very comfortably supportable.';
+  }
 };
 
 const loanPurposeMeta: Record<string, { icon: LucideIcon; eyebrow: string }> = {
@@ -179,7 +201,7 @@ export const DscrGauge: React.FC<{ value: number }> = ({ value }) => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
+        <div className="hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right sm:block">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Bank Benchmark</p>
           <p className="mt-1 text-lg font-bold text-slate-950">{DSCR_BENCHMARK.toFixed(2)}x</p>
         </div>
@@ -588,8 +610,19 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   const dscrBand = dscr !== null ? getDscrBand(dscr) : null;
   const dscrStatus = dscrBand?.quickStatus ?? null;
   const nextStepConfig = dscrBand?.nextStep ?? null;
-  const dscrDisplay = dscr !== null ? dscr.toFixed(2) : '';
+  const debtNeededPerDollarEarned = dscr !== null && dscr > 0 ? 1 / dscr : null;
+  const debtLeftoverPerDollarEarned = dscr !== null && dscr > 0 ? Math.max(1 - (1 / dscr), 0) : null;
+  const meaningHeadline = dscrBand ? getMeaningHeadline(dscrBand.id) : '';
+  const dollarTranslation =
+    debtNeededPerDollarEarned === null || dscr === null
+      ? ''
+      : dscr < 1
+        ? `For every $1.00 your business earns, about ${formatRatioDollarAmount(debtNeededPerDollarEarned)} is needed for debt payments. That means the debt load is running ahead of the cash flow supporting it.`
+        : `For every $1.00 your business earns, about ${formatRatioDollarAmount(debtNeededPerDollarEarned)} goes toward debt payments, leaving about ${formatRatioDollarAmount(debtLeftoverPerDollarEarned ?? 0)} after debt.`;
   const isBelowBenchmark = dscr !== null && dscr < DSCR_BENCHMARK;
+  const isBelowOneDscr = dscr !== null && dscr < 1;
+  const shouldShowIncomeAdjustmentCallout = isBelowBenchmark && !isBelowOneDscr;
+  const shouldShowBenchmarkTargetBox = isBelowBenchmark && !isBelowOneDscr;
   const shouldShowCashFlowAnalysisUpsell = dscrBand?.showExpandedAnalysisUpsell ?? false;
   const defaultPurposeMeta = loanPurposeMeta['Working Capital']!;
   const selectedPurposeMeta = loanPurposeMeta[loanPurpose] ?? defaultPurposeMeta;
@@ -633,8 +666,8 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
     trackCtaClick({
       page_template: analyticsPageTemplate,
       section_id: sectionId,
-      cta_id: 'explore_loan_packaging',
-      cta_label: nextStepConfig?.primaryCtaLabel ?? 'Explore Loan Packaging',
+      cta_id: 'explore_loan_services',
+      cta_label: nextStepConfig?.primaryCtaLabel ?? 'Explore Loan Packaging Or Brokering',
       destination_url: '/loan-services',
     });
     router.push('/loan-services');
@@ -972,7 +1005,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                           Based on a requested loan of {formatCurrency(principal)} for {selectedPurposeTitle}, your current cash flow produces:
                         </p>
                       </div>
-                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${dscrStatus.badgeClassName}`}>
+                      <span className={`hidden rounded-full border px-3 py-1 text-xs font-semibold sm:inline-flex ${dscrStatus.badgeClassName}`}>
                         {dscrStatus.label}
                       </span>
                     </div>
@@ -982,27 +1015,29 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     <div className={`border-b border-slate-200/80 p-4 sm:p-5 xl:border-b-0 xl:border-r ${dscrStatus.panelClassName}`}>
                       <DscrGauge value={dscr} />
 
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-white/80 bg-white/90 p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Monthly Income</p>
-                          <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-emerald-700">{formatCurrency(values.monthlyNetIncome)}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-2">
+                        <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-3 sm:p-4">
+                          <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">Monthly Income</p>
+                          <p className="mt-2 break-words text-xl font-black tracking-[-0.04em] text-emerald-700 sm:text-2xl">{formatCurrency(values.monthlyNetIncome)}</p>
                         </div>
-                        <div className="rounded-2xl border border-white/80 bg-white/90 p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Monthly Debt Service</p>
-                          <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-rose-700">{formatCurrency(totalProjectedDebtService)}</p>
+                        <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-3 sm:p-4">
+                          <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">Monthly Debt Service</p>
+                          <p className="mt-2 break-words text-xl font-black tracking-[-0.04em] text-rose-700 sm:text-2xl">{formatCurrency(totalProjectedDebtService)}</p>
                         </div>
                       </div>
 
                       <div className="mt-3 rounded-2xl border border-white/80 bg-white/90 p-4">
                         <div className="mt-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">What Your DSCR Suggests</p>
-                          <p className="mt-1 text-base font-semibold text-slate-950">Since your DSCR is {dscrDisplay}, {dscrStatus.summary}</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">What This Actually Means</p>
+                          <p className="mt-1 text-base font-semibold text-slate-950">{meaningHeadline}</p>
+                          <p className="mt-2 text-sm leading-6 text-slate-700">{dollarTranslation}</p>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">{dscrStatus.summary}</p>
                         </div>
                         <div className="mt-3">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Lender Read</p>
-                          <p className="mt-1 text-sm leading-6 text-slate-600">At {dscrDisplay}, {dscrStatus.lenderRead}</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">How A Lender Will Likely Read It</p>
+                          <p className="mt-1 text-sm leading-6 text-slate-600">{dscrStatus.lenderRead}</p>
                         </div>
-                        {isBelowBenchmark && (
+                        {shouldShowIncomeAdjustmentCallout && (
                           <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-3">
                             <p className="text-sm leading-6 text-amber-950">
                               This quick check does not include every possible income adjustment. In the full cash flow analysis, we look for valid items that may increase the income used in your DSCR and improve the result.
@@ -1112,9 +1147,9 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                                 <p className="mt-1 text-sm font-semibold text-slate-950">{formatCurrency(principal)}</p>
                               )}
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <div className="rounded-2xl border border-white bg-white px-4 py-3">
-                                <p className="text-xs font-medium text-slate-500">{isEditingAssumptions ? 'Term (Months)' : 'Term'}</p>
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+                              <div className="min-w-0 rounded-2xl border border-white bg-white px-3 py-3 sm:px-4">
+                                <p className="text-[11px] font-medium leading-4 text-slate-500 sm:text-xs">{isEditingAssumptions ? 'Term (Months)' : 'Term'}</p>
                                 {isEditingAssumptions ? (
                                   <Select value={customTermMonths ? String(customTermMonths) : ''} onValueChange={handleTermSelectChange}>
                                     <SelectTrigger className="mt-2 h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm font-semibold text-slate-950 focus:border-slate-900 focus:ring-4 focus:ring-slate-200">
@@ -1136,8 +1171,8 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                                   <p className="mt-1 text-sm font-semibold text-slate-950">{selectedTerm} Months</p>
                                 )}
                               </div>
-                              <div className="rounded-2xl border border-white bg-white px-4 py-3">
-                                <p className="text-xs font-medium text-slate-500">{isEditingAssumptions ? 'Rate (%)' : 'Rate'}</p>
+                              <div className="min-w-0 rounded-2xl border border-white bg-white px-3 py-3 sm:px-4">
+                                <p className="text-[11px] font-medium leading-4 text-slate-500 sm:text-xs">{isEditingAssumptions ? 'Rate (%)' : 'Rate'}</p>
                                 {isEditingAssumptions ? (
                                   <div className="relative mt-2">
                                     <input
@@ -1154,9 +1189,12 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                                 )}
                               </div>
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <div className={`rounded-2xl border border-white bg-white px-4 py-3 ${isEditingAssumptions ? 'sm:col-span-2' : ''}`}>
-                                <p className="text-xs font-medium text-slate-500">{isEditingAssumptions ? 'Down Payment (%)' : 'Down Payment'}</p>
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+                              <div className={`min-w-0 rounded-2xl border border-white bg-white px-3 py-3 sm:px-4 ${isEditingAssumptions ? 'sm:col-span-2' : ''}`}>
+                                <p className="text-[11px] font-medium leading-4 text-slate-500 sm:text-xs">
+                                  <span className="sm:hidden">Down Payment %</span>
+                                  <span className="hidden sm:inline">{isEditingAssumptions ? 'Down Payment (%)' : 'Down Payment'}</span>
+                                </p>
                                 {isEditingAssumptions ? (
                                   <div className="relative mt-2">
                                     <input
@@ -1172,8 +1210,11 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                                   <p className="mt-1 text-sm font-semibold text-slate-950">{(selectedDownPaymentPct * 100).toFixed(2).replace(/\.00$/, '')}%</p>
                                 )}
                               </div>
-                              <div className={`rounded-2xl border border-white bg-white px-4 py-3 ${isEditingAssumptions ? 'sm:col-span-2' : ''}`}>
-                                <p className="text-xs font-medium text-slate-500">Down Payment Amount</p>
+                              <div className={`min-w-0 rounded-2xl border border-white bg-white px-3 py-3 sm:px-4 ${isEditingAssumptions ? 'sm:col-span-2' : ''}`}>
+                                <p className="text-[11px] font-medium leading-4 text-slate-500 sm:text-xs">
+                                  <span className="sm:hidden">Down Payment $</span>
+                                  <span className="hidden sm:inline">Down Payment Amount</span>
+                                </p>
                                 {isEditingAssumptions ? (
                                   <div className="relative mt-2">
                                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">$</span>
@@ -1201,7 +1242,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         </div>
                       </div>
 
-                      {dscr < DSCR_BENCHMARK && (
+                      {shouldShowBenchmarkTargetBox && (
                         <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
@@ -1280,33 +1321,33 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   </section>
                 )}
 
-                {shouldShowCashFlowAnalysisUpsell && (
+                {nextStepConfig?.primaryCtaKind === 'analysis' && (
                   <section className="rounded-[2rem] border border-slate-200 bg-slate-950 p-4 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.8)] sm:p-5">
                     <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-semibold text-emerald-300">Start Here First</span>
+                          <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-semibold text-emerald-300">Best Next Move</span>
                           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-200">Bank-Level Analysis</span>
                           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-200">EBITDA Review</span>
                           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-200">DSCR Recheck</span>
                         </div>
-                        <h3 className="mt-3 text-2xl font-black tracking-[-0.04em] text-white">Run The Full Cash Flow Analysis</h3>
+                        <h3 className="mt-3 text-2xl font-black tracking-[-0.04em] text-white">{nextStepConfig.title}</h3>
                         <p className="mt-2 text-sm leading-6 text-slate-200">
-                          Before you package the request, we can show you the deeper bank-level view. We calculate EBITDA, review income adjustments, re-check DSCR, and show whether the deal really looks strong enough as-is.
+                          {nextStepConfig.description}
                         </p>
 
                         <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">See What The Bank Will Actually Focus On</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">Go beyond the quick estimate and see the repayment story a lender will care about most.</p>
+                            <p className="text-sm font-semibold text-white">See What A Lender Will Actually Focus On</p>
+                            <p className="mt-1.5 text-sm leading-6 text-slate-300">We move beyond the quick estimate and review the repayment story the way a lender is more likely to pressure-test it.</p>
                           </div>
                           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">Catch Income Adjustments The Quick Tool Misses</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">We review whether your numbers should be adjusted to show a more complete picture of the business.</p>
+                            <p className="text-sm font-semibold text-white">Catch Add-Backs Or Structure Issues Early</p>
+                            <p className="mt-1.5 text-sm leading-6 text-slate-300">If the request needs to be resized, restructured, or supported with valid income adjustments, it is better to learn that now.</p>
                           </div>
                           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                             <p className="text-sm font-semibold text-white">Know Whether You&apos;re Truly Ready</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">Leave with a clearer answer on whether to move forward, lower the request, or improve the structure first.</p>
+                            <p className="mt-1.5 text-sm leading-6 text-slate-300">Leave with a clearer answer on whether to move forward, lower the request, or improve the structure before packaging or applying.</p>
                           </div>
                           <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -1319,15 +1360,19 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                       </div>
 
                       <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Why It Helps</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Why Start Here</p>
                         <div className="mt-3 space-y-2.5">
                           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">Confirms The Real Strength Of The Deal</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">You can see whether your current request still makes sense once the numbers are reviewed more like a bank would review them.</p>
+                            <p className="text-sm font-semibold text-white">This Keeps You From Guessing</p>
+                            <p className="mt-1.5 text-sm leading-6 text-slate-300">Instead of wondering whether this result is close enough, you get a clearer lender-style read on whether the request actually holds up.</p>
                           </div>
                           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">Helps You Avoid Packaging Too Early</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">If something needs to change first, it is better to find that out here than after building the package.</p>
+                            <p className="text-sm font-semibold text-white">It Can Save You From Packaging Too Early</p>
+                            <p className="mt-1.5 text-sm leading-6 text-slate-300">If something needs to change first, it is better to find that out here than after spending time and money preparing the file.</p>
+                          </div>
+                          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                            <p className="text-sm font-semibold text-white">If You Still Want To See The Loan-Service Path</p>
+                            <p className="mt-1.5 text-sm leading-6 text-slate-300">Loan packaging organizes the file and brokering can help carry a strong request into lender conversations, but this analysis is usually the smarter first move at your current range.</p>
                           </div>
                         </div>
                         <Button
@@ -1338,19 +1383,27 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         >
                           Start Comprehensive Analysis
                         </Button>
+                        <Button
+                          className="mt-2.5 h-11 w-full rounded-2xl border border-white/15 bg-white/5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                          size="lg"
+                          onClick={() => handleExploreLoanPackaging('calculator_analysis_secondary_loan_services')}
+                          id="dscr-calc-cta-loan-services-secondary"
+                        >
+                          Explore Loan Packaging Or Brokering
+                        </Button>
                         <p className="mt-2.5 text-center text-xs leading-5 text-slate-400">
-                          Best for borrowers who want a clearer bank-level read before packaging or applying.
+                          Best for borrowers who need a clearer lender-style answer before deciding whether to package, broker, resize, or wait.
                         </p>
                       </div>
                     </div>
                   </section>
                 )}
 
-                {dscr >= DSCR_BENCHMARK && nextStepConfig && (
+                {nextStepConfig?.primaryCtaKind === 'packaging' && (
                   <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.76)_0%,rgba(255,255,255,1)_44%,rgba(239,246,255,0.9)_100%)] shadow-[0_24px_60px_-42px_rgba(15,23,42,0.35)]">
                     <div className="grid gap-0 xl:grid-cols-[0.9fr_1.1fr]">
                       <div className="border-b border-slate-200/80 p-4 sm:p-5 xl:border-b-0 xl:border-r">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">{nextStepConfig.serviceEyebrow}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Best Next Move</p>
                         <h3 className="mt-2 text-[1.65rem] font-black tracking-[-0.04em] text-slate-950">{nextStepConfig.title}</h3>
                         <p className="mt-2 text-sm leading-6 text-slate-700">
                           {nextStepConfig.description}
@@ -1385,8 +1438,8 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         <div className="rounded-[1.75rem] border border-emerald-200 bg-white/96 p-4 shadow-[0_24px_60px_-42px_rgba(16,185,129,0.4)]">
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{nextStepConfig.serviceEyebrow}</p>
-                              <h4 className="mt-1.5 text-[1.55rem] font-black tracking-[-0.04em] text-slate-950">{nextStepConfig.serviceTitle}</h4>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Loan Services Path</p>
+                              <h4 className="mt-1.5 text-[1.55rem] font-black tracking-[-0.04em] text-slate-950">Loan Packaging Or Brokering</h4>
                             </div>
                             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
                               Best When You&apos;re Ready To Apply
@@ -1394,18 +1447,23 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                           </div>
 
                           <p className="mt-3 text-sm leading-6 text-slate-700">
-                            {nextStepConfig.serviceDescription}
+                            Your DSCR suggests this request may be ready to move into lender preparation. We help turn the numbers into a cleaner lender-facing file, and if you want hands-on help beyond packaging, our brokering path can help carry a strong request into lender conversations.
                           </p>
 
                           <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                               <p className="text-sm font-semibold text-slate-950">Lender-Ready Package</p>
-                              <p className="mt-1.5 text-sm leading-6 text-slate-600">Organize the request, documents, summaries, and story into something you can present with confidence.</p>
+                              <p className="mt-1.5 text-sm leading-6 text-slate-600">We help organize the request, documents, debt summary, and story into something you can present with confidence.</p>
                             </div>
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                              <p className="text-sm font-semibold text-slate-950">Guidance That Moves The Deal Forward</p>
-                              <p className="mt-1.5 text-sm leading-6 text-slate-600">We help you present the file more professionally so lender conversations start from a stronger place.</p>
+                              <p className="text-sm font-semibold text-slate-950">Brokering When You Want More Support</p>
+                              <p className="mt-1.5 text-sm leading-6 text-slate-600">If you want help beyond the package, brokering can help move a strong file into real lender conversations.</p>
                             </div>
+                          </div>
+
+                          <div className="mt-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
+                            <p className="text-sm font-semibold text-slate-950">Why Borrowers Use Us</p>
+                            <p className="mt-1.5 text-sm leading-6 text-slate-700">We stay focused on how the request reads to a lender, not just on filling out forms. That means clearer numbers, cleaner presentation, and a more useful path from “I think I qualify” to “here is a file I can actually send out.”</p>
                           </div>
 
                           <Button
@@ -1416,6 +1474,16 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                           >
                             {nextStepConfig.primaryCtaLabel}
                           </Button>
+                          {shouldShowCashFlowAnalysisUpsell && (
+                            <Button
+                              className="mt-2.5 h-11 w-full rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50"
+                              size="lg"
+                              onClick={() => handleStartComprehensiveAnalysis('calculator_packaging_secondary_analysis')}
+                              id="dscr-calc-cta-secondary-analysis"
+                            >
+                              Validate With Comprehensive Analysis First
+                            </Button>
+                          )}
                           <p className="mt-2.5 text-center text-xs leading-5 text-slate-500">{nextStepConfig.serviceSupportLine}</p>
                         </div>
                       </div>
