@@ -203,6 +203,30 @@ function StepRail() {
   );
 }
 
+function StepRailMobile() {
+  return (
+    <div className="grid grid-cols-4 overflow-hidden border-y border-slate-200 bg-white/95 shadow-sm">
+      {EXPLAINER_SCENES.map((scene, index) => (
+        <div
+          key={scene.id}
+          className={`min-w-0 px-2 py-3 text-center ${index < EXPLAINER_SCENES.length - 1 ? 'border-r border-slate-200' : ''}`}
+        >
+          <span
+            className="mx-auto block h-2 w-2 rounded-full"
+            style={{ backgroundColor: scene.accent }}
+          />
+          <p className="mt-1 text-[0.54rem] font-black uppercase tracking-[0.14em] text-slate-500">
+            {scene.eyebrow}
+          </p>
+          <p className="mt-1 text-[0.82rem] font-black leading-tight text-slate-950">
+            {scene.boxTitle}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DashboardDesktopMarkup() {
   return (
     <div
@@ -1050,7 +1074,7 @@ function DesktopExplainerSvg() {
     <svg
       viewBox="0 0 1380 1000"
       aria-hidden="true"
-      className="loan-packaging-explainer-svg hidden w-full md:block"
+      className="loan-packaging-explainer-svg block h-auto w-full"
     >
       <defs>
         <linearGradient id={accentGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -1090,46 +1114,12 @@ function DesktopExplainerSvg() {
   );
 }
 
-function MobileExplainerSvg() {
-  const idPrefix = useId().replace(/:/g, '');
-  const shellShadowId = `${idPrefix}-mobile-shadow`;
-
-  return (
-    <svg
-      viewBox="0 0 430 1040"
-      aria-hidden="true"
-      className="loan-packaging-explainer-svg block w-full md:hidden"
-    >
-      <defs>
-        <filter id={shellShadowId} x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="24" stdDeviation="24" floodColor="#0f172a" floodOpacity="0.18" />
-        </filter>
-      </defs>
-
-      <rect width="430" height="1040" rx="36" fill="#f8fafc" />
-      <circle cx="68" cy="96" r="62" fill="#cffafe" opacity="0.9" className="lpe-float-slow" />
-      <circle cx="366" cy="140" r="70" fill="#dbeafe" opacity="0.9" className="lpe-float-reverse" />
-      <circle cx="340" cy="930" r="70" fill="#e0f2fe" opacity="0.8" className="lpe-float-slow" />
-
-      <g filter={`url(#${shellShadowId})`}>
-        <rect x="38" y="86" width="354" height="934" rx="42" fill="#0f172a" />
-        <rect x="50" y="102" width="330" height="902" rx="34" fill="#ffffff" />
-        <rect x="165" y="102" width="100" height="10" rx="5" fill="#cbd5e1" />
-        <foreignObject x="56" y="130" width="318" height="850">
-          <DashboardMobileMarkup />
-        </foreignObject>
-      </g>
-
-    </svg>
-  );
-}
-
 export default function LoanPackagingExplainer() {
   return (
     <section className="bg-white py-12 sm:py-16" data-reveal>
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="home-reveal overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef6ff_46%,#ffffff_100%)] p-5 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.32)] sm:p-7 lg:p-8">
-          <div className="mx-auto max-w-5xl text-center">
+        <div className="home-reveal overflow-visible rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef6ff_46%,#ffffff_100%)] p-5 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.32)] sm:overflow-hidden sm:p-7 lg:p-8">
+          <div className="mx-auto max-w-5xl px-0 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-[0.68rem] font-bold uppercase tracking-[0.22em] text-cyan-900">
               <Workflow className="h-4 w-4" />
               See How Loan Packaging Works
@@ -1145,14 +1135,22 @@ export default function LoanPackagingExplainer() {
             </p>
           </div>
 
-          <div className="relative mt-8">
+          <div className="mt-8 sm:hidden">
+            <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2">
+              <StepRailMobile />
+            </div>
+            <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2">
+              <DesktopExplainerSvg />
+            </div>
+          </div>
+
+          <div className="relative mt-8 hidden sm:block">
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-1 sm:px-2">
               <StepRail />
             </div>
             <div className="pointer-events-none absolute inset-x-8 top-8 h-28 rounded-full bg-cyan-300/20 blur-3xl" />
             <div className="pointer-events-none absolute bottom-10 right-6 h-36 w-36 rounded-full bg-sky-300/20 blur-3xl" />
             <DesktopExplainerSvg />
-            <MobileExplainerSvg />
           </div>
 
           <div className="mt-8 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
