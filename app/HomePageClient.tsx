@@ -345,8 +345,8 @@ function HomeContent() {
         <div className="pointer-events-none absolute right-[-5rem] top-16 h-80 w-80 rounded-full bg-amber-300/[0.14] blur-3xl home-parallax-soft-reverse" />
         <div className="pointer-events-none absolute left-1/2 top-1/3 h-56 w-56 -translate-x-1/2 rounded-full bg-sky-400/10 blur-3xl home-float" />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-8 pt-8 sm:px-6 sm:pb-12 sm:pt-12 md:pb-14 md:pt-14">
-          <div className="mx-auto flex max-w-[52rem] flex-col items-center text-center">
+        <div className="relative mx-auto max-w-7xl px-4 pb-4 pt-8 sm:px-6 sm:pb-12 sm:pt-12 md:pb-14 md:pt-14">
+          <div className="mx-auto flex max-w-[52rem] flex-col items-center text-center lg:max-w-[76rem]">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.16] bg-white/[0.08] px-3 py-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-slate-100 backdrop-blur-sm sm:px-4 sm:py-2 sm:text-xs">
                 <ShieldCheck className="h-4 w-4 text-cyan-200" />
                 <span className="sm:hidden">Business loan guidance for owners</span>
@@ -359,7 +359,7 @@ function HomeContent() {
               Get your business approved for funding, without the guesswork.
             </h1>
 
-            <p className="mt-3 max-w-none text-[12px] leading-4.5 text-slate-200 line-clamp-3 sm:mt-4 sm:max-w-3xl sm:text-lg sm:leading-8 sm:line-clamp-none">
+            <p className="mt-3 max-w-none text-[10.5px] leading-[0.95rem] text-slate-200 sm:mt-4 sm:max-w-5xl sm:text-lg sm:leading-8 lg:max-w-[64rem] xl:max-w-[70rem]">
               We help small business owners check repayment strength with a free DSCR calculator, organize their
               finances, build stronger loan packages, and move toward funding with clear, step-by-step guidance.
             </p>
