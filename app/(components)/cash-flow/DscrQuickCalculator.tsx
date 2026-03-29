@@ -61,6 +61,7 @@ interface DscrQuickCalculatorProps {
   initialValues?: DscrFormValues;
   onValuesChange?: (values: DscrFormValues) => void;
   embedded?: boolean;
+  compactMobileLayout?: boolean;
   analyticsPageTemplate?: string;
   analyticsPlacement?: string;
 }
@@ -152,9 +153,9 @@ const Tooltip: React.FC<{ text: string }> = ({ text }) => (
     <button
       type="button"
       aria-label="More information"
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-all duration-200 hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+      className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-all duration-200 hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 sm:h-8 sm:w-8"
     >
-      <Info className="h-4 w-4" />
+      <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
     </button>
     <div className="pointer-events-none absolute right-0 top-10 z-10 w-64 rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm leading-6 text-slate-100 opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 translate-y-1">
       {text}
@@ -220,7 +221,7 @@ export const DscrGauge: React.FC<{ value: number }> = ({ value }) => {
 };
 
 const InputField: React.FC<{
-  label: string;
+  label: React.ReactNode;
   name: string;
   placeholder: string;
   tooltip: string;
@@ -231,7 +232,25 @@ const InputField: React.FC<{
   required?: boolean;
   id?: string;
   icon: LucideIcon;
-}> = ({ label, name, placeholder, tooltip, description, errorMessage, value, onChange, required, id, icon: Icon }) => {
+  compact?: boolean;
+  hideDescriptionOnMobile?: boolean;
+  optimizeLabelMobile?: boolean;
+}> = ({
+  label,
+  name,
+  placeholder,
+  tooltip,
+  description,
+  errorMessage,
+  value,
+  onChange,
+  required,
+  id,
+  icon: Icon,
+  compact = false,
+  hideDescriptionOnMobile = false,
+  optimizeLabelMobile = false,
+}) => {
   const [displayValue, setDisplayValue] = React.useState(value ? value.toLocaleString('en-US') : '');
 
   React.useEffect(() => {
@@ -253,22 +272,53 @@ const InputField: React.FC<{
   };
 
   return (
-    <div className="rounded-[20px] border border-slate-200 bg-white p-3.5 shadow-[0_14px_45px_-36px_rgba(15,23,42,0.8)] transition-all duration-200 focus-within:-translate-y-0.5 focus-within:border-slate-900 focus-within:shadow-[0_24px_60px_-40px_rgba(15,23,42,0.75)]">
+    <div
+      className={`rounded-[20px] border border-slate-200 bg-white shadow-[0_14px_45px_-36px_rgba(15,23,42,0.8)] transition-all duration-200 focus-within:-translate-y-0.5 focus-within:border-slate-900 focus-within:shadow-[0_24px_60px_-40px_rgba(15,23,42,0.75)] ${
+        compact ? 'p-2.5 sm:p-3' : 'p-3 sm:p-3.5'
+      }`}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-            <Icon className="h-4 w-4" />
+          <div
+            className={`flex shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ${
+              compact
+                ? optimizeLabelMobile
+                  ? 'h-7 w-7 rounded-xl'
+                  : 'h-8 w-8'
+                : 'h-9 w-9'
+            }`}
+          >
+            <Icon
+              className={
+                compact
+                  ? optimizeLabelMobile
+                    ? 'h-3 w-3'
+                    : 'h-3.5 w-3.5'
+                  : 'h-4 w-4'
+              }
+            />
           </div>
-          <label htmlFor={id || name} className="truncate text-sm font-semibold tracking-[0.01em] text-slate-900">
+          <label
+            htmlFor={id || name}
+            className={`min-w-0 text-pretty font-semibold tracking-[0.01em] text-slate-900 ${
+              compact
+                ? optimizeLabelMobile
+                  ? 'text-[10px] leading-[0.82rem] sm:text-sm sm:leading-5'
+                  : 'text-[13px] leading-5 sm:text-sm'
+                : 'text-sm leading-5'
+            }`}
+          >
             {label}
             {required ? <span className="ml-1 text-emerald-600">*</span> : null}
           </label>
         </div>
         <Tooltip text={tooltip} />
       </div>
-      <p className="mt-2 text-xs leading-4.5 text-slate-500">{description}</p>
+      <p className={`mt-1.5 text-slate-500 ${compact ? 'text-[11px] leading-4 sm:text-xs sm:leading-4.5' : 'text-xs leading-4.5'} ${hideDescriptionOnMobile ? 'hidden sm:block' : ''}`}>
+        {description}
+      </p>
       <div className="relative">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-semibold text-slate-400">$</span>
+        <span className={`pointer-events-none absolute top-1/2 -translate-y-1/2 font-semibold text-slate-400 ${compact ? 'left-3 text-sm' : 'left-4 text-base'}`}>$</span>
         <input
           type="text"
           id={id || name}
@@ -279,7 +329,9 @@ const InputField: React.FC<{
           required={required}
           min={0}
           max={10000000}
-          className="mt-2 h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-9 pr-4 text-base font-semibold text-slate-900 shadow-inner shadow-slate-200/40 transition-all duration-200 placeholder:font-medium placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-4 focus:ring-slate-200"
+          className={`mt-1.5 w-full rounded-2xl border border-slate-200 bg-slate-50 font-semibold text-slate-900 shadow-inner shadow-slate-200/40 transition-all duration-200 placeholder:font-medium placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-4 focus:ring-slate-200 ${
+            compact ? 'h-10 pl-7 pr-3 text-sm sm:h-10 sm:pl-8 sm:text-[15px]' : 'h-11 pl-9 pr-4 text-base'
+          }`}
           inputMode="numeric"
           pattern="[0-9,]*"
         />
@@ -295,6 +347,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   initialValues,
   onValuesChange,
   embedded = false,
+  compactMobileLayout = false,
   analyticsPageTemplate = 'unknown_page',
   analyticsPlacement = embedded ? 'embedded' : 'standalone',
 }) => {
@@ -540,7 +593,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   const shouldShowCashFlowAnalysisUpsell = dscrBand?.showExpandedAnalysisUpsell ?? false;
   const defaultPurposeMeta = loanPurposeMeta['Working Capital']!;
   const selectedPurposeMeta = loanPurposeMeta[loanPurpose] ?? defaultPurposeMeta;
-  const selectedPurposeTitle = selectedPurpose?.title ?? 'Select Loan Purpose';
+  const selectedPurposeTitle = selectedPurpose?.title ?? 'Choose Loan Purpose';
   const selectedPurposeDescription = selectedPurpose?.description ?? 'Choose the option that best matches what you want the funds to do for your business.';
   const SelectedPurposeIcon = selectedPurposeMeta.icon;
   const benchmarkMonthlyCapacity = Math.max((values.monthlyNetIncome / DSCR_BENCHMARK) - totalMonthlyDebtPayments, 0);
@@ -563,6 +616,18 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   );
   const additionalCapacity = Math.max(maxLoanAmountAtBenchmark - principal, 0);
   const amountAboveBenchmarkTarget = Math.max(principal - maxLoanAmountAtBenchmark, 0);
+
+  const getDebtFieldMobileLabel = (fieldName: (typeof debtFieldMeta)[number]['name']) => {
+    if (!compactMobileLayout) return undefined;
+    if (fieldName === 'realEstateDebt') return 'Real Estate';
+    return undefined;
+  };
+
+  const getDebtFieldMobileLayoutClassName = (fieldName: (typeof debtFieldMeta)[number]['name']) => {
+    if (!compactMobileLayout) return '';
+    if (fieldName === 'vehicleEquipment') return 'col-span-2';
+    return '';
+  };
 
   const handleExploreLoanPackaging = (sectionId: string) => {
     trackCtaClick({
@@ -650,7 +715,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
         {!embedded && <div className="absolute -left-16 top-10 h-36 w-36 rounded-full bg-emerald-200/35 blur-3xl" />}
         {!embedded && <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-sky-200/25 blur-3xl" />}
 
-        <div className={embedded ? 'relative' : 'relative p-4 sm:p-4 lg:p-5'}>
+        <div className={embedded ? 'relative' : 'relative p-3 sm:p-4 lg:p-4.5'}>
           {!embedded && (
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-800">
@@ -679,23 +744,36 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
             </div>
           )}
 
-          <form className={embedded ? 'space-y-4' : 'mt-3 space-y-4'} onSubmit={(e) => e.preventDefault()}>
-            <div className="grid gap-4 xl:grid-cols-[2fr_3fr]">
-              <section className="rounded-[24px] border border-slate-200 bg-white/90 p-3.5 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
-                <div className="flex flex-col gap-2 border-b border-slate-200 pb-2.5 sm:flex-row sm:items-end sm:justify-between">
+          <form className={embedded ? 'space-y-3' : 'mt-2.5 space-y-3'} onSubmit={(e) => e.preventDefault()}>
+            <div className="grid gap-3 xl:grid-cols-[1.05fr_1.35fr] xl:items-start">
+              <section className="rounded-[24px] border border-slate-200 bg-white/90 p-3 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
+                <div className="flex flex-col gap-2 border-b border-slate-200 pb-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Loan Request</p>
-                    <h2 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-slate-950">Main inputs</h2>
+                    <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-950 sm:text-xl">Main inputs</h2>
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+                  <div className={`rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-600 ${
+                    compactMobileLayout
+                      ? 'hidden sm:inline-flex sm:items-center sm:gap-2 sm:text-sm'
+                      : 'inline-flex items-center gap-2 text-xs sm:text-sm'
+                  }`}>
                     <Clock3 className="h-4 w-4 text-slate-500" />
                     Under 1 minute
                   </div>
                 </div>
 
-                <div className="mt-2.5 grid gap-3">
+                <div className={`mt-2.5 grid gap-2 ${compactMobileLayout ? 'grid-cols-2' : ''} sm:gap-2.5 xl:grid-cols-2`}>
                   <InputField
-                    label="Monthly Net Income"
+                    label={
+                      <>
+                        <span className="sm:hidden">
+                          Monthly Net
+                          <br />
+                          Income
+                        </span>
+                        <span className="hidden sm:inline">Monthly Net Income</span>
+                      </>
+                    }
                     name="monthlyNetIncome"
                     placeholder="e.g. 10,000"
                     tooltip="Use your business's average monthly profit after operating expenses, before any existing or new loan payments. If you only have an annual number, divide it by 12 for a quick estimate."
@@ -705,6 +783,9 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     onChange={handleInputChange}
                     required
                     icon={TrendingUp}
+                    compact
+                    hideDescriptionOnMobile
+                    optimizeLabelMobile={compactMobileLayout}
                   />
                   <InputField
                     label="Loan Amount"
@@ -718,16 +799,19 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     required
                     id="dscr-calc-form-loan-amount"
                     icon={BadgeDollarSign}
+                    compact
+                    hideDescriptionOnMobile
+                    optimizeLabelMobile={compactMobileLayout}
                   />
                 </div>
 
-                <div className="mt-2.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-3">
+                <div className="mt-2.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-2.5 sm:p-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Loan Purpose</p>
-                      <h3 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-950">What will this loan be used for?</h3>
+                      <h3 className="mt-1 text-base font-semibold tracking-[-0.03em] text-slate-950 sm:text-lg">What will this loan be used for?</h3>
                     </div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 sm:text-sm">
                       <SelectedPurposeIcon className="h-4 w-4" />
                       {selectedPurposeMeta.eyebrow}
                     </div>
@@ -736,19 +820,19 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   <Select value={loanPurpose} onValueChange={handleLoanPurposeChange}>
                     <SelectTrigger
                       id="loanPurpose"
-                      className="mt-3 h-auto min-h-14 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm outline-none transition-all duration-200 focus:border-slate-900 focus:ring-4 focus:ring-slate-200"
+                      className="mt-2 h-auto min-h-12 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left shadow-sm outline-none transition-all duration-200 focus:border-slate-900 focus:ring-4 focus:ring-slate-200 sm:min-h-14 sm:px-4 sm:py-3"
                       data-ga-id="dscr-calc-form-loan-purpose"
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 sm:h-10 sm:w-10">
                           <SelectedPurposeIcon className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold text-slate-950">
+                          <div className="text-[13px] font-semibold leading-5 text-slate-950 sm:text-sm">
                             {selectedPurposeTitle}
                           </div>
-                          <div className="mt-0.5 truncate text-xs text-slate-500">
-                            {loanPurpose ? 'Choose The Best Match For What You Need' : 'Select A Loan Purpose To Continue'}
+                          <div className="mt-0.5 text-[11px] leading-4 text-slate-500 sm:text-xs">
+                            {loanPurpose ? 'Choose The Best Match For What You Need' : 'Pick the option that fits this request'}
                           </div>
                         </div>
                       </div>
@@ -785,44 +869,52 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   {validationError?.field === 'loanPurpose' && (
                     <p className="mt-2 text-sm font-medium text-rose-600">{validationError.message}</p>
                   )}
-                  <p className="mt-1.5 text-sm leading-6 text-slate-600">
+                  <p className="mt-1.5 hidden text-sm leading-6 text-slate-600 sm:block">
                     {selectedPurposeDescription}
                   </p>
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-white/90 p-3.5 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur">
-                <div className="flex flex-col gap-2 border-b border-slate-200 pb-2.5 sm:flex-row sm:items-end sm:justify-between">
+              <section className="rounded-[24px] border border-slate-200 bg-white/90 p-3 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
+                <div className="flex flex-col gap-2 border-b border-slate-200 pb-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Existing Debt</p>
-                    <h2 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-slate-950">Enter your required monthly payments</h2>
+                    <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-950 sm:text-xl">Required monthly payments</h2>
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900">
+                  <div className={`inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 font-medium text-amber-900 ${
+                    compactMobileLayout
+                      ? 'whitespace-nowrap text-[9px] tracking-[-0.01em] sm:text-sm sm:tracking-normal'
+                      : 'text-xs sm:text-sm'
+                  }`}>
                     <ShieldCheck className="h-4 w-4 text-amber-700" />
                     We don't need balances, just monthly payments
                   </div>
                 </div>
 
-                <div className="mt-2.5 grid gap-3 sm:grid-cols-2">
+                <div className={`mt-2.5 grid gap-2 ${compactMobileLayout ? 'grid-cols-2' : ''} sm:gap-2.5 sm:grid-cols-2 xl:grid-cols-3`}>
                   {debtFieldMeta.map((field) => (
-                    <InputField
-                      key={field.name}
-                      label={field.label}
-                      name={field.name}
-                      placeholder={field.placeholder}
-                      tooltip={field.tooltip}
-                      description={field.description}
-                      value={values[field.name]}
-                      onChange={handleInputChange}
-                      id={field.id}
-                      icon={field.icon}
-                    />
+                    <div key={field.name} className={getDebtFieldMobileLayoutClassName(field.name)}>
+                      <InputField
+                        label={getDebtFieldMobileLabel(field.name) ?? field.label}
+                        name={field.name}
+                        placeholder={field.placeholder}
+                        tooltip={field.tooltip}
+                        description={field.description}
+                        value={values[field.name]}
+                        onChange={handleInputChange}
+                        id={field.id}
+                        icon={field.icon}
+                        compact
+                        hideDescriptionOnMobile
+                        optimizeLabelMobile={compactMobileLayout}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
             </div>
 
-            <div className="mt-3 flex flex-col items-center">
+            <div className="mt-2.5 flex flex-col items-center">
               <div className="w-full max-w-sm">
                 <Button
                   onClick={(e) => {
@@ -853,11 +945,16 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     });
                     handleCalculate();
                   }}
-                  className="h-11 w-full rounded-2xl bg-emerald-500 px-6 text-base font-semibold text-slate-950 shadow-[0_20px_60px_-30px_rgba(16,185,129,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-400"
+                  className="group relative h-10 w-full overflow-hidden rounded-2xl border border-emerald-300/70 bg-[linear-gradient(135deg,#34d399_0%,#22c55e_42%,#0f766e_100%)] px-6 text-sm font-semibold text-white shadow-[0_22px_55px_-28px_rgba(16,185,129,0.72)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_-28px_rgba(13,148,136,0.68)] active:translate-y-0 active:scale-[0.985] sm:h-11 sm:text-base"
                   id="dscr-calc-btn-calculate"
                 >
-                  Calculate DSCR
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.2)_22%,transparent_44%)] opacity-0 transition-all duration-500 group-hover:translate-x-full group-hover:opacity-100" />
+                  <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/70" />
+                  <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_55%)] opacity-80" />
+                  <span className="relative flex items-center justify-center">
+                    <span className="tracking-[0.01em]">Calculate DSCR</span>
+                    <ArrowRight className="ml-2 h-5 w-5 transition duration-300 group-hover:translate-x-1 group-active:translate-x-0.5" />
+                  </span>
                 </Button>
                 <p className="mt-2 text-center text-xs text-slate-500">This does not affect your credit.</p>
               </div>

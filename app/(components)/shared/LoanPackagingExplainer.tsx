@@ -209,7 +209,7 @@ function StepRailMobile() {
       {EXPLAINER_SCENES.map((scene, index) => (
         <div
           key={scene.id}
-          className={`min-w-0 px-2 py-3 text-center ${index < EXPLAINER_SCENES.length - 1 ? 'border-r border-slate-200' : ''}`}
+          className={`min-w-0 px-1.5 py-2 text-center ${index < EXPLAINER_SCENES.length - 1 ? 'border-r border-slate-200' : ''}`}
         >
           <span
             className="mx-auto block h-2 w-2 rounded-full"
@@ -218,7 +218,7 @@ function StepRailMobile() {
           <p className="mt-1 text-[0.54rem] font-black uppercase tracking-[0.14em] text-slate-500">
             {scene.eyebrow}
           </p>
-          <p className="mt-1 text-[0.82rem] font-black leading-tight text-slate-950">
+          <p className="mt-1 text-[0.76rem] font-black leading-tight text-slate-950">
             {scene.boxTitle}
           </p>
         </div>
@@ -1116,26 +1116,26 @@ function DesktopExplainerSvg() {
 
 export default function LoanPackagingExplainer() {
   return (
-    <section className="bg-white py-12 sm:py-16" data-reveal>
+    <section className="bg-white py-8 sm:py-16" data-reveal>
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="home-reveal overflow-visible rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef6ff_46%,#ffffff_100%)] p-5 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.32)] sm:overflow-hidden sm:p-7 lg:p-8">
+        <div className="home-reveal overflow-visible rounded-[2rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef6ff_46%,#ffffff_100%)] p-4 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.32)] sm:overflow-hidden sm:p-7 lg:p-8">
           <div className="mx-auto max-w-5xl px-0 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-[0.68rem] font-bold uppercase tracking-[0.22em] text-cyan-900">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-cyan-900 sm:px-4 sm:py-2 sm:text-[0.68rem] sm:tracking-[0.22em]">
               <Workflow className="h-4 w-4" />
               See How Loan Packaging Works
             </div>
 
-            <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl lg:text-[3.2rem] lg:leading-[1.03]">
+            <h2 className="mx-auto mt-4 max-w-[16ch] text-[1.72rem] font-black leading-[1.06] tracking-tight text-slate-900 sm:mt-5 sm:max-w-none sm:text-4xl lg:text-[3.2rem] lg:leading-[1.03]">
               A clearer, more convincing way to present your business to lenders.
             </h2>
 
-            <p className="mx-auto mt-4 max-w-4xl text-base leading-7 text-slate-600 sm:text-lg">
+            <p className="mx-auto mt-3 max-w-[34ch] text-[13px] leading-5 text-slate-600 sm:mt-4 sm:max-w-4xl sm:text-lg sm:leading-7">
               Our loan packaging dashboard helps you organize the request, complete lender-ready documents, create a
               strong cover letter, and send everything in a cleaner format that is easier for lenders to review.
             </p>
           </div>
 
-          <div className="mt-8 sm:hidden">
+          <div className="mt-4 sm:hidden">
             <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2">
               <StepRailMobile />
             </div>
@@ -1153,35 +1153,35 @@ export default function LoanPackagingExplainer() {
             <DesktopExplainerSvg />
           </div>
 
-          <div className="mt-8 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <div className="mt-5 grid gap-3 sm:gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-4">
               {CUSTOMER_BOTTOM_POINTS.map((item) => (
-                <article key={item.title} className="rounded-[1.6rem] border border-slate-200 bg-white/92 p-5 shadow-sm">
-                  <h3 className="text-lg font-black text-slate-900">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">{item.description}</p>
+                <article key={item.title} className="rounded-[1.2rem] border border-slate-200 bg-white/92 p-3 shadow-sm sm:rounded-[1.6rem] sm:p-5">
+                  <h3 className="text-[13px] font-black leading-4.5 text-slate-900 sm:text-lg sm:leading-5">{item.title}</h3>
+                  <p className="mt-1.5 text-[11px] leading-4 text-slate-600 sm:mt-2 sm:text-base sm:leading-6">{item.description}</p>
                 </article>
               ))}
             </div>
 
-            <div className="rounded-[1.8rem] border border-slate-200 bg-slate-950 p-6 text-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.75)]">
+            <div className="rounded-[1.4rem] border border-slate-200 bg-slate-950 p-3.5 text-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.75)] sm:rounded-[1.8rem] sm:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-200">Why clients love this</p>
-              <h3 className="mt-2 text-2xl font-black">The cover letter gives your package a voice.</h3>
-              <p className="mt-3 text-sm leading-6 text-slate-300 sm:text-base">
+              <h3 className="mt-2 text-[1.15rem] font-black leading-tight sm:text-2xl">The cover letter gives your package a voice.</h3>
+              <p className="mt-2 text-[12px] leading-5 text-slate-300 sm:mt-3 sm:text-base sm:leading-6">
                 Before a lender gets into statements and supporting documents, the cover letter helps them understand
                 what you need, why you need it, and why the request makes sense now. That first impression matters.
               </p>
 
-              <div className="mt-6 flex flex-col gap-3">
+              <div className="mt-3 flex flex-col gap-2 sm:mt-6 sm:gap-3">
                 <Link
                   href="/loan-services"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-slate-100 sm:text-base"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-[13px] font-bold text-slate-950 transition hover:bg-slate-100 sm:px-6 sm:py-3.5 sm:text-base"
                 >
                   Explore Loan Packaging
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/loan-services"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-white/15 sm:text-base"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-[13px] font-bold text-white transition hover:bg-white/15 sm:px-6 sm:py-3.5 sm:text-base"
                 >
                   Explore Brokering Support
                   <Handshake className="h-4 w-4" />

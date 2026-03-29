@@ -100,64 +100,64 @@ const Testimonials = () => {
   const activePage = Math.floor(currentIndex / testimonialsPerPage);
 
   return (
-    <section className="relative overflow-hidden bg-[linear-gradient(180deg,#eff6ff_0%,#ffffff_42%,#f8fafc_100%)] py-10 sm:py-12">
+    <section className="relative overflow-hidden bg-[linear-gradient(180deg,#eff6ff_0%,#ffffff_42%,#f8fafc_100%)] py-8 sm:py-12">
       <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:radial-gradient(circle_at_16%_18%,rgba(6,182,212,0.15),transparent_28%),radial-gradient(circle_at_84%_20%,rgba(14,165,233,0.12),transparent_26%),radial-gradient(circle_at_80%_88%,rgba(251,191,36,0.12),transparent_30%)]" />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="mb-6 grid gap-4 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
+        <div className="mb-5 grid gap-3 sm:gap-4 lg:grid-cols-[0.72fr_1.28fr] lg:items-end">
           <div className="max-w-2xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-800 shadow-sm backdrop-blur">
+            <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-800 shadow-sm backdrop-blur sm:px-4 sm:py-2 sm:text-[11px] sm:tracking-[0.18em]">
               <ShieldCheck className="h-4 w-4" />
               Client Proof
             </p>
-            <h2 className="mt-3 text-3xl font-black text-slate-900 sm:text-4xl">What business owners say after working with us</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">
+            <h2 className="mt-2.5 text-[2rem] font-black leading-[1.08] text-slate-900 sm:mt-3 sm:text-4xl">What business owners say after working with us</h2>
+            <p className="mt-2 text-[13px] leading-5.5 text-slate-600 sm:mt-3 sm:text-base sm:leading-6">
               Same quotes, presented in a cleaner format that matches the credibility we want the rest of the page to carry.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Positioning</p>
-              <p className="mt-2 text-sm font-semibold text-slate-900">Trusted by owners who needed real funding guidance</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="rounded-2xl border border-slate-200 bg-white/85 p-3 shadow-sm backdrop-blur sm:p-4">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:text-[11px] sm:tracking-[0.14em]">Positioning</p>
+              <p className="mt-1.5 text-[11px] font-semibold leading-4 text-slate-900 sm:mt-2 sm:text-sm sm:leading-5">Trusted by owners who needed real funding guidance</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Themes</p>
-              <p className="mt-2 text-sm font-semibold text-slate-900">Knowledge, detail, accountability, and real-world support</p>
+            <div className="rounded-2xl border border-slate-200 bg-white/85 p-3 shadow-sm backdrop-blur sm:p-4">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:text-[11px] sm:tracking-[0.14em]">Themes</p>
+              <p className="mt-1.5 text-[11px] font-semibold leading-4 text-slate-900 sm:mt-2 sm:text-sm sm:leading-5">Knowledge, detail, accountability, and real-world support</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Best fit</p>
-              <p className="mt-2 text-sm font-semibold text-slate-900">Small businesses that want more than generic loan advice</p>
+            <div className="rounded-2xl border border-slate-200 bg-white/85 p-3 shadow-sm backdrop-blur sm:p-4">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:text-[11px] sm:tracking-[0.14em]">Best fit</p>
+              <p className="mt-1.5 text-[11px] font-semibold leading-4 text-slate-900 sm:mt-2 sm:text-sm sm:leading-5">Small businesses that want more than generic loan advice</p>
             </div>
           </div>
         </div>
 
-        <div className={`grid gap-5 ${testimonialsPerPage === 2 ? 'md:grid-cols-2' : ''}`}>
+        <div className={`grid gap-4 sm:gap-5 ${testimonialsPerPage === 2 ? 'md:grid-cols-2' : ''}`}>
           {testimonials.length > 0 && (
             <>
               <article
                 key={testimonials[firstIndex]!.id}
-                className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.32)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_60px_-30px_rgba(15,23,42,0.38)] sm:p-7"
+                className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/92 p-4 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.32)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_60px_-30px_rgba(15,23,42,0.38)] sm:p-7"
               >
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-500 via-sky-500 to-amber-400" />
                 <div className="flex items-start justify-between gap-4">
-                  <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+                  <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700 sm:text-[11px] sm:tracking-[0.16em]">
                     <Star className="h-3.5 w-3.5 fill-current" />
                     Client Review
                   </div>
-                  <Quote className="h-8 w-8 text-cyan-600/70" />
+                  <Quote className="h-6 w-6 text-cyan-600/70 sm:h-8 sm:w-8" />
                 </div>
 
-                <p className="mt-5 text-base leading-8 text-slate-700">&ldquo;{testimonials[firstIndex]!.content}&rdquo;</p>
+                <p className="mt-4 text-[15px] leading-6.5 text-slate-700 sm:mt-5 sm:text-base sm:leading-8">&ldquo;{testimonials[firstIndex]!.content}&rdquo;</p>
 
-                <div className="mt-6 flex items-center gap-4 border-t border-slate-200 pt-5">
-                  <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                <div className="mt-5 flex items-center gap-3 border-t border-slate-200 pt-4 sm:mt-6 sm:gap-4 sm:pt-5">
+                  <div className="relative h-14 w-14 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 sm:h-16 sm:w-16">
                     <Image src={testimonials[firstIndex]!.image} alt={testimonials[firstIndex]!.name} fill className="object-cover" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900">{testimonials[firstIndex]!.name}</h3>
-                    <p className="text-sm text-slate-600">{testimonials[firstIndex]!.role}</p>
-                    <p className="text-sm text-cyan-700">{testimonials[firstIndex]!.company}</p>
+                    <h3 className="text-sm font-bold text-slate-900 sm:text-base">{testimonials[firstIndex]!.name}</h3>
+                    <p className="text-[13px] text-slate-600 sm:text-sm">{testimonials[firstIndex]!.role}</p>
+                    <p className="text-[13px] text-cyan-700 sm:text-sm">{testimonials[firstIndex]!.company}</p>
                   </div>
                 </div>
               </article>
@@ -165,27 +165,27 @@ const Testimonials = () => {
               {testimonialsPerPage === 2 && (
                 <article
                   key={testimonials[secondIndex]!.id}
-                  className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/92 p-6 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.32)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_60px_-30px_rgba(15,23,42,0.38)] sm:p-7"
+                  className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/92 p-4 shadow-[0_22px_50px_-34px_rgba(15,23,42,0.32)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_60px_-30px_rgba(15,23,42,0.38)] sm:p-7"
                 >
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-400" />
                   <div className="flex items-start justify-between gap-4">
-                    <div className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                    <div className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-700 sm:text-[11px] sm:tracking-[0.16em]">
                       <ShieldCheck className="h-3.5 w-3.5" />
                       Trusted Outcome
                     </div>
-                    <Quote className="h-8 w-8 text-cyan-600/70" />
+                    <Quote className="h-6 w-6 text-cyan-600/70 sm:h-8 sm:w-8" />
                   </div>
 
-                  <p className="mt-5 text-base leading-8 text-slate-700">&ldquo;{testimonials[secondIndex]!.content}&rdquo;</p>
+                  <p className="mt-4 text-[15px] leading-6.5 text-slate-700 sm:mt-5 sm:text-base sm:leading-8">&ldquo;{testimonials[secondIndex]!.content}&rdquo;</p>
 
-                  <div className="mt-6 flex items-center gap-4 border-t border-slate-200 pt-5">
-                    <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                  <div className="mt-5 flex items-center gap-3 border-t border-slate-200 pt-4 sm:mt-6 sm:gap-4 sm:pt-5">
+                    <div className="relative h-14 w-14 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 sm:h-16 sm:w-16">
                       <Image src={testimonials[secondIndex]!.image} alt={testimonials[secondIndex]!.name} fill className="object-cover" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900">{testimonials[secondIndex]!.name}</h3>
-                      <p className="text-sm text-slate-600">{testimonials[secondIndex]!.role}</p>
-                      <p className="text-sm text-cyan-700">{testimonials[secondIndex]!.company}</p>
+                      <h3 className="text-sm font-bold text-slate-900 sm:text-base">{testimonials[secondIndex]!.name}</h3>
+                      <p className="text-[13px] text-slate-600 sm:text-sm">{testimonials[secondIndex]!.role}</p>
+                      <p className="text-[13px] text-cyan-700 sm:text-sm">{testimonials[secondIndex]!.company}</p>
                     </div>
                   </div>
                 </article>
@@ -194,7 +194,7 @@ const Testimonials = () => {
           )}
         </div>
 
-        <div className="mt-6 flex items-center justify-center gap-2">
+        <div className="mt-5 flex items-center justify-center gap-2 sm:mt-6">
           {Array.from({ length: pages }).map((_, index) => (
             <button
               key={index}
