@@ -1,23 +1,61 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { Suspense } from 'react';
 import Header from '@/app/(components)/shared/Header';
 import Footer from '@/app/(components)/shared/Footer';
 import AnalyticsWrapper from '@/app/(components)/AnalyticsWrapper';
 import AnalyticsProvider from '@/app/(components)/AnalyticsProvider';
-import { Analytics } from "@vercel/analytics/next";
 import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Business Lending Advocate',
-  description: 'Expert guidance for small business loans',
-  icons: {
-    icon: '/images/Logo.png'
-  },
   metadataBase: new URL('https://www.businesslendingadvocate.com'),
+  title: {
+    default: 'Business Lending Advocate',
+    template: '%s | Business Lending Advocate',
+  },
+  description:
+    'Business loan guidance, free DSCR tools, cash flow analysis, loan packaging, and lender-readiness support for small-business owners.',
+  applicationName: 'Business Lending Advocate',
+  category: 'finance',
+  authors: [{ name: 'Business Lending Advocate' }],
+  creator: 'Business Lending Advocate',
+  publisher: 'Business Lending Advocate',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  icons: {
+    icon: '/images/Logo.png',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'Business Lending Advocate',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#020617',
 };
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;

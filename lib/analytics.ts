@@ -14,9 +14,9 @@ declare global {
     gtag?: (
       command: 'config' | 'event' | 'consent',
       targetId: string,
-      params?: Record<string, any>
+      params?: Record<string, unknown>
     ) => void;
-    dataLayer?: any[];
+    dataLayer?: unknown[];
   }
 }
 
@@ -32,7 +32,11 @@ export type GA4EventName =
   | 'phone_click'
   | 'email_click'
   | 'outbound_click'
-  | 'scroll';
+  | 'scroll'
+  | 'page_section_view'
+  | 'cta_click'
+  | 'calculator_interaction'
+  | 'calculator_result';
 
 // Event Parameter Types
 export interface PageViewParams {
@@ -67,7 +71,7 @@ export interface SelectItemParams {
 }
 
 export interface SelectContentParams {
-  content_type: 'phone' | 'email' | 'link';
+  content_type: 'phone' | 'email' | 'link' | 'engagement' | 'cta' | 'section';
   link_text?: string;
   link_url?: string;
 }
@@ -97,6 +101,37 @@ export interface ScrollParams {
   percent_scrolled: 90;
 }
 
+export interface PageSectionViewParams {
+  page_template: string;
+  section_id: string;
+  section_label?: string;
+}
+
+export interface CtaClickParams {
+  page_template: string;
+  section_id: string;
+  cta_id: string;
+  cta_label: string;
+  destination_url?: string;
+}
+
+export interface CalculatorInteractionParams {
+  page_template: string;
+  placement?: string;
+  interaction_name: string;
+  loan_purpose?: string;
+  dscr_band?: string;
+  dscr_value?: number;
+  loan_amount?: number;
+  monthly_income?: number;
+  monthly_debt_service?: number;
+  benchmark_gap?: number;
+  assumption_rate?: number;
+  assumption_term_months?: number;
+  assumption_down_payment_pct?: number;
+  recommended_action?: string;
+}
+
 export type EventParams =
   | PageViewParams
   | GenerateLeadParams
@@ -107,7 +142,10 @@ export type EventParams =
   | PhoneClickParams
   | EmailClickParams
   | OutboundClickParams
-  | ScrollParams;
+  | ScrollParams
+  | PageSectionViewParams
+  | CtaClickParams
+  | CalculatorInteractionParams;
 
 // ============================================================================
 // Configuration
@@ -139,6 +177,23 @@ const ALLOWED_PARAMS = new Set([
   'file_extension',
   'link_domain',
   'percent_scrolled',
+  'page_template',
+  'section_id',
+  'section_label',
+  'cta_id',
+  'cta_label',
+  'destination_url',
+  'placement',
+  'interaction_name',
+  'dscr_band',
+  'dscr_value',
+  'monthly_income',
+  'monthly_debt_service',
+  'benchmark_gap',
+  'assumption_rate',
+  'assumption_term_months',
+  'assumption_down_payment_pct',
+  'recommended_action',
   // UTM parameters
   'utm_source',
   'utm_medium',
@@ -169,10 +224,10 @@ export function isAnalyticsEnabled(): boolean {
 /**
  * Sanitize event parameters (remove disallowed keys)
  */
-function sanitizeParams(params?: Record<string, any>): Record<string, any> {
+function sanitizeParams<T extends object>(params?: T): Record<string, unknown> {
   if (!params) return {};
 
-  const sanitized: Record<string, any> = {};
+  const sanitized: Record<string, unknown> = {};
   const disallowed: string[] = [];
 
   for (const [key, value] of Object.entries(params)) {
@@ -244,7 +299,7 @@ export function trackPageview(path: string, title?: string): void {
       console.log('[Analytics] Page view:', params);
     }
 
-    window.gtag!('event', 'page_view', params);
+    window.gtag!('event', 'page_view', sanitizeParams(params));
   } catch (error) {
     console.error('[Analytics] Error tracking page view:', error);
   }
@@ -351,7 +406,7 @@ export function getStoredUTMParams(): Record<string, string> {
   try {
     const stored = localStorage.getItem(UTM_STORAGE_KEY);
     return stored ? JSON.parse(stored) : {};
-  } catch (error) {
+  } catch {
     return {};
   }
 }
@@ -460,7 +515,7 @@ export function initEngagementTracking(): void {
       track('select_content', {
         content_type: 'engagement',
         link_text: '10s',
-      } as any);
+      });
       engagementEvents++;
     }
   }, 10000);
@@ -471,7 +526,7 @@ export function initEngagementTracking(): void {
       track('select_content', {
         content_type: 'engagement',
         link_text: '30s',
-      } as any);
+      });
       engagementEvents++;
     }
   }, 30000);
@@ -525,6 +580,22 @@ export function initClickTracking(): void {
       trackFileDownload(href, linkText);
     }
   });
+}
+
+export function trackSectionView(params: PageSectionViewParams): void {
+  track('page_section_view', params);
+}
+
+export function trackCtaClick(params: CtaClickParams): void {
+  track('cta_click', params);
+}
+
+export function trackCalculatorInteraction(params: CalculatorInteractionParams): void {
+  track('calculator_interaction', params);
+}
+
+export function trackCalculatorResult(params: CalculatorInteractionParams): void {
+  track('calculator_result', params);
 }
 
 // ============================================================================

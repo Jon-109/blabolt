@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -81,8 +81,6 @@ const Header = () => {
   const hideAffordabilityCta =
     isPackagingWorkspace || pathname.startsWith('/comprehensive-cash-flow-analysis');
 
-  if (pathname.startsWith('/report/print/')) return null;
-
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [canAccessComprehensive, setCanAccessComprehensive] = useState(false);
@@ -90,7 +88,7 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkAccessStatus = async (fallbackAdmin = false, fallbackLoggedIn = false) => {
+  const checkAccessStatus = useCallback(async (fallbackAdmin = false, fallbackLoggedIn = false) => {
     try {
       const res = await fetch('/api/access/me', { cache: 'no-store' });
       if (!res.ok) {
@@ -109,9 +107,9 @@ const Header = () => {
       setIsAdmin(fallbackAdmin);
       setCanAccessComprehensive(false);
     }
-  };
+  }, []);
 
-  const applyUserState = async (user: User | null) => {
+  const applyUserState = useCallback(async (user: User | null) => {
     if (!user) {
       setIsLoggedIn(false);
       setIsAdmin(false);
@@ -125,7 +123,7 @@ const Header = () => {
     setIsAdmin(localAdmin);
     setDisplayName(getDisplayName(user));
     await checkAccessStatus(localAdmin, true);
-  };
+  }, [checkAccessStatus]);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -163,7 +161,7 @@ const Header = () => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [applyUserState, checkAccessStatus]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -176,6 +174,8 @@ const Header = () => {
     if (!displayName) return 'Hi';
     return `Hi, ${displayName}`;
   }, [displayName]);
+
+  if (pathname.startsWith('/report/print/')) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white">

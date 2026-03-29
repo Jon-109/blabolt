@@ -4,6 +4,7 @@ import { DscrGauge } from '@/app/(components)/cash-flow/DscrQuickCalculator';
 import CashFlowBusinessDebtSummaryTemplate from '@/app/(components)/cash-flow/CashFlowBusinessDebtSummaryTemplate';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/app/(components)/ui/tooltip';
 import { calculateFinancialSummary, formatLoanTermLabel } from '@/lib/financial/calculations';
+import { DSCR_BENCHMARK, getDscrBand } from '@/lib/financial/dscr';
 
 // --- Type Definitions ---
 
@@ -54,7 +55,7 @@ export interface DebtDetail {
 
 // A wrapper for each year's financials, matching the mapped structure
 export interface FinancialYearWrapped {
-  input: { [key: string]: any };
+  input: object;
   summary: FinancialYearData;
   ytdMonth?: string;
 }
@@ -84,8 +85,8 @@ export interface CashFlowReportProps {
 }
 
 // --- Type Guard for debts.entries ---
-function hasDebtEntries(obj: any): obj is { entries: DebtDetail[] } {
-  return obj && typeof obj === 'object' && Array.isArray(obj.entries);
+function hasDebtEntries(obj: unknown): obj is { entries: DebtDetail[] } {
+  return Boolean(obj) && typeof obj === 'object' && Array.isArray((obj as { entries?: unknown }).entries);
 }
 
 // --- Default Values --- 
@@ -206,8 +207,6 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
   const dscr2025 = getYearData<DscrYearData>(safeDscr, '2025'); 
   const dscr2026 = getYearData<DscrYearData>(safeDscr, ytdKey); 
 
-  const bankPreference = 1.25;
-
   // --- Determine which columns to show ---
   const show2024 = !isYearSkipped(financials2024);
   const show2025 = !isYearSkipped(financials2025);
@@ -221,7 +220,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
 
   const renderDSCRCell = (dscrValue: number | undefined | null, paddingClass: string = 'p-1') => {
     const value = dscrValue ?? 0;
-    const isSufficient = value >= bankPreference;
+    const isSufficient = value >= DSCR_BENCHMARK;
     const textColor = isSufficient ? 'text-green-600' : 'text-red-600';
     const bgColor = isSufficient ? 'bg-green-100' : 'bg-red-100';
     const formattedDSCR = value.toFixed(2);
@@ -323,7 +322,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
           </tbody>
         </table>
         <p className="text-sm text-center text-gray-600 mt-2">
-          Bank Preference: At Least {bankPreference.toFixed(2)}x
+          Bank Preference: At Least {DSCR_BENCHMARK.toFixed(2)}x
         </p>
       </section>
       {/* --- Understanding Your Debt Service Coverage Ratio (DSCR) - 2025 (Optimized) --- */}
@@ -369,73 +368,32 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
           {/* Explanation and Calculation */}
           <div className="md:w-2/3 print:w-2/3 flex flex-col">
             <p className="mb-2 text-gray-600 text-xs md:text-sm leading-snug">
-              Your Debt Service Coverage Ratio (DSCR) shows if your business brings in enough income to pay all its debt payments. <span className="font-semibold">A score of 1.0x means for every $1 you make, you pay $1 in debts.</span> Most banks want to see at least <span className="font-semibold">1.25x</span>—so you have a safety cushion.
+              Your Debt Service Coverage Ratio (DSCR) shows if your business brings in enough income to pay all its debt payments. <span className="font-semibold">A score of 1.0x means for every $1 you make, you pay $1 in debts.</span> Most banks want to see at least <span className="font-semibold">{DSCR_BENCHMARK.toFixed(2)}x</span> so you have a safety cushion.
             </p>
             {/* Use calculated DSCR for conditional rendering */}
             {(() => {
               const dscr2025Calc = (financials2025?.adjustedEbitda ?? 0) /
                 ((annualDebtService['2025'] ?? dscr2025?.debtService ?? 0) + (annualizedLoanPayments['2025'] ?? safeLoanInfo?.annualizedLoan ?? 0));
               if (!Number.isFinite(dscr2025Calc)) return null;
-              if (dscr2025Calc >= 1.25) {
-                return (
-                  <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded mb-4 text-gray-800 text-sm">
-                    <div className="flex items-center mb-1">
-                      <span className="text-lg mr-2">🔵</span>
-                      <span className="font-semibold text-green-700">1.25 or Higher (Strong)</span>
-                    </div>
-                    <div className="mb-1">Your DSCR is above 1.25, which is excellent.</div>
-                    <div className="mb-2">From a lender’s viewpoint, this means your business is generating at least 25% more income than needed to cover your debt obligations. You’re operating with a healthy cushion, which reduces our risk significantly.</div>
-                    <ul className="list-disc pl-5 mb-2">
-                      <li>Potential for larger loan amounts</li>
-                      <li>Access to better interest rates</li>
-                      <li>Greater likelihood of faster approvals with fewer conditions</li>
-                    </ul>
-                    <div className="text-green-800 font-semibold">✅ Bottom line: You’re in a great position to borrow — and possibly even refinance existing debt on better terms.</div>
+              const band = getDscrBand(dscr2025Calc);
+
+              return (
+                <div className={`${band.report.containerClassName} mb-4 rounded p-4 text-sm`}>
+                  <div className="mb-1 flex items-center">
+                    <span className={`font-semibold ${band.report.accentTextClassName}`}>
+                      {band.report.heading}
+                    </span>
                   </div>
-                );
-              } else if (dscr2025Calc >= 1.0) {
-                return (
-                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-4 text-gray-800 text-sm">
-                    <div className="flex items-center mb-1">
-                      <span className="text-lg mr-2">🟡</span>
-                      <span className="font-semibold text-yellow-700">1.00 – 1.24 (Needs Work)</span>
-                    </div>
-                    <div className="mb-1">Your DSCR falls between 1.00 and 1.24 — you're covering debt, but just barely.</div>
-                    <div className="mb-2">From a lender’s viewpoint, this means your business is meeting debt payments, but there's little room for unexpected expenses or downturns.</div>
-                    <div className="mb-2">This range signals marginal strength. You're not in danger, but we may:</div>
-                    <ul className="list-disc pl-5 mb-2">
-                      <li>Request additional financial documentation</li>
-                      <li>Ask about cash flow strategies or upcoming changes</li>
-                      <li>Offer smaller loan amounts or require collateral</li>
-                    </ul>
-                    <div className="text-yellow-800 font-semibold">⚠️ Recommendation: Focus on boosting cash flow and reducing non-essential debt to strengthen your future borrowing power.</div>
-                  </div>
-                );
-              } else if (dscr2025Calc < 1.0) {
-                return (
-                  <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded mb-4 text-gray-800 text-sm">
-                    <div className="flex items-center mb-1">
-                      <span className="text-lg mr-2">🔴</span>
-                      <span className="font-semibold text-red-700">Below 1.00 (High Risk)</span>
-                    </div>
-                    <div className="mb-1">Your DSCR is under 1.00, which raises red flags for lending.</div>
-                    <div className="mb-2">This means your business isn’t generating enough income to cover its current debt — a lender’s biggest concern. It suggests you’re relying on external sources, reserves, or hoping for increased revenue to stay afloat.</div>
-                    <div className="mb-2">❌ In this case, we would typically:</div>
-                    <ul className="list-disc pl-5 mb-2">
-                      <li>Decline the loan request, or</li>
-                      <li>Require major improvements or guarantees before reconsidering</li>
-                    </ul>
-                    <div className="mb-2">🔄 What you can do:</div>
-                    <ul className="list-disc pl-5 mb-2">
-                      <li>Review expenses and eliminate non-essential costs</li>
-                      <li>Explore ways to increase revenue (e.g., raise prices, boost sales)</li>
-                      <li>Consider restructuring existing debt to lower your payments</li>
-                    </ul>
-                    <div className="text-red-800 font-semibold">💬 Once your DSCR improves, we can revisit your application.</div>
-                  </div>
-                );
-              }
-              return null;
+                  <div className="mb-1">{band.report.lead}</div>
+                  <div className="mb-2">{band.report.lenderPerspective}</div>
+                  <ul className="mb-2 list-disc pl-5">
+                    {band.report.bullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+                  <div className={`font-semibold ${band.report.accentTextClassName}`}>{band.report.bottomLine}</div>
+                </div>
+              );
             })()}
           </div>
         </div>
@@ -654,21 +612,6 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
       </section>
     </div>
   );
-};
-
-// Helper function to get DSCR color based on value
-const getDscrColor = (value: number): string => {
-  if (value >= 1.25) return '#34C759'; // Green (Above 1.25)
-  if (value >= 1.0) return '#F7DC6F'; // Yellow (Between 1.0 and 1.25)
-  return '#DC2626'; // Red (Default/Below 1.0)
-};
-
-// Helper function for DSCR interpretation text
-const getDscrInterpretation = (value: number, preference: number): string => {
-  if (value === 0) return "Insufficient data or zero income/debt";
-  if (value >= preference) return `Strong! Meets or exceeds the typical bank preference of ${preference.toFixed(2)}x.`;
-  if (value >= 1.0) return `Okay. Covers debt payments, but below the typical bank preference of ${preference.toFixed(2)}x.`;
-  return `Caution! Income may not be sufficient to cover all debt payments.`;
 };
 
 export default CashFlowReport;

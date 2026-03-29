@@ -25,7 +25,20 @@ import {
   Wrench,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { loanPurposes } from '@/lib/loanPurposes';
+import {
+  calculateMonthlyLoanPayment,
+  calculatePrincipalFromPaymentCapacity,
+  DSCR_BENCHMARK,
+  DSCR_GAUGE_MAX,
+  getDscrBand,
+  loanPurposes,
+  type LoanPurpose,
+} from '@/lib/financial/dscr';
+import {
+  trackCalculatorInteraction,
+  trackCalculatorResult,
+  trackCtaClick,
+} from '@/lib/analytics';
 import { Button } from '@/app/(components)/ui/button';
 import {
   Select,
@@ -48,6 +61,8 @@ interface DscrQuickCalculatorProps {
   initialValues?: DscrFormValues;
   onValuesChange?: (values: DscrFormValues) => void;
   embedded?: boolean;
+  analyticsPageTemplate?: string;
+  analyticsPlacement?: string;
 }
 
 const formatCurrency = (value: number): string => {
@@ -147,231 +162,10 @@ const Tooltip: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
-type DscrStatus = {
-  label: string;
-  badgeClassName: string;
-  valueClassName: string;
-  borderClassName: string;
-  panelClassName: string;
-  summary: string;
-  lenderRead: string;
-};
-
-type NextStepConfig = {
-  title: string;
-  description: string;
-  businessAge: string;
-  businessAgeNote: string;
-  creditRange: string;
-  creditNote: string;
-  serviceEyebrow: string;
-  serviceTitle: string;
-  serviceDescription: string;
-  serviceSupportLine: string;
-  primaryCtaLabel: string;
-  primaryCtaKind: 'analysis' | 'packaging';
-};
-
-function getDscrStatus(value: number): DscrStatus {
-  if (value < 1) {
-    return {
-      label: 'Needs Improvement',
-      badgeClassName: 'border-rose-200 bg-rose-50 text-rose-700',
-      valueClassName: 'text-rose-600',
-      borderClassName: 'border-rose-200',
-      panelClassName: 'bg-rose-50/70',
-      summary: 'that is a weak result for this request. The payment looks too high for the business’s monthly cash flow, and on this quick check the business does not appear to have enough room to carry it.',
-      lenderRead: 'at this level, most lenders would see the request as unaffordable unless the amount is reduced, the payment is lowered, or the business shows stronger cash flow elsewhere in the file. This quick DSCR also does not include possible income adjustments that can sometimes improve the result.',
-    };
-  }
-
-  if (value < 1.1) {
-    return {
-      label: 'Very Tight',
-      badgeClassName: 'border-orange-200 bg-orange-50 text-orange-700',
-      valueClassName: 'text-orange-600',
-      borderClassName: 'border-orange-200',
-      panelClassName: 'bg-orange-50/70',
-      summary: 'that is a very tight result. The business may be able to cover the payment on paper, but there is almost no room for a slower month or an unexpected expense.',
-      lenderRead: 'at this level, most lenders would still see the request as too tight. Even if the business nearly covers the payment, the deal can still feel risky because there is not much room for error. A fuller review can sometimes improve the DSCR if there are valid items that should be added back to income.',
-    };
-  }
-
-  if (value < 1.25) {
-    return {
-      label: 'Borderline',
-      badgeClassName: 'border-amber-200 bg-amber-50 text-amber-700',
-      valueClassName: 'text-amber-600',
-      borderClassName: 'border-amber-200',
-      panelClassName: 'bg-amber-50/70',
-      summary: 'that is a borderline result. The business is getting closer to a comfortable level, but the request still looks a little high for the current cash flow.',
-      lenderRead: 'at this level, a lender may see potential, but would often want a lower request, a lower payment, or stronger file support before feeling comfortable moving forward. This is also the range where a fuller review can make a meaningful difference if there are valid items that should be added back to income.',
-    };
-  }
-
-  if (value < 1.4) {
-    return {
-      label: 'Solid Starting Point',
-      badgeClassName: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-      valueClassName: 'text-emerald-600',
-      borderClassName: 'border-emerald-200',
-      panelClassName: 'bg-emerald-50/80',
-      summary: 'that is a good starting result. The business appears to bring in enough income each month to cover the debt payments with some room left over.',
-      lenderRead: 'at this level, a lender may view the payment as affordable at a first look. Approval would still depend on credit, tax returns, bank statements, and the full strength of the file.',
-    };
-  }
-
-  if (value < 1.75) {
-    return {
-      label: 'Strong Position',
-      badgeClassName: 'border-teal-200 bg-teal-50 text-teal-700',
-      valueClassName: 'text-teal-600',
-      borderClassName: 'border-teal-200',
-      panelClassName: 'bg-teal-50/80',
-      summary: 'that is a strong result. The business appears to have a good amount of room above the required debt payments, which makes the request look more comfortable.',
-      lenderRead: 'at this level, a lender will often read this as a business that can handle the payment with solid room to spare. If the rest of the file is consistent, this usually supports a stronger first impression.',
-    };
-  }
-
-  return {
-    label: 'Excellent Cushion',
-    badgeClassName: 'border-cyan-200 bg-cyan-50 text-cyan-700',
-    valueClassName: 'text-cyan-600',
-    borderClassName: 'border-cyan-200',
-    panelClassName: 'bg-cyan-50/80',
-    summary: 'that is an excellent result. The business appears to have a wide gap between its monthly income and its required debt payments.',
-    lenderRead: 'at this level, many lenders would read this as a strong sign that the business can comfortably afford the payment. DSCR alone does not decide approval, but it can make the request easier to support if the rest of the file looks clean.',
-  };
-}
-
-function getNextStepConfig(value: number): NextStepConfig {
-  if (value < 1) {
-    return {
-      title: 'Strengthen The File Before You Apply',
-      description: 'This request likely needs a smaller size, stronger structure, or deeper review before it looks financeable to most lenders.',
-      businessAge: '2+ Years Preferred',
-      businessAgeNote: 'Time in business helps, but cash flow is still the main issue at this range.',
-      creditRange: 'Often 700+',
-      creditNote: 'Better credit helps, but it usually will not offset a DSCR below 1.00 by itself.',
-      serviceEyebrow: 'Recommended First Step',
-      serviceTitle: 'Start With A Bank-Level Analysis',
-      serviceDescription: 'Before packaging the request, see how the file is likely to read to a lender and where the structure may need work.',
-      serviceSupportLine: 'Best for figuring out whether to lower the request, change the structure, or wait before applying.',
-      primaryCtaLabel: 'Get My Bank-Level Analysis',
-      primaryCtaKind: 'analysis',
-    };
-  }
-
-  if (value < 1.1) {
-    return {
-      title: 'Get The Structure Tighter First',
-      description: 'You may be close, but this still looks tight enough that most lenders would want a cleaner structure or stronger support.',
-      businessAge: '2+ Years Preferred',
-      businessAgeNote: 'A longer operating track record can help, but the request may still feel strained here.',
-      creditRange: 'Often 680-720+',
-      creditNote: 'Stronger credit can help, but many lenders would still want the request improved.',
-      serviceEyebrow: 'Recommended First Step',
-      serviceTitle: 'Use The Bank-Level Analysis First',
-      serviceDescription: 'Pressure-test the request before you spend time packaging it. This is usually the smarter move in a very tight range.',
-      serviceSupportLine: 'Best for identifying what needs to change before you present the file to lenders.',
-      primaryCtaLabel: 'Get My Bank-Level Analysis',
-      primaryCtaKind: 'analysis',
-    };
-  }
-
-  if (value < 1.25) {
-    return {
-      title: 'You May Be Close, But Not Quite Ready',
-      description: 'There may be a workable deal here, but many lenders would still want a smaller request, stronger support, or better overall structure.',
-      businessAge: '2+ Years Is Common',
-      businessAgeNote: 'More operating history can make a borderline request easier to explain.',
-      creditRange: 'Often 660-700+',
-      creditNote: 'This is the zone where credit quality and a clean package start mattering more.',
-      serviceEyebrow: 'Recommended First Step',
-      serviceTitle: 'Dial In The File Before Packaging',
-      serviceDescription: 'A bank-level review can help you decide whether the request should be resized or repackaged before moving forward.',
-      serviceSupportLine: 'Best for borrowers who may be financeable, but need better structure before lender outreach.',
-      primaryCtaLabel: 'Get My Bank-Level Analysis',
-      primaryCtaKind: 'analysis',
-    };
-  }
-
-  if (value < 1.4) {
-    return {
-      title: 'You Look Close To Packaging-Ready',
-      description: 'You are above the common 1.25x benchmark, which usually means it makes sense to start organizing the file the way a lender expects to see it.',
-      businessAge: '2+ Years Is Common',
-      businessAgeNote: 'That track record is often enough for packaging to make sense if the rest of the file is clean.',
-      creditRange: 'Often 640-680+',
-      creditNote: 'Stronger bank channels may still prefer 680+, but this is a realistic starting zone.',
-      serviceEyebrow: 'Recommended Next Step',
-      serviceTitle: 'Start Building Your Loan Package',
-      serviceDescription: 'Turn this high-level result into a polished lender-ready file with the right documents, summaries, and story.',
-      serviceSupportLine: 'Best for businesses that look financeable and want to present the request professionally.',
-      primaryCtaLabel: 'Explore Loan Packaging',
-      primaryCtaKind: 'packaging',
-    };
-  }
-
-  if (value < 1.75) {
-    return {
-      title: 'You Look Ready To Package This Well',
-      description: 'This is a stronger repayment position. If your credit and business history are in range, packaging the request is often the right move.',
-      businessAge: '2+ Years Is Common',
-      businessAgeNote: 'A solid operating history plus this DSCR usually creates a more comfortable lender conversation.',
-      creditRange: 'Often 620-680+',
-      creditNote: 'Stronger credit can still improve lender options, pricing, and flexibility.',
-      serviceEyebrow: 'Recommended Next Step',
-      serviceTitle: 'Package The File Before You Apply',
-      serviceDescription: 'A strong DSCR deserves a polished submission. We help organize the numbers, documents, and narrative the way lenders want to see them.',
-      serviceSupportLine: 'Best for borrowers who look solid on paper and want to maximize approval odds.',
-      primaryCtaLabel: 'Explore Loan Packaging',
-      primaryCtaKind: 'packaging',
-    };
-  }
-
-  return {
-    title: 'You Are In A Strong Position To Package',
-    description: 'This level of coverage gives you real room to present the request from a position of strength, assuming the rest of the file is clean.',
-    businessAge: '2+ Years Still Helps',
-    businessAgeNote: 'Lenders still care about operating history, but this DSCR gives you a stronger starting point.',
-    creditRange: 'Often 620+; stricter banks may prefer 680+',
-    creditNote: 'At this level, stronger credit can broaden your lender options more than it changes basic eligibility.',
-    serviceEyebrow: 'Recommended Next Step',
-    serviceTitle: 'Turn A Strong File Into A Lender-Ready Package',
-    serviceDescription: 'If the business is performing this well, the next smart move is packaging the request cleanly so the strength of the file comes through.',
-    serviceSupportLine: 'Best for borrowers who appear ready and want a more polished, lender-facing package.',
-    primaryCtaLabel: 'Explore Loan Packaging',
-    primaryCtaKind: 'packaging',
-  };
-}
-
-function calculatePrincipalFromPaymentCapacity(
-  monthlyPaymentCapacity: number,
-  annualRate: number,
-  termMonths: number,
-  isInterestOnly: boolean,
-) {
-  if (monthlyPaymentCapacity <= 0) return 0;
-  const monthlyRate = annualRate / 12;
-
-  if (isInterestOnly) {
-    if (monthlyRate <= 0) return 0;
-    return monthlyPaymentCapacity / monthlyRate;
-  }
-
-  if (termMonths <= 0) return 0;
-  if (monthlyRate <= 0) return monthlyPaymentCapacity * termMonths;
-
-  const factor = (Math.pow(1 + monthlyRate, termMonths) - 1) / (monthlyRate * Math.pow(1 + monthlyRate, termMonths));
-  return monthlyPaymentCapacity * factor;
-}
-
 export const DscrGauge: React.FC<{ value: number }> = ({ value }) => {
-  const status = getDscrStatus(value);
-  const gaugeMax = 1.75;
-  const pointerPosition = Math.max(0, Math.min((value / gaugeMax) * 100, 100));
-  const benchmarkPosition = (1.25 / gaugeMax) * 100;
+  const status = getDscrBand(value).quickStatus;
+  const pointerPosition = Math.max(0, Math.min((value / DSCR_GAUGE_MAX) * 100, 100));
+  const benchmarkPosition = (DSCR_BENCHMARK / DSCR_GAUGE_MAX) * 100;
 
   return (
     <div>
@@ -386,7 +180,7 @@ export const DscrGauge: React.FC<{ value: number }> = ({ value }) => {
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Bank Benchmark</p>
-          <p className="mt-1 text-lg font-bold text-slate-950">1.25x</p>
+          <p className="mt-1 text-lg font-bold text-slate-950">{DSCR_BENCHMARK.toFixed(2)}x</p>
         </div>
       </div>
 
@@ -400,7 +194,7 @@ export const DscrGauge: React.FC<{ value: number }> = ({ value }) => {
             style={{ left: `${benchmarkPosition}%` }}
           >
             <div className="rounded-full bg-slate-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
-              1.25x
+              {DSCR_BENCHMARK.toFixed(2)}x
             </div>
             <div className="mt-1 h-5 w-px bg-slate-900" />
           </div>
@@ -417,8 +211,8 @@ export const DscrGauge: React.FC<{ value: number }> = ({ value }) => {
         <div className="mt-4 flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
           <span>0.00</span>
           <span>1.00</span>
-          <span>1.25 Standard</span>
-          <span>1.75+</span>
+          <span>{DSCR_BENCHMARK.toFixed(2)} Standard</span>
+          <span>{DSCR_GAUGE_MAX.toFixed(2)}+</span>
         </div>
       </div>
     </div>
@@ -497,38 +291,16 @@ const InputField: React.FC<{
   );
 };
 
-function calculateMonthlyLoanPayment(principal: number, annualRate: number, termMonths: number, isInterestOnly: boolean = false) {
-  if (!principal || !annualRate) return 0;
-  const monthlyRate = annualRate / 12;
-  
-  if (isInterestOnly) {
-    // Interest-only payment calculation
-    return principal * monthlyRate;
-  }
-  
-  if (!termMonths) return 0;
-  // Regular amortizing payment calculation
-  return (
-    principal * monthlyRate * Math.pow(1 + monthlyRate, termMonths)
-  ) / (Math.pow(1 + monthlyRate, termMonths) - 1);
-}
-
 const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   initialValues,
   onValuesChange,
   embedded = false,
+  analyticsPageTemplate = 'unknown_page',
+  analyticsPlacement = embedded ? 'embedded' : 'standalone',
 }) => {
   const [, setError] = React.useState<string>('');
   const router = useRouter();
   const comprehensiveCheckoutPath = '/checkout/cash_flow_analysis';
-
-  const handleExploreLoanPackaging = () => {
-    router.push('/loan-services');
-  };
-
-  const handleStartComprehensiveAnalysis = () => {
-    router.push(comprehensiveCheckoutPath);
-  };
   
   const [values, setValues] = useState<DscrFormValues>(() => ({
     monthlyNetIncome: 0,
@@ -545,6 +317,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   const [validationError, setValidationError] = useState<{ field: string; message: string } | null>(null);
   const [isEditingAssumptions, setIsEditingAssumptions] = useState(false);
   const resultsRef = React.useRef<HTMLDivElement | null>(null);
+  const lastResultSignatureRef = React.useRef<string | null>(null);
 
   // Use a type-safe array of loan purpose keys for the dropdown
   const loanPurposeKeys = Object.keys(loanPurposes) as (keyof typeof loanPurposes)[];
@@ -552,9 +325,9 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   const defaultPurpose = loanPurposes['Working Capital']!;
   const selectedPurpose = loanPurpose ? loanPurposes[loanPurpose] : null;
   const activePurpose = selectedPurpose ?? defaultPurpose;
-  const [customTermMonths, setCustomTermMonths] = useState(defaultPurpose.defaultTerm);
-  const [customRatePercent, setCustomRatePercent] = useState(defaultPurpose.defaultRate * 100);
-  const [customDownPaymentPercent, setCustomDownPaymentPercent] = useState((defaultPurpose.defaultDownPaymentPct ?? 0) * 100);
+  const [customTermMonths, setCustomTermMonths] = useState<number>(defaultPurpose.defaultTerm);
+  const [customRatePercent, setCustomRatePercent] = useState<number>(defaultPurpose.defaultRate * 100);
+  const [customDownPaymentPercent, setCustomDownPaymentPercent] = useState<number>((defaultPurpose.defaultDownPaymentPct ?? 0) * 100);
   const principal = parseInt(loanAmount.replace(/[$,]/g, '')) || 0;
   const selectedRate = customRatePercent / 100;
   const selectedTerm = customTermMonths;
@@ -615,18 +388,45 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   const handleRatePercentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/[^\d.]/g, '');
     const numericValue = parseFloat(rawValue);
-    setCustomRatePercent(Number.isNaN(numericValue) ? 0 : Math.min(Math.max(numericValue, 0), 100));
+    const nextValue = Number.isNaN(numericValue) ? 0 : Math.min(Math.max(numericValue, 0), 100);
+    setCustomRatePercent(nextValue);
+    trackCalculatorInteraction({
+      page_template: analyticsPageTemplate,
+      placement: analyticsPlacement,
+      interaction_name: 'assumption_rate_updated',
+      loan_purpose: loanPurpose || undefined,
+      loan_amount: principal || undefined,
+      assumption_rate: nextValue,
+    });
   };
 
   const handleTermSelectChange = (value: string) => {
     const numericValue = parseInt(value, 10);
-    setCustomTermMonths(Number.isNaN(numericValue) ? defaultPurpose.defaultTerm : numericValue);
+    const nextValue = Number.isNaN(numericValue) ? defaultPurpose.defaultTerm : numericValue;
+    setCustomTermMonths(nextValue);
+    trackCalculatorInteraction({
+      page_template: analyticsPageTemplate,
+      placement: analyticsPlacement,
+      interaction_name: 'assumption_term_updated',
+      loan_purpose: loanPurpose || undefined,
+      loan_amount: principal || undefined,
+      assumption_term_months: nextValue,
+    });
   };
 
   const handleDownPaymentPercentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value.replace(/[^\d.]/g, '');
     const numericValue = parseFloat(rawValue);
-    setCustomDownPaymentPercent(Number.isNaN(numericValue) ? 0 : Math.min(Math.max(numericValue, 0), 100));
+    const nextValue = Number.isNaN(numericValue) ? 0 : Math.min(Math.max(numericValue, 0), 100);
+    setCustomDownPaymentPercent(nextValue);
+    trackCalculatorInteraction({
+      page_template: analyticsPageTemplate,
+      placement: analyticsPlacement,
+      interaction_name: 'assumption_down_payment_percent_updated',
+      loan_purpose: loanPurpose || undefined,
+      loan_amount: principal || undefined,
+      assumption_down_payment_pct: nextValue,
+    });
   };
 
   const handleDownPaymentAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -635,6 +435,14 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
     const nextAmount = Number.isNaN(numericValue) ? 0 : Math.min(Math.max(numericValue, 0), principal);
     const nextPercent = principal > 0 ? (nextAmount / principal) * 100 : 0;
     setCustomDownPaymentPercent(Number(nextPercent.toFixed(2)));
+    trackCalculatorInteraction({
+      page_template: analyticsPageTemplate,
+      placement: analyticsPlacement,
+      interaction_name: 'assumption_down_payment_amount_updated',
+      loan_purpose: loanPurpose || undefined,
+      loan_amount: principal || undefined,
+      assumption_down_payment_pct: Number(nextPercent.toFixed(2)),
+    });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -651,6 +459,13 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
     setError('');
     setValidationError(null);
     setLoanPurpose(value as keyof typeof loanPurposes | '');
+    trackCalculatorInteraction({
+      page_template: analyticsPageTemplate,
+      placement: analyticsPlacement,
+      interaction_name: 'loan_purpose_selected',
+      loan_purpose: value,
+      loan_amount: principal || undefined,
+    });
   };
 
   const focusField = (fieldId: string, openSelect: boolean = false) => {
@@ -714,20 +529,21 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
     values.realEstateDebt +
     values.creditCards +
     values.vehicleEquipment +
-    values.linesOfCredit +
-    values.otherDebt;
+      values.linesOfCredit +
+      values.otherDebt;
   const totalProjectedDebtService = totalMonthlyDebtPayments + estimatedPayment;
-  const dscrStatus = dscr !== null ? getDscrStatus(dscr) : null;
-  const nextStepConfig = dscr !== null ? getNextStepConfig(dscr) : null;
+  const dscrBand = dscr !== null ? getDscrBand(dscr) : null;
+  const dscrStatus = dscrBand?.quickStatus ?? null;
+  const nextStepConfig = dscrBand?.nextStep ?? null;
   const dscrDisplay = dscr !== null ? dscr.toFixed(2) : '';
-  const isBelowBenchmark = dscr !== null && dscr < 1.25;
-  const shouldShowCashFlowAnalysisUpsell = dscr !== null && dscr > 1 && dscr < 1.75;
+  const isBelowBenchmark = dscr !== null && dscr < DSCR_BENCHMARK;
+  const shouldShowCashFlowAnalysisUpsell = dscrBand?.showExpandedAnalysisUpsell ?? false;
   const defaultPurposeMeta = loanPurposeMeta['Working Capital']!;
   const selectedPurposeMeta = loanPurposeMeta[loanPurpose] ?? defaultPurposeMeta;
   const selectedPurposeTitle = selectedPurpose?.title ?? 'Select Loan Purpose';
   const selectedPurposeDescription = selectedPurpose?.description ?? 'Choose the option that best matches what you want the funds to do for your business.';
   const SelectedPurposeIcon = selectedPurposeMeta.icon;
-  const benchmarkMonthlyCapacity = Math.max((values.monthlyNetIncome / 1.25) - totalMonthlyDebtPayments, 0);
+  const benchmarkMonthlyCapacity = Math.max((values.monthlyNetIncome / DSCR_BENCHMARK) - totalMonthlyDebtPayments, 0);
   const maxFinancedAmountAtBenchmark = Math.max(
     0,
     Math.round(
@@ -747,6 +563,80 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   );
   const additionalCapacity = Math.max(maxLoanAmountAtBenchmark - principal, 0);
   const amountAboveBenchmarkTarget = Math.max(principal - maxLoanAmountAtBenchmark, 0);
+
+  const handleExploreLoanPackaging = (sectionId: string) => {
+    trackCtaClick({
+      page_template: analyticsPageTemplate,
+      section_id: sectionId,
+      cta_id: 'explore_loan_packaging',
+      cta_label: nextStepConfig?.primaryCtaLabel ?? 'Explore Loan Packaging',
+      destination_url: '/loan-services',
+    });
+    router.push('/loan-services');
+  };
+
+  const handleStartComprehensiveAnalysis = (sectionId: string) => {
+    trackCtaClick({
+      page_template: analyticsPageTemplate,
+      section_id: sectionId,
+      cta_id: 'start_comprehensive_analysis',
+      cta_label: 'Start Comprehensive Analysis',
+      destination_url: comprehensiveCheckoutPath,
+    });
+    router.push(comprehensiveCheckoutPath);
+  };
+
+  React.useEffect(() => {
+    if (!showResults || dscr === null || !dscrBand) return;
+
+    const signature = [
+      dscrBand.id,
+      dscr.toFixed(4),
+      principal,
+      totalProjectedDebtService,
+      selectedRate.toFixed(4),
+      selectedTerm,
+      selectedDownPaymentPct.toFixed(4),
+      loanPurpose,
+    ].join('|');
+
+    if (lastResultSignatureRef.current === signature) return;
+    lastResultSignatureRef.current = signature;
+
+    trackCalculatorResult({
+      page_template: analyticsPageTemplate,
+      placement: analyticsPlacement,
+      interaction_name: 'result_viewed',
+      loan_purpose: loanPurpose || undefined,
+      dscr_band: dscrBand.id,
+      dscr_value: Number(dscr.toFixed(2)),
+      loan_amount: principal || undefined,
+      monthly_income: values.monthlyNetIncome || undefined,
+      monthly_debt_service: totalProjectedDebtService || undefined,
+      benchmark_gap: Number((dscr - DSCR_BENCHMARK).toFixed(2)),
+      assumption_rate: Number(customRatePercent.toFixed(2)),
+      assumption_term_months: selectedTerm,
+      assumption_down_payment_pct: Number(customDownPaymentPercent.toFixed(2)),
+      recommended_action: nextStepConfig?.primaryCtaKind,
+    });
+  }, [
+    analyticsPageTemplate,
+    analyticsPlacement,
+    customDownPaymentPercent,
+    customRatePercent,
+    dscr,
+    dscrBand,
+    loanPurpose,
+    nextStepConfig,
+    principal,
+    selectedDownPaymentPct,
+    selectedTerm,
+    selectedRate,
+    showResults,
+    totalProjectedDebtService,
+    values.monthlyNetIncome,
+  ]);
+
   return (
     <div className="mx-auto max-w-6xl">
       <div
@@ -821,7 +711,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     name="loanAmount"
                     placeholder="e.g. 100,000"
                     tooltip="How much funding are you looking for?"
-                    description="Enter the amount you want to test. We’ll also estimate the loan amount your cash flow may support at 1.25x DSCR, the number banks prefer to see at minimum."
+                    description={`Enter the amount you want to test. We’ll also estimate the loan amount your cash flow may support at ${DSCR_BENCHMARK.toFixed(2)}x DSCR, the number banks prefer to see at minimum.`}
                     errorMessage={validationError?.field === 'dscr-calc-form-loan-amount' ? validationError.message : undefined}
                     value={parseInt(loanAmount.replace(/[$,]/g, '')) || 0}
                     onChange={handleLoanAmountChange}
@@ -865,7 +755,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl">
                       {loanPurposeKeys.map((purpose) => {
-                        const purposeConfig = loanPurposes[purpose]!;
+                        const purposeConfig: LoanPurpose = loanPurposes[purpose];
                         const OptionIcon = (loanPurposeMeta[purpose] ?? defaultPurposeMeta).icon;
 
                         return (
@@ -937,10 +827,30 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                 <Button
                   onClick={(e) => {
                     if (!validateRequiredFields()) {
+                      trackCalculatorInteraction({
+                        page_template: analyticsPageTemplate,
+                        placement: analyticsPlacement,
+                        interaction_name: 'calculate_validation_failed',
+                        loan_purpose: loanPurpose || undefined,
+                        loan_amount: principal || undefined,
+                        monthly_income: values.monthlyNetIncome || undefined,
+                      });
                       e.preventDefault();
                       return;
                     }
                     setError('');
+                    trackCalculatorInteraction({
+                      page_template: analyticsPageTemplate,
+                      placement: analyticsPlacement,
+                      interaction_name: 'calculate_submitted',
+                      loan_purpose: loanPurpose || undefined,
+                      loan_amount: principal || undefined,
+                      monthly_income: values.monthlyNetIncome || undefined,
+                      monthly_debt_service: totalProjectedDebtService || undefined,
+                      assumption_rate: Number(customRatePercent.toFixed(2)),
+                      assumption_term_months: selectedTerm,
+                      assumption_down_payment_pct: Number(customDownPaymentPercent.toFixed(2)),
+                    });
                     handleCalculate();
                   }}
                   className="h-11 w-full rounded-2xl bg-emerald-500 px-6 text-base font-semibold text-slate-950 shadow-[0_20px_60px_-30px_rgba(16,185,129,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-400"
@@ -1002,7 +912,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                             </p>
                             <Button
                               type="button"
-                              onClick={handleStartComprehensiveAnalysis}
+                              onClick={() => handleStartComprehensiveAnalysis('calculator_below_benchmark_callout')}
                               className="mt-3 h-10 w-full rounded-xl bg-slate-900 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
                             >
                               Start Comprehensive Analysis
@@ -1024,7 +934,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                             {formatCurrency(values.monthlyNetIncome)} / {formatCurrency(totalProjectedDebtService)} = <span className={dscrStatus.valueClassName}>{dscr.toFixed(2)}</span>
                           </p>
                           <p className="mt-2 text-sm leading-6 text-slate-600">
-                            Lenders compare your monthly net income to your total required monthly debt payments. Most want to see at least 1.25x.
+                            Lenders compare your monthly net income to your total required monthly debt payments. Most want to see at least {DSCR_BENCHMARK.toFixed(2)}x.
                           </p>
                         </div>
                       </div>
@@ -1066,7 +976,16 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                             </div>
                             <button
                               type="button"
-                              onClick={() => setIsEditingAssumptions((current) => !current)}
+                              onClick={() => {
+                                setIsEditingAssumptions((current) => !current);
+                                trackCalculatorInteraction({
+                                  page_template: analyticsPageTemplate,
+                                  placement: analyticsPlacement,
+                                  interaction_name: isEditingAssumptions ? 'assumptions_closed' : 'assumptions_opened',
+                                  loan_purpose: loanPurpose || undefined,
+                                  loan_amount: principal || undefined,
+                                });
+                              }}
                               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950"
                             >
                               <PencilLine className="h-3.5 w-3.5" />
@@ -1185,18 +1104,18 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         </div>
                       </div>
 
-                      {dscr < 1.25 && (
+                      {dscr < DSCR_BENCHMARK && (
                         <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">1.25x Target</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">{DSCR_BENCHMARK.toFixed(2)}x Target</p>
                               <h4 className="mt-1 text-lg font-bold tracking-[-0.03em] text-slate-950">
-                                {maxLoanAmountAtBenchmark > 0 ? 'Estimated Loan Amount You Could Afford At 1.25x' : 'Current Numbers May Not Support A New Loan At 1.25x'}
+                                {maxLoanAmountAtBenchmark > 0 ? `Estimated Loan Amount You Could Afford At ${DSCR_BENCHMARK.toFixed(2)}x` : `Current Numbers May Not Support A New Loan At ${DSCR_BENCHMARK.toFixed(2)}x`}
                               </h4>
                               <p className="mt-2 text-sm leading-6 text-slate-700">
                                 {maxLoanAmountAtBenchmark > 0
-                                  ? `Based on your current income, existing monthly debt, and the loan assumptions above, this is the estimated loan amount that would bring your DSCR up to the common 1.25x benchmark.`
-                                  : `Based on your current income and existing monthly debt payments, this quick check does not show room for an additional loan while staying at 1.25x DSCR.`}
+                                  ? `Based on your current income, existing monthly debt, and the loan assumptions above, this is the estimated loan amount that would bring your DSCR up to the common ${DSCR_BENCHMARK.toFixed(2)}x benchmark.`
+                                  : `Based on your current income and existing monthly debt payments, this quick check does not show room for an additional loan while staying at ${DSCR_BENCHMARK.toFixed(2)}x DSCR.`}
                               </p>
                             </div>
                             <div className="rounded-2xl border border-amber-200 bg-white/90 px-4 py-3 text-center sm:min-w-52">
@@ -1214,7 +1133,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                                 <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">{formatCurrency(principal)}</p>
                               </div>
                               <div className="rounded-2xl border border-white/90 bg-white/90 p-4">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Amount Above 1.25x Target</p>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Amount Above {DSCR_BENCHMARK.toFixed(2)}x Target</p>
                                 <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-amber-700">{formatCurrency(amountAboveBenchmarkTarget)}</p>
                               </div>
                             </div>
@@ -1229,7 +1148,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   </div>
                 </section>
 
-                {dscr >= 1.25 && maxLoanAmountAtBenchmark > 0 && (
+                {dscr >= DSCR_BENCHMARK && maxLoanAmountAtBenchmark > 0 && (
                   <section className="rounded-[2rem] border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.96)_0%,rgba(255,255,255,1)_52%,rgba(240,253,250,0.98)_100%)] p-4 shadow-[0_24px_60px_-42px_rgba(16,185,129,0.35)] sm:p-5">
                     <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
                       <div>
@@ -1239,7 +1158,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Bonus Insight</p>
                         <h3 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">You May Qualify For a Larger Loan</h3>
                         <p className="mt-3 text-sm leading-6 text-slate-700">
-                          Based on your current numbers, your business is performing above the typical lender benchmark of 1.25x DSCR.
+                          Based on your current numbers, your business is performing above the typical lender benchmark of {DSCR_BENCHMARK.toFixed(2)}x DSCR.
                         </p>
                         <p className="mt-3 text-sm leading-6 text-slate-700">
                           This means you may be able to support a larger loan while still staying within a comfortable approval range.
@@ -1317,7 +1236,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         <Button
                           className="mt-4 h-11 w-full rounded-2xl bg-white text-base font-bold text-slate-950 transition-colors hover:bg-slate-100"
                           size="lg"
-                          onClick={handleStartComprehensiveAnalysis}
+                          onClick={() => handleStartComprehensiveAnalysis('calculator_full_analysis_upsell')}
                           id="dscr-calc-cta-cash-flow-analysis"
                         >
                           Start Comprehensive Analysis
@@ -1330,11 +1249,11 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   </section>
                 )}
 
-                {dscr >= 1.25 && nextStepConfig && (
+                {dscr >= DSCR_BENCHMARK && nextStepConfig && (
                   <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.76)_0%,rgba(255,255,255,1)_44%,rgba(239,246,255,0.9)_100%)] shadow-[0_24px_60px_-42px_rgba(15,23,42,0.35)]">
                     <div className="grid gap-0 xl:grid-cols-[0.9fr_1.1fr]">
                       <div className="border-b border-slate-200/80 p-4 sm:p-5 xl:border-b-0 xl:border-r">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Next Step</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">{nextStepConfig.serviceEyebrow}</p>
                         <h3 className="mt-2 text-[1.65rem] font-black tracking-[-0.04em] text-slate-950">{nextStepConfig.title}</h3>
                         <p className="mt-2 text-sm leading-6 text-slate-700">
                           {nextStepConfig.description}
@@ -1369,7 +1288,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         <div className="rounded-[1.75rem] border border-emerald-200 bg-white/96 p-4 shadow-[0_24px_60px_-42px_rgba(16,185,129,0.4)]">
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Loan Packaging</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{nextStepConfig.serviceEyebrow}</p>
                               <h4 className="mt-1.5 text-[1.55rem] font-black tracking-[-0.04em] text-slate-950">{nextStepConfig.serviceTitle}</h4>
                             </div>
                             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
@@ -1395,7 +1314,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                           <Button
                             className="mt-4 h-11 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 text-base font-bold text-white shadow-[0_18px_50px_-30px_rgba(16,185,129,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:from-emerald-600 hover:to-green-700"
                             size="lg"
-                            onClick={handleExploreLoanPackaging}
+                            onClick={() => handleExploreLoanPackaging('calculator_packaging_next_step')}
                             id="dscr-calc-cta-start-checkout"
                           >
                             {nextStepConfig.primaryCtaLabel}

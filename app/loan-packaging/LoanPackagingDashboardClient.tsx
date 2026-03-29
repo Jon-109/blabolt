@@ -392,7 +392,7 @@ const FINANCING_DEFAULTS_BY_PURPOSE: Record<string, FinancingDefaults> = {
     summary: 'Estimated with a long-term owner-occupied commercial refinance structure.',
   },
   'Debt Refinance / Consolidation': fromCalculatorPurpose(
-    'Debt Refinancing',
+    'Debt Refinance / Consolidation',
     'Estimated as a consolidation refinance using the home-page quick calculator defaults.',
   ),
   'Business Expansion / New Location': {

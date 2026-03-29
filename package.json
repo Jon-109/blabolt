@@ -9,6 +9,8 @@
     "postbuild": "next-sitemap",
     "start": "next start",
     "lint": "eslint .",
+    "lint:funnel": "eslint app/page.tsx app/HomePageClient.tsx app/cash-flow-analysis/page.tsx app/cash-flow-analysis/CashFlowAnalysisPageClient.tsx 'app/(components)/cash-flow/DscrQuickCalculator.tsx' 'app/(components)/analysis/DSCRCard.tsx' 'app/(components)/CashFlowReport.tsx' 'app/(components)/shared/Header.tsx' lib/analytics.ts lib/financial/dscr.ts lib/loanPurposes.ts",
+    "typecheck": "tsc --noEmit --pretty false",
     "tw:config": "tailwindcss resolve-config"
   },
   "dependencies": {
