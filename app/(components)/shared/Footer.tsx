@@ -33,6 +33,11 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                <Link href="/services/templates-bundle" className="text-gray-400 hover:text-white transition-colors">
+                  Templates
+                </Link>
+              </li>
+              <li>
                 <Link href="/loan-services" className="text-gray-400 hover:text-white transition-colors">
                   Loan Brokering
                 </Link>

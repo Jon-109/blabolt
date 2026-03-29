@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, ShieldCheck } from 'lucide-react';
+import { ChevronDown, LogOut, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/supabase/helpers/client';
 import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 
@@ -13,6 +13,16 @@ const KNOWN_ADMIN_EMAILS = new Set([
   'rosantina@businesslendingadvocate.com',
   'jonathanfaranda@gmail.com',
 ]);
+
+const TEMPLATES_BUNDLE_PATH = '/services/templates-bundle';
+
+type TemplateNavItem = {
+  href: string;
+  label: string;
+  id: string;
+  mobileId: string;
+  matches: (pathname: string) => boolean;
+};
 
 function isKnownAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
@@ -44,6 +54,64 @@ function getDisplayName(user: User | null): string | null {
   const firstName = fullName.split(' ')[0]?.trim();
   return firstName || fullName;
 }
+
+function matchesPath(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function isTemplatesArea(pathname: string): boolean {
+  return (
+    pathname === '/templates' ||
+    pathname.startsWith('/templates/') ||
+    matchesPath(pathname, TEMPLATES_BUNDLE_PATH) ||
+    pathname.startsWith('/services/templates/')
+  );
+}
+
+const TEMPLATE_NAV_ITEMS: TemplateNavItem[] = [
+  {
+    href: TEMPLATES_BUNDLE_PATH,
+    label: 'Templates Bundle',
+    id: 'header-link-templates-bundle',
+    mobileId: 'header-mobile-link-templates-bundle',
+    matches: (pathname) => matchesPath(pathname, TEMPLATES_BUNDLE_PATH),
+  },
+  {
+    href: '/services/templates/balance-sheet',
+    label: 'Balance Sheet',
+    id: 'header-link-template-balance-sheet',
+    mobileId: 'header-mobile-link-template-balance-sheet',
+    matches: (pathname) => matchesPath(pathname, '/services/templates/balance-sheet'),
+  },
+  {
+    href: '/services/templates/income-statement',
+    label: 'Income Statement',
+    id: 'header-link-template-income-statement',
+    mobileId: 'header-mobile-link-template-income-statement',
+    matches: (pathname) => matchesPath(pathname, '/services/templates/income-statement'),
+  },
+  {
+    href: '/services/templates/business-debt-summary',
+    label: 'Business Debt Summary',
+    id: 'header-link-template-business-debt-summary',
+    mobileId: 'header-mobile-link-template-business-debt-summary',
+    matches: (pathname) => matchesPath(pathname, '/services/templates/business-debt-summary'),
+  },
+  {
+    href: '/services/templates/personal-financial-statement',
+    label: 'Personal Financial Statement',
+    id: 'header-link-template-personal-financial-statement',
+    mobileId: 'header-mobile-link-template-personal-financial-statement',
+    matches: (pathname) => matchesPath(pathname, '/services/templates/personal-financial-statement'),
+  },
+  {
+    href: '/services/templates/personal-debt-summary',
+    label: 'Personal Debt Summary',
+    id: 'header-link-template-personal-debt-summary',
+    mobileId: 'header-mobile-link-template-personal-debt-summary',
+    matches: (pathname) => matchesPath(pathname, '/services/templates/personal-debt-summary'),
+  },
+];
 
 async function syncServerSession(session: Session | null) {
   if (!session?.access_token || !session.refresh_token) {
@@ -86,7 +154,10 @@ const Header = () => {
   const [canAccessComprehensive, setCanAccessComprehensive] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileTemplatesMenuOpen, setIsMobileTemplatesMenuOpen] = useState(false);
+  const [isTemplatesMenuOpen, setIsTemplatesMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const templatesMenuRef = useRef<HTMLDivElement | null>(null);
 
   const checkAccessStatus = useCallback(async (fallbackAdmin = false, fallbackLoggedIn = false) => {
     try {
@@ -163,10 +234,37 @@ const Header = () => {
     };
   }, [applyUserState, checkAccessStatus]);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsMobileTemplatesMenuOpen(false);
+    setIsTemplatesMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isTemplatesMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (!templatesMenuRef.current?.contains(target)) {
+        setIsTemplatesMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isTemplatesMenuOpen]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     await clearServerSession();
     setIsMobileMenuOpen(false);
+    setIsMobileTemplatesMenuOpen(false);
     router.push('/login');
   };
 
@@ -227,13 +325,15 @@ const Header = () => {
                   DSCR Check
                 </Link>
               ) : null}
-              <Link
-                href="/templates"
-                className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
-                id="header-link-templates"
-              >
-                Templates
-              </Link>
+              <DesktopTemplatesMenu
+                menuRef={templatesMenuRef}
+                pathname={pathname}
+                isOpen={isTemplatesMenuOpen}
+                onOpen={() => setIsTemplatesMenuOpen(true)}
+                onClose={() => setIsTemplatesMenuOpen(false)}
+                onToggle={() => setIsTemplatesMenuOpen((open) => !open)}
+                variant="pill"
+              />
               <Link
                 href="/loan-packaging"
                 className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
@@ -260,6 +360,15 @@ const Header = () => {
               >
                 Cash Flow Analysis
               </Link>
+              <DesktopTemplatesMenu
+                menuRef={templatesMenuRef}
+                pathname={pathname}
+                isOpen={isTemplatesMenuOpen}
+                onOpen={() => setIsTemplatesMenuOpen(true)}
+                onClose={() => setIsTemplatesMenuOpen(false)}
+                onToggle={() => setIsTemplatesMenuOpen((open) => !open)}
+                variant="text"
+              />
               <Link
                 href="/loan-services"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
@@ -351,12 +460,23 @@ const Header = () => {
                     {isLoggedIn && canAccessComprehensive ? (
                       <MenuItem href="/comprehensive-cash-flow-analysis" label="DSCR Check" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-dscr-check" />
                     ) : null}
-                    <MenuItem href="/templates" label="Templates" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-templates" />
+                    <MobileTemplatesMenu
+                      pathname={pathname}
+                      isOpen={isMobileTemplatesMenuOpen}
+                      onNavigate={() => setIsMobileMenuOpen(false)}
+                      onToggle={() => setIsMobileTemplatesMenuOpen((open) => !open)}
+                    />
                     <MenuItem href="/loan-packaging" label="Loan Package" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-packaging" />
                   </>
                 ) : (
                   <>
                     <MenuItem href="/cash-flow-analysis" label="Cash Flow Analysis" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-cash-flow-analysis" />
+                    <MobileTemplatesMenu
+                      pathname={pathname}
+                      isOpen={isMobileTemplatesMenuOpen}
+                      onNavigate={() => setIsMobileMenuOpen(false)}
+                      onToggle={() => setIsMobileTemplatesMenuOpen((open) => !open)}
+                    />
                     <MenuItem href="/loan-services" label="Loan Services" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-services" />
                   </>
                 )}
@@ -391,6 +511,175 @@ type MenuItemProps = {
   label: string;
   onClick?: () => void;
   id?: string;
+};
+
+type DesktopTemplatesMenuProps = {
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  pathname: string;
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  onToggle: () => void;
+  variant: 'pill' | 'text';
+};
+
+const DesktopTemplatesMenu = ({
+  menuRef,
+  pathname,
+  isOpen,
+  onOpen,
+  onClose,
+  onToggle,
+  variant,
+}: DesktopTemplatesMenuProps) => {
+  const isActive = isTemplatesArea(pathname);
+  const wrapperClasses =
+    variant === 'pill'
+      ? `flex items-center overflow-hidden rounded-full border transition ${
+          isActive || isOpen
+            ? 'border-sky-200 bg-sky-50 text-sky-800'
+            : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800'
+        }`
+      : `flex items-center rounded-full transition ${
+          isActive || isOpen ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+        }`;
+
+  return (
+    <div
+      ref={menuRef}
+      className="relative"
+      onMouseEnter={onOpen}
+      onMouseLeave={onClose}
+      onFocusCapture={onOpen}
+      onBlurCapture={(event) => {
+        const nextTarget = event.relatedTarget;
+        if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+          onClose();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          onClose();
+        }
+      }}
+    >
+      <div className={wrapperClasses}>
+        <Link href={TEMPLATES_BUNDLE_PATH} className="px-4 py-2 pr-1 text-sm font-semibold" id="header-link-templates">
+          Templates
+        </Link>
+        <button
+          type="button"
+          className={`flex items-center transition ${
+            variant === 'pill' ? 'px-1.5 py-2 pr-3' : 'px-1 py-2 pr-3'
+          }`}
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+          aria-label="Toggle templates menu"
+          id="header-button-templates-dropdown"
+          onClick={onToggle}
+        >
+          <ChevronDown className={`h-4 w-4 transition ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
+      <div
+        className={`absolute right-0 top-full z-50 w-72 pt-2 transition ${
+          isOpen ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-2 opacity-0'
+        }`}
+      >
+        <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-xl" role="menu" aria-label="Templates menu">
+          {TEMPLATE_NAV_ITEMS.map((item) => {
+            const itemActive = item.matches(pathname);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                id={item.id}
+                className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                  itemActive
+                    ? 'bg-sky-50 text-sky-800'
+                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+                role="menuitem"
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+type MobileTemplatesMenuProps = {
+  pathname: string;
+  isOpen: boolean;
+  onNavigate: () => void;
+  onToggle: () => void;
+};
+
+const MobileTemplatesMenu = ({ pathname, isOpen, onNavigate, onToggle }: MobileTemplatesMenuProps) => {
+  const isActive = isTemplatesArea(pathname);
+
+  return (
+    <div
+      className={`overflow-hidden rounded-lg border transition ${
+        isActive || isOpen ? 'border-sky-200 bg-sky-50' : 'border-slate-200 bg-white'
+      }`}
+    >
+      <div className="flex items-stretch">
+        <Link
+          href={TEMPLATES_BUNDLE_PATH}
+          className={`flex-1 px-3 py-3 text-lg font-semibold transition ${
+            isActive || isOpen ? 'text-sky-800' : 'text-slate-700 hover:text-sky-800'
+          }`}
+          onClick={onNavigate}
+          id="header-mobile-link-templates"
+        >
+          Templates
+        </Link>
+        <button
+          type="button"
+          className={`flex items-center justify-center px-4 transition ${
+            isActive || isOpen ? 'border-l border-sky-200 text-sky-800' : 'border-l border-slate-200 text-slate-700'
+          }`}
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+          aria-label="Toggle templates menu"
+          id="header-mobile-button-templates-dropdown"
+          onClick={onToggle}
+        >
+          <ChevronDown className={`h-5 w-5 transition ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
+      {isOpen ? (
+        <div className="border-t border-sky-200/80 px-2 py-2">
+          {TEMPLATE_NAV_ITEMS.map((item) => {
+            const itemActive = item.matches(pathname);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                id={item.mobileId}
+                className={`block rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  itemActive
+                    ? 'bg-white text-sky-800 shadow-sm'
+                    : 'text-slate-700 hover:bg-white hover:text-slate-900'
+                }`}
+                onClick={onNavigate}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
 };
 
 const MenuItem = ({ href, label, onClick, id }: MenuItemProps) => (

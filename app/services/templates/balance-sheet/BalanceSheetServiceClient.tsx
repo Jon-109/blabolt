@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {
-  ArrowRight,
   BadgeCheck,
   Banknote,
   BarChart3,
@@ -30,7 +29,7 @@ import {
 import BalanceSheetSvgTemplate from '@/app/(components)/templates/BalanceSheetSvgTemplate';
 import AuthAwareCheckoutButton from '@/app/services/components/AuthAwareCheckoutButton';
 import useServicePageMotion from '@/app/services/components/useServicePageMotion';
-import type { BalanceSheetData } from '@/lib/templates/types';
+import { balanceSheetPreviewData } from '@/lib/templates/preview-data';
 import {
   TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE,
   TEMPLATE_BUNDLE_PRICE_CENTS,
@@ -110,54 +109,6 @@ const faqs = [
   },
 ];
 
-const previewData: BalanceSheetData = {
-  statementLabel: 'FY 2025 Year-End',
-  statementType: 'year_end',
-  asOfDate: '2025-12-31',
-  businessInfo: {
-    legalName: 'Summit Ridge Contracting LLC',
-    reportBasis: 'accrual',
-  },
-  assets: {
-    cashAndCashEquivalents: 118400,
-    accountsReceivable: 94200,
-    inventory: 48200,
-    prepaidExpenses: 10600,
-    otherCurrentAssets: 7800,
-    fixedAssetBreakdown: {
-      businessRealEstate: 465000,
-      vehicles: 162000,
-      machineryEquipment: 238000,
-      furnitureFixtures: 43000,
-      leaseholdImprovements: 28000,
-    },
-    accumulatedDepreciation: 192000,
-    notesReceivable: 22000,
-    intangibleAssets: 9000,
-    investments: 54000,
-    otherNonCurrentAssets: 12500,
-  },
-  liabilities: {
-    accountsPayable: 77200,
-    accruedExpenses: 28600,
-    taxesPayable: 12400,
-    currentPortionLongTermDebt: 35800,
-    creditCardsAndLines: 46200,
-    deferredRevenue: 14000,
-    otherCurrentLiabilities: 9800,
-    longTermDebt: 392000,
-    shareholderLoans: 64000,
-    otherLongTermLiabilities: 21200,
-  },
-  equity: {
-    ownerContributions: 310000,
-    retainedEarnings: 196900,
-    ownerDistributions: 126500,
-    otherEquity: 15000,
-  },
-  notes: '',
-};
-
 export default function BalanceSheetServiceClient() {
   useServicePageMotion();
 
@@ -216,11 +167,6 @@ export default function BalanceSheetServiceClient() {
                 >
                   Start Balance Sheet for {singleTemplatePriceLabel}
                 </AuthAwareCheckoutButton>
-                <Button asChild variant="outline" className="h-11 w-full rounded-xl border-cyan-200/40 bg-transparent font-semibold text-cyan-100 hover:bg-cyan-300/10 hover:text-cyan-50">
-                  <Link id="balance-sheet-service-hero-cta-demo" href="/services/templates/balance-sheet/demo">
-                    View Live Output Demo
-                  </Link>
-                </Button>
               </div>
 
               <p className="mt-4 text-xs text-slate-300">
@@ -259,9 +205,9 @@ export default function BalanceSheetServiceClient() {
             </div>
           </div>
 
-          <div className="service-reveal overflow-x-auto rounded-2xl border border-slate-300/20 bg-slate-950/45 p-3 sm:p-4">
-            <div className="mx-auto w-[816px] rounded-xl bg-white shadow-[0_20px_55px_-35px_rgba(56,189,248,0.7)]">
-              <BalanceSheetSvgTemplate data={previewData} />
+          <div className="service-reveal rounded-2xl border border-slate-300/20 bg-slate-950/45 p-3 sm:p-4">
+            <div className="mx-auto w-full max-w-[816px] rounded-xl bg-white shadow-[0_20px_55px_-35px_rgba(56,189,248,0.7)]">
+              <BalanceSheetSvgTemplate data={balanceSheetPreviewData} />
             </div>
           </div>
         </div>
@@ -375,22 +321,6 @@ export default function BalanceSheetServiceClient() {
               </ul>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 md:pb-16" data-service-reveal>
-        <div className="service-reveal flex flex-col gap-5 rounded-3xl border border-cyan-200/20 bg-gradient-to-r from-slate-950/75 to-cyan-950/40 p-6 md:flex-row md:items-center md:justify-between md:p-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-cyan-200">See It Before You Buy</p>
-            <h2 className="mt-2 text-2xl font-black text-white">View the Balance Sheet demo output</h2>
-            <p className="mt-2 max-w-2xl text-sm text-slate-200">Preview the exact output style and format before starting your own statement.</p>
-          </div>
-          <Button asChild className="service-magnetic h-12 rounded-xl bg-white text-slate-900 hover:bg-slate-100" data-service-magnetic>
-            <Link id="balance-sheet-service-demo-cta-view" href="/services/templates/balance-sheet/demo">
-              Open Demo Page
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
         </div>
       </section>
 

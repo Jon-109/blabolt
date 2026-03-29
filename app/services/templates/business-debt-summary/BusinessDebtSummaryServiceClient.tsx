@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {
-  ArrowRight,
   BadgeCheck,
   Banknote,
   BarChart3,
@@ -30,7 +29,7 @@ import {
 import BusinessDebtSummarySvgTemplate from '@/app/(components)/templates/BusinessDebtSummarySvgTemplate';
 import AuthAwareCheckoutButton from '@/app/services/components/AuthAwareCheckoutButton';
 import useServicePageMotion from '@/app/services/components/useServicePageMotion';
-import type { BusinessDebtSummaryData } from '@/lib/templates/types';
+import { businessDebtSummaryPreviewData } from '@/lib/templates/preview-data';
 import {
   TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE,
   TEMPLATE_BUNDLE_PRICE_CENTS,
@@ -110,53 +109,6 @@ const faqs = [
   },
 ];
 
-const previewData: BusinessDebtSummaryData = {
-  asOfDate: '2026-03-01',
-  businessInfo: {
-    name: 'Summit Ridge Contracting LLC',
-  },
-  debts: [
-    {
-      category: 'credit_cards',
-      creditor: 'Amex Business Gold',
-      originalAmount: 0,
-      currentBalance: 14200,
-      monthlyPayment: 620,
-      creditLimit: 28000,
-    },
-    {
-      category: 'line_of_credit',
-      creditor: 'Regional Bank Operating LOC',
-      originalAmount: 50000,
-      currentBalance: 19600,
-      monthlyPayment: 870,
-      creditLimit: 50000,
-    },
-    {
-      category: 'vehicle_equipment',
-      creditor: 'Equipment Loan - Cat Skid Steer',
-      originalAmount: 76500,
-      currentBalance: 51100,
-      monthlyPayment: 1480,
-    },
-    {
-      category: 'term_loans',
-      creditor: 'Working Capital Term Loan',
-      originalAmount: 120000,
-      currentBalance: 73600,
-      monthlyPayment: 2120,
-    },
-    {
-      category: 'real_estate',
-      creditor: 'Warehouse Mortgage',
-      originalAmount: 590000,
-      currentBalance: 478000,
-      monthlyPayment: 4210,
-    },
-  ],
-  notes: '',
-};
-
 export default function BusinessDebtSummaryServiceClient() {
   useServicePageMotion();
 
@@ -215,11 +167,6 @@ export default function BusinessDebtSummaryServiceClient() {
                 >
                   Start Business Debt Summary for {singleTemplatePriceLabel}
                 </AuthAwareCheckoutButton>
-                <Button asChild variant="outline" className="h-11 w-full rounded-xl border-cyan-200/40 bg-transparent font-semibold text-cyan-100 hover:bg-cyan-300/10 hover:text-cyan-50">
-                  <Link id="business-debt-service-hero-cta-demo" href="/services/templates/business-debt-summary/demo">
-                    View Live Output Demo
-                  </Link>
-                </Button>
               </div>
 
               <p className="mt-4 text-xs text-slate-300">
@@ -258,9 +205,9 @@ export default function BusinessDebtSummaryServiceClient() {
             </div>
           </div>
 
-          <div className="service-reveal overflow-x-auto rounded-2xl border border-slate-300/20 bg-slate-950/45 p-3 sm:p-4">
-            <div className="mx-auto w-[816px] rounded-xl bg-white shadow-[0_20px_55px_-35px_rgba(56,189,248,0.7)]">
-              <BusinessDebtSummarySvgTemplate data={previewData} />
+          <div className="service-reveal rounded-2xl border border-slate-300/20 bg-slate-950/45 p-3 sm:p-4">
+            <div className="mx-auto w-full max-w-[816px] rounded-xl bg-white shadow-[0_20px_55px_-35px_rgba(56,189,248,0.7)]">
+              <BusinessDebtSummarySvgTemplate data={businessDebtSummaryPreviewData} />
             </div>
           </div>
         </div>
@@ -374,22 +321,6 @@ export default function BusinessDebtSummaryServiceClient() {
               </ul>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 md:pb-16" data-service-reveal>
-        <div className="service-reveal flex flex-col gap-5 rounded-3xl border border-cyan-200/20 bg-gradient-to-r from-slate-950/75 to-cyan-950/40 p-6 md:flex-row md:items-center md:justify-between md:p-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-cyan-200">See It Before You Buy</p>
-            <h2 className="mt-2 text-2xl font-black text-white">View the Business Debt Summary demo output</h2>
-            <p className="mt-2 max-w-2xl text-sm text-slate-200">Preview the format, grouped totals, and lender-style layout so you know exactly what you are producing.</p>
-          </div>
-          <Button asChild className="service-magnetic h-12 rounded-xl bg-white text-slate-900 hover:bg-slate-100" data-service-magnetic>
-            <Link id="business-debt-service-demo-cta-view" href="/services/templates/business-debt-summary/demo">
-              Open Demo Page
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
         </div>
       </section>
 

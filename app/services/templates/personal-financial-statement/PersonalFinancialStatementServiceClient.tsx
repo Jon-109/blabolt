@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {
-  ArrowRight,
   BadgeCheck,
   Banknote,
   BarChart3,
@@ -30,7 +29,7 @@ import {
 import SBAForm413SvgTemplate from '@/app/(components)/templates/SBAForm413SvgTemplate';
 import AuthAwareCheckoutButton from '@/app/services/components/AuthAwareCheckoutButton';
 import useServicePageMotion from '@/app/services/components/useServicePageMotion';
-import type { PersonalFinancialStatementData } from '@/lib/templates/types';
+import { personalFinancialStatementPreviewData } from '@/lib/templates/preview-data';
 import {
   TEMPLATE_BUNDLE_LIMIT_PER_TEMPLATE,
   TEMPLATE_BUNDLE_PRICE_CENTS,
@@ -114,98 +113,6 @@ const faqs = [
   },
 ];
 
-const previewData: PersonalFinancialStatementData = {
-  asOfDate: '2026-03-01',
-  personalInfo: {
-    name: 'Jordan Rivera',
-    address: '1824 Cedar Bluff Dr, San Antonio, TX 78258',
-    phone: '(210) 555-3984',
-    email: 'jordan.rivera@example.com',
-  },
-  businessInfo: {
-    applicantBusinessName: 'Rivera Industrial Services LLC',
-    applicantBusinessPhone: '(210) 555-3984',
-  },
-  declarations: {
-    isMarried: 'yes',
-    isUsCitizen: 'yes',
-    hasContingentLiability: 'no',
-    hasLawsuitOrJudgment: 'no',
-    hasTaxDelinquency: 'no',
-    hasGuarantees: 'yes',
-    guaranteesNotes: 'Personal guaranty on operating line of credit.',
-  },
-  assets: {
-    cashChecking: 45200,
-    cashSavings: 38800,
-    accountsNotesReceivable: 12000,
-    lifeInsuranceCashSurrender: 18500,
-    stocksBonds: 74200,
-    realEstate: 465000,
-    automobiles: 42000,
-    personalProperty: 27000,
-    otherAssets: 16000,
-  },
-  liabilities: {
-    creditCards: 18400,
-    mortgages: 286000,
-    autoLoans: 24500,
-    studentLoans: 19800,
-    otherDebts: 15600,
-  },
-  annualIncome: {
-    salary: 148000,
-    netInvestmentIncome: 9200,
-    realEstateIncome: 16800,
-    otherIncome: 4200,
-  },
-  realEstateOwned: [
-    {
-      propertyType: 'primary_residence',
-      propertyAddress: '1824 Cedar Bluff Dr, San Antonio, TX 78258',
-      originalCost: 392000,
-      presentMarketValue: 465000,
-      mortgageHolderName: 'First National Mortgage',
-      mortgageBalance: 286000,
-      amountOfPaymentPerMonth: 2590,
-      status: 'current',
-    },
-  ],
-  retirementAccounts: [
-    {
-      accountType: '401k',
-      institutionName: 'Fidelity',
-      currentEstimatedValue: 126000,
-      pledgedAsCollateral: 'no',
-    },
-  ],
-  vehiclesOwned: [
-    {
-      year: 2023,
-      make: 'Toyota',
-      model: 'Highlander',
-      currentEstimatedValue: 42000,
-      loanBalance: 24500,
-      monthlyPayment: 690,
-    },
-  ],
-  stocksAndBonds: [
-    {
-      symbol: 'VTI',
-      issuerName: 'Vanguard Total Stock Market ETF',
-      numberOfShares: 280,
-      marketValue: 74200,
-      dateOfQuote: '2026-03-01',
-    },
-  ],
-  sba413Page3Entries: [
-    { section: 'Retirement', description: '401(k) - Fidelity', amount: 126000 },
-    { section: 'Securities', description: 'VTI ETF Holdings', amount: 74200 },
-    { section: 'Other Assets', description: 'Cash value life insurance', amount: 18500 },
-  ],
-  notes: '',
-};
-
 export default function PersonalFinancialStatementServiceClient() {
   useServicePageMotion();
 
@@ -264,11 +171,6 @@ export default function PersonalFinancialStatementServiceClient() {
                 >
                   Start Personal Financial Statement for {singleTemplatePriceLabel}
                 </AuthAwareCheckoutButton>
-                <Button asChild variant="outline" className="h-11 w-full rounded-xl border-cyan-200/40 bg-transparent font-semibold text-cyan-100 hover:bg-cyan-300/10 hover:text-cyan-50">
-                  <Link id="pfs-service-hero-cta-demo" href="/services/templates/personal-financial-statement/demo">
-                    View SBA Form 413 Demo
-                  </Link>
-                </Button>
               </div>
 
               <p className="mt-4 text-xs text-slate-300">
@@ -308,8 +210,8 @@ export default function PersonalFinancialStatementServiceClient() {
           </div>
 
           <div className="service-reveal rounded-2xl border border-slate-300/20 bg-slate-950/45 p-3 sm:p-4">
-            <div className="max-h-[680px] overflow-y-auto rounded-xl border border-slate-300/15 bg-white p-3 shadow-[0_20px_55px_-35px_rgba(56,189,248,0.7)]">
-              <SBAForm413SvgTemplate data={previewData} />
+            <div className="mx-auto w-full max-w-[816px] max-h-[680px] overflow-y-auto rounded-xl border border-slate-300/15 bg-white p-3 shadow-[0_20px_55px_-35px_rgba(56,189,248,0.7)]">
+              <SBAForm413SvgTemplate data={personalFinancialStatementPreviewData} />
             </div>
           </div>
         </div>
@@ -423,22 +325,6 @@ export default function PersonalFinancialStatementServiceClient() {
               </ul>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 md:pb-16" data-service-reveal>
-        <div className="service-reveal flex flex-col gap-5 rounded-3xl border border-cyan-200/20 bg-gradient-to-r from-slate-950/75 to-cyan-950/40 p-6 md:flex-row md:items-center md:justify-between md:p-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-cyan-200">See It Before You Buy</p>
-            <h2 className="mt-2 text-2xl font-black text-white">View the SBA Form 413 demo output</h2>
-            <p className="mt-2 max-w-2xl text-sm text-slate-200">Preview the full-format Personal Financial Statement output so you know exactly what lenders and SBA reviewers will see.</p>
-          </div>
-          <Button asChild className="service-magnetic h-12 rounded-xl bg-white text-slate-900 hover:bg-slate-100" data-service-magnetic>
-            <Link id="pfs-service-demo-cta-view" href="/services/templates/personal-financial-statement/demo">
-              Open Demo Page
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
         </div>
       </section>
 
