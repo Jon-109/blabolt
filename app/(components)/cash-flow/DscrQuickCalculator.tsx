@@ -624,9 +624,9 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   };
 
   const getDebtFieldMobileLayoutClassName = (fieldName: (typeof debtFieldMeta)[number]['name']) => {
-    if (!compactMobileLayout) return '';
-    if (fieldName === 'vehicleEquipment') return 'col-span-2';
-    return '';
+    if (fieldName !== 'vehicleEquipment') return '';
+    if (compactMobileLayout) return 'col-span-2 sm:col-span-2';
+    return 'sm:col-span-2';
   };
 
   const handleExploreLoanPackaging = (sectionId: string) => {
@@ -891,7 +891,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   </div>
                 </div>
 
-                <div className={`mt-2.5 grid gap-2 ${compactMobileLayout ? 'grid-cols-2' : ''} sm:gap-2.5 sm:grid-cols-2 xl:grid-cols-3`}>
+                <div className={`mt-2.5 grid gap-2 ${compactMobileLayout ? 'grid-cols-2' : ''} sm:gap-2.5 sm:grid-cols-2`}>
                   {debtFieldMeta.map((field) => (
                     <div key={field.name} className={getDebtFieldMobileLayoutClassName(field.name)}>
                       <InputField
