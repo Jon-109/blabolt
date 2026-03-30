@@ -662,15 +662,37 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
     return 'sm:col-span-2';
   };
 
-  const handleExploreLoanPackaging = (sectionId: string) => {
+  const handleExploreLoanPackaging = (sectionId: string, ctaLabel: string = 'Just Get My File Lender-Ready') => {
     trackCtaClick({
       page_template: analyticsPageTemplate,
       section_id: sectionId,
       cta_id: 'explore_loan_services',
-      cta_label: nextStepConfig?.primaryCtaLabel ?? 'Explore Loan Packaging Or Brokering',
+      cta_label: ctaLabel,
       destination_url: '/loan-services',
     });
     router.push('/loan-services');
+  };
+
+  const handleStartLoanBrokering = (sectionId: string) => {
+    trackCtaClick({
+      page_template: analyticsPageTemplate,
+      section_id: sectionId,
+      cta_id: 'start_loan_brokering',
+      cta_label: 'Move Forward With Expert Help',
+      destination_url: '/loan-services',
+    });
+    router.push('/loan-services');
+  };
+
+  const handleExploreCashFlowAnalysis = (sectionId: string, ctaLabel: string = 'Validate With Full Analysis First') => {
+    trackCtaClick({
+      page_template: analyticsPageTemplate,
+      section_id: sectionId,
+      cta_id: 'explore_cash_flow_analysis',
+      cta_label: ctaLabel,
+      destination_url: '/cash-flow-analysis',
+    });
+    router.push('/cash-flow-analysis');
   };
 
   const handleStartComprehensiveAnalysis = (sectionId: string) => {
@@ -1400,91 +1422,123 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                 )}
 
                 {nextStepConfig?.primaryCtaKind === 'packaging' && (
-                  <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.76)_0%,rgba(255,255,255,1)_44%,rgba(239,246,255,0.9)_100%)] shadow-[0_24px_60px_-42px_rgba(15,23,42,0.35)]">
-                    <div className="grid gap-0 xl:grid-cols-[0.9fr_1.1fr]">
-                      <div className="border-b border-slate-200/80 p-4 sm:p-5 xl:border-b-0 xl:border-r">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Best Next Move</p>
-                        <h3 className="mt-2 text-[1.65rem] font-black tracking-[-0.04em] text-slate-950">{nextStepConfig.title}</h3>
+                  <section className="relative overflow-hidden rounded-[2rem] border border-sky-200/80 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_38%,#dbeafe_100%)] shadow-[0_28px_70px_-42px_rgba(37,99,235,0.28)]">
+                    <div className="absolute -right-10 top-0 h-40 w-40 rounded-full bg-cyan-300/25 blur-3xl" />
+                    <div className="absolute left-0 top-10 h-32 w-32 rounded-full bg-sky-300/20 blur-3xl" />
+                    <div className="relative grid gap-0 xl:grid-cols-[0.78fr_1.22fr]">
+                      <div className="border-b border-sky-200/80 bg-white/80 p-4 backdrop-blur-sm sm:p-5 xl:border-b-0 xl:border-r">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Best Next Move</p>
+                        <h3 className="mt-2 text-[1.25rem] font-black tracking-[-0.04em] text-slate-950 sm:text-[1.5rem] xl:whitespace-nowrap">Strong Position To Move Forward</h3>
                         <p className="mt-2 text-sm leading-6 text-slate-700">
-                          {nextStepConfig.description}
+                          If you meet the common lender criteria below, you are usually ready to move forward with a loan package.
                         </p>
 
-                        <div className="mt-4 grid gap-2.5">
-                          <div className="rounded-2xl border border-white/80 bg-white/92 px-4 py-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Typical Business Age</p>
-                                <p className="mt-1 text-sm font-bold text-slate-950">{nextStepConfig.businessAge}</p>
+                        <div className="mt-4 grid gap-3">
+                          <div className="rounded-[1.6rem] border border-sky-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.1)_0%,rgba(255,255,255,0.98)_100%)] px-4 py-4 shadow-[0_18px_45px_-34px_rgba(14,165,233,0.45)]">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="rounded-2xl border border-sky-100 bg-white/95 px-4 py-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Time In Business</p>
+                                <p className="mt-1 text-base font-black text-slate-950">{nextStepConfig.businessAge}</p>
+                                <p className="mt-1.5 text-xs leading-5 text-slate-600">Preferred by many lenders for stability.</p>
                               </div>
-                              <div className="h-8 w-px bg-slate-200" />
-                              <div className="flex-1">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Rough Credit Comfort</p>
-                                <p className="mt-1 text-sm font-bold text-slate-950">{nextStepConfig.creditRange}</p>
+                              <div className="rounded-2xl border border-sky-100 bg-white/95 px-4 py-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Credit Range</p>
+                                <p className="mt-1 text-base font-black text-slate-950">{nextStepConfig.creditRange}</p>
+                                <p className="mt-1.5 text-xs leading-5 text-slate-600">Usually enough to open solid lender options.</p>
                               </div>
                             </div>
-                            <div className="mt-2 grid gap-2 text-xs leading-5 text-slate-600 sm:grid-cols-2">
-                              <p>{nextStepConfig.businessAgeNote}</p>
-                              <p>{nextStepConfig.creditNote}</p>
+                            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                              <p className="text-sm font-semibold text-emerald-900">If you meet these and your DSCR stays above {DSCR_BENCHMARK.toFixed(2)}, you&apos;re typically ready to move forward with a loan package.</p>
+                            </div>
+                            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+                              If you&apos;re below either one, you may still have paths through SBA options, a smaller request, a longer term, or stronger cash flow support.
                             </div>
                           </div>
                         </div>
 
-                        <p className="mt-2.5 text-[11px] leading-5 text-slate-500">
-                          Rough guidance only. Lenders also weigh documentation, liquidity, collateral, industry, and deal structure.
+                        <p className="mt-3 text-[11px] leading-5 text-slate-500">
+                          Rough guidance only. Lenders also review documents, liquidity, collateral, industry, and deal structure.
                         </p>
                       </div>
 
                       <div className="p-4 sm:p-5">
-                        <div className="rounded-[1.75rem] border border-emerald-200 bg-white/96 p-4 shadow-[0_24px_60px_-42px_rgba(16,185,129,0.4)]">
+                        <div className="rounded-[1.8rem] border border-sky-300/60 bg-[linear-gradient(145deg,rgba(15,23,42,0.98)_0%,rgba(15,118,110,0.95)_0.1%,rgba(30,41,59,0.96)_28%,rgba(30,64,175,0.94)_100%)] p-4 text-white shadow-[0_32px_80px_-44px_rgba(30,64,175,0.65)]">
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Loan Services Path</p>
-                              <h4 className="mt-1.5 text-[1.55rem] font-black tracking-[-0.04em] text-slate-950">Loan Packaging Or Brokering</h4>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200/90">Loan Services Path</p>
+                              <h4 className="mt-1.5 text-[1.45rem] font-black tracking-[-0.04em] text-white">Turn This Into A Lender-Ready Deal</h4>
                             </div>
-                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
-                              Best When You&apos;re Ready To Apply
+                            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100">
+                              Smartest Next Move
                             </span>
                           </div>
 
-                          <p className="mt-3 text-sm leading-6 text-slate-700">
-                            Your DSCR suggests this request may be ready to move into lender preparation. We help turn the numbers into a cleaner lender-facing file, and if you want hands-on help beyond packaging, our brokering path can help carry a strong request into lender conversations.
+                          <p className="mt-3 text-sm leading-6 text-sky-50/92">
+                            Your DSCR suggests this request is strong enough to take seriously. The next step is choosing how you want to move it forward.
                           </p>
 
-                          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                              <p className="text-sm font-semibold text-slate-950">Lender-Ready Package</p>
-                              <p className="mt-1.5 text-sm leading-6 text-slate-600">We help organize the request, documents, debt summary, and story into something you can present with confidence.</p>
+                          <div className="mt-4 grid gap-3 md:grid-cols-[1.12fr_0.88fr]">
+                            <div className="group rounded-[1.6rem] border border-cyan-300/35 bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.08)_100%)] p-4 shadow-[0_22px_55px_-36px_rgba(34,211,238,0.55)] backdrop-blur-sm">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-100">Recommended Path</p>
+                                  <p className="mt-1 text-lg font-black tracking-[-0.03em] text-white">Brokered Help</p>
+                                </div>
+                                <span className="rounded-full bg-cyan-300/18 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100">Recommended</span>
+                              </div>
+                              <p className="mt-2 text-sm leading-6 text-sky-50/90">Best if you want expert help presenting, packaging, and placing the deal with lenders.</p>
+                              <div className="mt-3 grid gap-2">
+                                <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm leading-5 text-sky-50/90">We structure the deal so it reads better to lenders.</div>
+                                <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm leading-5 text-sky-50/90">We package the file and help place it with lender contacts.</div>
+                              </div>
                             </div>
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                              <p className="text-sm font-semibold text-slate-950">Brokering When You Want More Support</p>
-                              <p className="mt-1.5 text-sm leading-6 text-slate-600">If you want help beyond the package, brokering can help move a strong file into real lender conversations.</p>
+
+                            <div className="rounded-[1.6rem] border border-white/14 bg-white/8 p-4 backdrop-blur-sm">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200">Alternative</p>
+                              <p className="mt-1 text-lg font-black tracking-[-0.03em] text-white">Packaging Only</p>
+                              <p className="mt-2 text-sm leading-6 text-slate-100/90">Best if you already have lender relationships and just need a cleaner file.</p>
+                              <div className="mt-3 grid gap-2">
+                                <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm leading-5 text-slate-100/90">We organize the documents, numbers, and request story.</div>
+                                <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm leading-5 text-slate-100/90">You handle the outreach yourself.</div>
+                              </div>
                             </div>
                           </div>
 
-                          <div className="mt-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
-                            <p className="text-sm font-semibold text-slate-950">Why Borrowers Use Us</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-700">We stay focused on how the request reads to a lender, not just on filling out forms. That means clearer numbers, cleaner presentation, and a more useful path from “I think I qualify” to “here is a file I can actually send out.”</p>
+                          <div className="mt-3 rounded-[1.4rem] border border-sky-300/30 bg-[linear-gradient(135deg,rgba(125,211,252,0.14)_0%,rgba(255,255,255,0.07)_100%)] px-4 py-3">
+                            <p className="text-sm font-semibold text-white">Why This Step Matters</p>
+                            <p className="mt-1.5 text-sm leading-6 text-sky-50/90">
+                              Most deals do not stall because of the raw numbers alone. They stall because the request is not packaged and positioned clearly enough for a lender to say yes.
+                            </p>
                           </div>
 
-                          <Button
-                            className="mt-4 h-11 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 text-base font-bold text-white shadow-[0_18px_50px_-30px_rgba(16,185,129,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:from-emerald-600 hover:to-green-700"
-                            size="lg"
-                            onClick={() => handleExploreLoanPackaging('calculator_packaging_next_step')}
-                            id="dscr-calc-cta-start-checkout"
-                          >
-                            {nextStepConfig.primaryCtaLabel}
-                          </Button>
+                          <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
+                            <Button
+                              className="h-11 flex-1 rounded-2xl bg-[linear-gradient(135deg,#67e8f9_0%,#38bdf8_45%,#2563eb_100%)] text-sm font-bold text-slate-950 shadow-[0_20px_50px_-32px_rgba(56,189,248,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-105"
+                              size="lg"
+                              onClick={() => handleStartLoanBrokering('calculator_packaging_brokering_primary')}
+                              id="dscr-calc-cta-start-brokering"
+                            >
+                              Move Forward With Expert Help
+                            </Button>
+                            <Button
+                              className="h-11 flex-1 rounded-2xl border border-white/15 bg-white/10 text-sm font-semibold text-white transition-colors hover:bg-white/14"
+                              size="lg"
+                              onClick={() => handleExploreLoanPackaging('calculator_packaging_only_secondary', 'Just Get My File Lender-Ready')}
+                              id="dscr-calc-cta-packaging-only"
+                            >
+                              Just Get My File Lender-Ready
+                            </Button>
+                          </div>
                           {shouldShowCashFlowAnalysisUpsell && (
                             <Button
-                              className="mt-2.5 h-11 w-full rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50"
+                              className="mt-2.5 h-10 w-full rounded-2xl border border-cyan-300/28 bg-cyan-300/10 text-sm font-semibold text-cyan-50 transition-colors hover:bg-cyan-300/15"
                               size="lg"
-                              onClick={() => handleStartComprehensiveAnalysis('calculator_packaging_secondary_analysis')}
+                              onClick={() => handleExploreCashFlowAnalysis('calculator_packaging_secondary_analysis')}
                               id="dscr-calc-cta-secondary-analysis"
                             >
-                              Validate With Comprehensive Analysis First
+                              Validate With Full Analysis First
                             </Button>
                           )}
-                          <p className="mt-2.5 text-center text-xs leading-5 text-slate-500">{nextStepConfig.serviceSupportLine}</p>
                         </div>
                       </div>
                     </div>
