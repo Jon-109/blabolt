@@ -1135,12 +1135,10 @@ export default function LoanPackagingExplainer() {
             </p>
           </div>
 
-          <div className="mt-4 sm:hidden">
-            <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2">
-              <StepRailMobile />
-            </div>
-            <div className="relative left-1/2 right-1/2 w-screen -translate-x-1/2">
-              <DesktopExplainerSvg />
+          <div className="mt-4 -mx-4 sm:hidden">
+            <StepRailMobile />
+            <div className="mt-3">
+              <DashboardMobileMarkup />
             </div>
           </div>
 
