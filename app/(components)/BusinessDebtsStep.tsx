@@ -19,6 +19,7 @@ interface BusinessDebtsStepProps {
     answeredCategories: Record<DebtCategory, boolean>;
   }) => void;
   initialData?: Debt[];
+  showCompletionProgress?: boolean;
 }
 
 // --- Export Debt interface from this file ---
@@ -146,7 +147,8 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
     isFormValid, 
     onFormDataChange, 
     onProgressChange,
-    initialData = [] 
+    initialData = [],
+    showCompletionProgress = true,
   }, 
   ref // The ref passed from the parent
 ) => {
@@ -555,21 +557,23 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
           </div>
         </div>
 
-        <div className="mb-4 rounded-2xl border border-sky-200 bg-gradient-to-r from-cyan-100/80 via-white to-emerald-100/80 p-4 shadow-sm">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="text-sm font-semibold text-slate-900">Form completion</div>
-            <div className="text-sm font-bold text-slate-900">{completionPercent}%</div>
+        {showCompletionProgress && (
+          <div className="mb-4 rounded-2xl border border-sky-200 bg-gradient-to-r from-cyan-100/80 via-white to-emerald-100/80 p-4 shadow-sm">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-sm font-semibold text-slate-900">Form completion</div>
+              <div className="text-sm font-bold text-slate-900">{completionPercent}%</div>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-[linear-gradient(90deg,#0284c7_0%,#14b8a6_55%,#16a34a_100%)] transition-all duration-500"
+                style={{ width: `${completionPercent}%` }}
+              />
+            </div>
+            <div className="mt-2 text-xs font-medium text-slate-600">
+              {completedCategoryCount} of {categories.length} debt categories complete
+            </div>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,#0284c7_0%,#14b8a6_55%,#16a34a_100%)] transition-all duration-500"
-              style={{ width: `${completionPercent}%` }}
-            />
-          </div>
-          <div className="mt-2 text-xs font-medium text-slate-600">
-            {completedCategoryCount} of {categories.length} debt categories complete
-          </div>
-        </div>
+        )}
 
         <div className="mb-4 md:hidden">
           <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

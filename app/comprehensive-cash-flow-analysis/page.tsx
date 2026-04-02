@@ -967,6 +967,7 @@ export default function Page() {
           initialData={debts}
           onFormDataChange={handleDebtsChange}
           onProgressChange={setDebtProgressState}
+          showCompletionProgress={false}
           isFormValid={setIsStepValid}
           onNext={handleNext}
           onBack={handleBack}

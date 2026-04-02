@@ -96,6 +96,7 @@ interface FinancialInputsProps {
 interface FinancialFieldInfo {
   shortDescription: string;
   whereToFind: string;
+  additionalNote?: string;
 }
 
 type FinancialErrorData = {
@@ -110,40 +111,41 @@ type FieldErrors = {
 
 const financialFieldsInfo: Record<keyof FullFinancialData, FinancialFieldInfo> = {
   revenue: {
-    shortDescription: 'Total sales or service income before subtracting any costs.',
-    whereToFind: 'Income statement / profit and loss statement, or the gross receipts area of the matching business tax return.'
+    shortDescription: 'Total sales or income before any expenses.',
+    whereToFind: 'Income statement (profit & loss), business tax return, or gross receipts.',
+    additionalNote: 'If using a tax return, use the sales number after returns (not the first total at the top).'
   },
   cogs: {
-    shortDescription: 'Direct costs tied to producing what you sold.',
-    whereToFind: 'Income statement, usually listed as "Cost of Goods Sold," or the cost-of-sales section of the matching tax return.'
+    shortDescription: 'Enter the total direct costs required to produce your product or deliver your service, combined into one COGS number for the period.',
+    whereToFind: 'Income statement or business tax return. Often listed as "Cost of Goods Sold" or similar.'
   },
   operatingExpenses: {
-    shortDescription: 'Regular business operating costs other than COGS.',
-    whereToFind: 'Income statement below gross profit, or the deductions / expenses section of the matching tax return.'
+    shortDescription: `All regular business expenses.\nExamples:\n• rent\n• payroll\n• marketing\n• software\n• utilities\n• insurance`,
+    whereToFind: 'Income statement below gross profit, or business tax return under expenses/deductions.'
   },
   nonRecurringIncome: {
-    shortDescription: `One-time income that is not part of normal operations.\nExamples:\n• COVID relief grants\n• insurance payouts\n• forgiven debt\n• one-time asset sales\n• legal settlements`,
-    whereToFind: 'A separate line on the income statement, tax-return attachments, or your accountant’s notes. If you do not have any, enter $0.'
+    shortDescription: `Income that is not part of your normal business operations and is unlikely to happen again.\nExamples:\n• selling equipment\n• insurance payouts\n• grants\n• forgiven debt\n• lawsuit settlements`,
+    whereToFind: 'Usually listed as "Other income" or a separate line on your income statement. May also appear in your business tax return under "other income" or attached statements.'
   },
   nonRecurringExpenses: {
-    shortDescription: `One-time expenses that are outside normal operations.\nExamples:\n• major damage repair\n• lawsuit settlement\n• severance\n• disaster cleanup`,
-    whereToFind: 'A separate line on the income statement, tax-return attachments, or your accountant’s notes. If none apply, enter $0.'
+    shortDescription: `Expenses that are not part of your normal business operations and are unlikely to happen again.\nExamples:\n• major repairs\n• legal settlements\n• disaster cleanup\n• one-time restructuring costs`,
+    whereToFind: 'Usually listed as "Other expenses" or a separate line on your income statement. May also appear in your business tax return under deductions or attached statements.'
   },
   depreciation: {
-    shortDescription: 'Depreciation expense for business assets.',
-    whereToFind: 'Income statement, depreciation schedule, or business tax return. If it is not separately listed, enter $0.'
+    shortDescription: 'Non-cash expense for assets losing value over time (like equipment or vehicles).',
+    whereToFind: 'Income statement, business tax return, or depreciation schedule. Often listed as "Depreciation" or combined with amortization.'
   },
   amortization: {
-    shortDescription: 'Amortization expense for intangible assets.',
-    whereToFind: 'Income statement or business tax return. If it does not apply to your business, enter $0.'
+    shortDescription: 'Non-cash expense related to intangible assets (like loans, goodwill, or startup costs).',
+    whereToFind: 'Income statement, business tax return, or supporting schedules. Often grouped with depreciation or listed separately.'
   },
   interest: {
-    shortDescription: 'Interest expense paid on business debt.',
-    whereToFind: 'Income statement, usually listed as "Interest Expense," or the interest-expense line on the business tax return.'
+    shortDescription: 'Interest paid on business debt (loans, credit lines, or financing).',
+    whereToFind: 'Income statement or business tax return, usually listed as "Interest Expense" or similar.'
   },
   taxes: {
-    shortDescription: 'Income tax expense for the business period.',
-    whereToFind: 'Income statement, business tax return, or accountant-prepared workpapers. If not separately broken out, enter $0.'
+    shortDescription: 'Taxes paid on business income for the period.',
+    whereToFind: 'Income statement, business tax return, or accountant-prepared financials.'
   },
 };
 
@@ -289,10 +291,10 @@ const FinancialInputs = memo(({
       <div className="grid gap-4 md:grid-cols-2">
         {[
           'revenue',
-          'cogs',
           'operatingExpenses',
           'nonRecurringIncome',
           'nonRecurringExpenses',
+          'cogs',
           'depreciation',
           'amortization',
           'interest', // NEW
@@ -309,9 +311,11 @@ const FinancialInputs = memo(({
                   <span className="mt-1 block text-slate-500">
                     Where to find it: {financialFieldsInfo[key as keyof FullFinancialData].whereToFind}
                   </span>
-                  <span className="mt-1 block text-slate-500">
-                    If you do not have this broken out separately, enter `$0`. Do not get stuck here.
-                  </span>
+                  {financialFieldsInfo[key as keyof FullFinancialData].additionalNote && (
+                    <span className="mt-1 block text-slate-500">
+                      {financialFieldsInfo[key as keyof FullFinancialData].additionalNote}
+                    </span>
+                  )}
                 </span>
               }
               error={
@@ -334,7 +338,7 @@ const FinancialInputs = memo(({
               />
             </FormField>
 
-            {getFieldExamples(key as keyof FullFinancialData).length > 0 && (
+            {key !== 'operatingExpenses' && getFieldExamples(key as keyof FullFinancialData).length > 0 && (
               <div className="mt-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-2">
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Examples</div>
                 <p className="mt-2 text-xs leading-5 text-slate-600">
@@ -605,7 +609,7 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
               <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Financial History</div>
               <h2 className="mt-1 text-2xl font-bold text-slate-900">Revenue, expenses, and add-backs</h2>
               <p className="mt-1 text-sm text-slate-600">
-                We use these fields to calculate net income, EBITDA, adjusted EBITDA, and DSCR across the periods you provide.
+                These numbers are used to calculate your business cash flow and evaluate how strong it looks to a lender.
               </p>
             </div>
 

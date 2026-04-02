@@ -153,6 +153,7 @@ const Header = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [canAccessComprehensive, setCanAccessComprehensive] = useState(false);
   const [hasPaidComprehensiveAccess, setHasPaidComprehensiveAccess] = useState(false);
+  const [hasTemplatesAccess, setHasTemplatesAccess] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileTemplatesMenuOpen, setIsMobileTemplatesMenuOpen] = useState(false);
@@ -168,6 +169,7 @@ const Header = () => {
         setIsAdmin(fallbackAdmin);
         setCanAccessComprehensive(false);
         setHasPaidComprehensiveAccess(false);
+        setHasTemplatesAccess(false);
         return;
       }
 
@@ -176,11 +178,13 @@ const Header = () => {
       setIsAdmin(Boolean(json?.isAdmin) || fallbackAdmin);
       setCanAccessComprehensive(Boolean(json?.canAccessComprehensive));
       setHasPaidComprehensiveAccess(Boolean(json?.hasPaidComprehensiveAccess));
+      setHasTemplatesAccess(Boolean(json?.canAccessTemplates));
     } catch {
       setIsLoggedIn(fallbackLoggedIn);
       setIsAdmin(fallbackAdmin);
       setCanAccessComprehensive(false);
       setHasPaidComprehensiveAccess(false);
+      setHasTemplatesAccess(false);
     }
   }, []);
 
@@ -190,6 +194,7 @@ const Header = () => {
       setIsAdmin(false);
       setCanAccessComprehensive(false);
       setHasPaidComprehensiveAccess(false);
+      setHasTemplatesAccess(false);
       setDisplayName(null);
       return;
     }
@@ -280,6 +285,8 @@ const Header = () => {
 
   const comprehensiveNavHref = '/comprehensive-cash-flow-analysis';
   const comprehensiveNavLabel = hasPaidComprehensiveAccess ? 'My Cash Flow' : 'Cash Flow Analysis';
+  const templatesNavHref = '/templates';
+  const templatesNavLabel = 'My Templates';
 
   if (pathname.startsWith('/report/print/')) return null;
 
@@ -337,15 +344,25 @@ const Header = () => {
                   {hasPaidComprehensiveAccess ? 'My Cash Flow' : 'DSCR Check'}
                 </Link>
               ) : null}
-              <DesktopTemplatesMenu
-                menuRef={templatesMenuRef}
-                pathname={pathname}
-                isOpen={isTemplatesMenuOpen}
-                onOpen={() => setIsTemplatesMenuOpen(true)}
-                onClose={() => setIsTemplatesMenuOpen(false)}
-                onToggle={() => setIsTemplatesMenuOpen((open) => !open)}
-                variant="pill"
-              />
+              {hasTemplatesAccess ? (
+                <Link
+                  href={templatesNavHref}
+                  className="rounded-full bg-gradient-to-r from-slate-900 to-sky-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:from-slate-800 hover:to-sky-800"
+                  id="header-link-my-templates"
+                >
+                  {templatesNavLabel}
+                </Link>
+              ) : (
+                <DesktopTemplatesMenu
+                  menuRef={templatesMenuRef}
+                  pathname={pathname}
+                  isOpen={isTemplatesMenuOpen}
+                  onOpen={() => setIsTemplatesMenuOpen(true)}
+                  onClose={() => setIsTemplatesMenuOpen(false)}
+                  onToggle={() => setIsTemplatesMenuOpen((open) => !open)}
+                  variant="pill"
+                />
+              )}
               <Link
                 href="/loan-packaging"
                 className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
@@ -376,15 +393,25 @@ const Header = () => {
               >
                 {comprehensiveNavLabel}
               </Link>
-              <DesktopTemplatesMenu
-                menuRef={templatesMenuRef}
-                pathname={pathname}
-                isOpen={isTemplatesMenuOpen}
-                onOpen={() => setIsTemplatesMenuOpen(true)}
-                onClose={() => setIsTemplatesMenuOpen(false)}
-                onToggle={() => setIsTemplatesMenuOpen((open) => !open)}
-                variant="text"
-              />
+              {hasTemplatesAccess ? (
+                <Link
+                  href={templatesNavHref}
+                  className="rounded-full bg-gradient-to-r from-slate-900 to-sky-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:from-slate-800 hover:to-sky-800"
+                  id="header-link-my-templates"
+                >
+                  {templatesNavLabel}
+                </Link>
+              ) : (
+                <DesktopTemplatesMenu
+                  menuRef={templatesMenuRef}
+                  pathname={pathname}
+                  isOpen={isTemplatesMenuOpen}
+                  onOpen={() => setIsTemplatesMenuOpen(true)}
+                  onClose={() => setIsTemplatesMenuOpen(false)}
+                  onToggle={() => setIsTemplatesMenuOpen((open) => !open)}
+                  variant="text"
+                />
+              )}
               <Link
                 href="/loan-services"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
@@ -481,12 +508,21 @@ const Header = () => {
                         id="header-mobile-link-dscr-check"
                       />
                     ) : null}
-                    <MobileTemplatesMenu
-                      pathname={pathname}
-                      isOpen={isMobileTemplatesMenuOpen}
-                      onNavigate={() => setIsMobileMenuOpen(false)}
-                      onToggle={() => setIsMobileTemplatesMenuOpen((open) => !open)}
-                    />
+                    {hasTemplatesAccess ? (
+                      <MenuItem
+                        href={templatesNavHref}
+                        label={templatesNavLabel}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        id="header-mobile-link-my-templates"
+                      />
+                    ) : (
+                      <MobileTemplatesMenu
+                        pathname={pathname}
+                        isOpen={isMobileTemplatesMenuOpen}
+                        onNavigate={() => setIsMobileMenuOpen(false)}
+                        onToggle={() => setIsMobileTemplatesMenuOpen((open) => !open)}
+                      />
+                    )}
                     <MenuItem href="/loan-packaging" label="Loan Package" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-packaging" />
                   </>
                 ) : (
@@ -497,12 +533,21 @@ const Header = () => {
                       onClick={() => setIsMobileMenuOpen(false)}
                       id="header-mobile-link-cash-flow-analysis"
                     />
-                    <MobileTemplatesMenu
-                      pathname={pathname}
-                      isOpen={isMobileTemplatesMenuOpen}
-                      onNavigate={() => setIsMobileMenuOpen(false)}
-                      onToggle={() => setIsMobileTemplatesMenuOpen((open) => !open)}
-                    />
+                    {hasTemplatesAccess ? (
+                      <MenuItem
+                        href={templatesNavHref}
+                        label={templatesNavLabel}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        id="header-mobile-link-my-templates"
+                      />
+                    ) : (
+                      <MobileTemplatesMenu
+                        pathname={pathname}
+                        isOpen={isMobileTemplatesMenuOpen}
+                        onNavigate={() => setIsMobileMenuOpen(false)}
+                        onToggle={() => setIsMobileTemplatesMenuOpen((open) => !open)}
+                      />
+                    )}
                     <MenuItem href="/loan-services" label="Loan Services" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-services" />
                   </>
                 )}
