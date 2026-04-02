@@ -14,6 +14,7 @@ export type ServiceAccess = {
   hasLoanPackaging: boolean;
   hasLoanBrokering: boolean;
   hasComprehensiveOnlyPurchase: boolean;
+  hasPaidComprehensiveAccess: boolean;
   canAccessLoanPackaging: boolean;
   canAccessTemplates: boolean;
   canAccessComprehensive: boolean;
@@ -34,6 +35,7 @@ function baseAnonymousAccess(): ServiceAccess {
     hasLoanPackaging: false,
     hasLoanBrokering: false,
     hasComprehensiveOnlyPurchase: false,
+    hasPaidComprehensiveAccess: false,
     canAccessLoanPackaging: false,
     canAccessTemplates: false,
     canAccessComprehensive: false,
@@ -129,6 +131,15 @@ export async function resolveServiceAccessForUser(user: Pick<User, 'id' | 'email
     accountServiceLevel === 'brokering' ||
     Array.from(purchaseTypes).some((type) => FULL_ACCESS_PRODUCT_TYPES.has(type));
 
+  const hasPaidComprehensiveAccess =
+    isAdmin ||
+    hasFullService ||
+    accountComprehensive ||
+    accountServiceLevel === 'comprehensive' ||
+    accountServiceLevel === 'packaging' ||
+    accountServiceLevel === 'brokering' ||
+    hasComprehensiveOnlyPurchase;
+
   const canAccessLoanPackaging = isAdmin || hasFullService;
   // Loan Packaging and Loan Brokering both include the full templates bundle.
   const hasIncludedTemplatesBundleAccess = hasFullService;
@@ -144,13 +155,7 @@ export async function resolveServiceAccessForUser(user: Pick<User, 'id' | 'email
       : TEMPLATE_TYPES.filter((templateType) => purchasedTemplateTypes.has(templateType));
   const canAccessTemplates = availableTemplates.length > 0;
   const canAccessComprehensive =
-    isAdmin ||
-    hasFullService ||
-    accountComprehensive ||
-    accountServiceLevel === 'comprehensive' ||
-    accountServiceLevel === 'packaging' ||
-    accountServiceLevel === 'brokering' ||
-    hasComprehensiveOnlyPurchase ||
+    hasPaidComprehensiveAccess ||
     freeComprehensiveEnabled();
 
   let role: ServiceAccess['role'] = 'basic';
@@ -169,6 +174,7 @@ export async function resolveServiceAccessForUser(user: Pick<User, 'id' | 'email
     hasLoanPackaging,
     hasLoanBrokering,
     hasComprehensiveOnlyPurchase,
+    hasPaidComprehensiveAccess,
     canAccessLoanPackaging,
     canAccessTemplates,
     canAccessComprehensive,

@@ -152,6 +152,7 @@ const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [canAccessComprehensive, setCanAccessComprehensive] = useState(false);
+  const [hasPaidComprehensiveAccess, setHasPaidComprehensiveAccess] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileTemplatesMenuOpen, setIsMobileTemplatesMenuOpen] = useState(false);
@@ -166,6 +167,7 @@ const Header = () => {
         setIsLoggedIn(fallbackLoggedIn);
         setIsAdmin(fallbackAdmin);
         setCanAccessComprehensive(false);
+        setHasPaidComprehensiveAccess(false);
         return;
       }
 
@@ -173,10 +175,12 @@ const Header = () => {
       setIsLoggedIn(Boolean(json?.isAuthenticated) || fallbackLoggedIn);
       setIsAdmin(Boolean(json?.isAdmin) || fallbackAdmin);
       setCanAccessComprehensive(Boolean(json?.canAccessComprehensive));
+      setHasPaidComprehensiveAccess(Boolean(json?.hasPaidComprehensiveAccess));
     } catch {
       setIsLoggedIn(fallbackLoggedIn);
       setIsAdmin(fallbackAdmin);
       setCanAccessComprehensive(false);
+      setHasPaidComprehensiveAccess(false);
     }
   }, []);
 
@@ -185,6 +189,7 @@ const Header = () => {
       setIsLoggedIn(false);
       setIsAdmin(false);
       setCanAccessComprehensive(false);
+      setHasPaidComprehensiveAccess(false);
       setDisplayName(null);
       return;
     }
@@ -273,6 +278,9 @@ const Header = () => {
     return `Hi, ${displayName}`;
   }, [displayName]);
 
+  const comprehensiveNavHref = '/comprehensive-cash-flow-analysis';
+  const comprehensiveNavLabel = hasPaidComprehensiveAccess ? 'My Cash Flow' : 'Cash Flow Analysis';
+
   if (pathname.startsWith('/report/print/')) return null;
 
   return (
@@ -318,11 +326,15 @@ const Header = () => {
               ) : null}
               {isLoggedIn && canAccessComprehensive ? (
                 <Link
-                  href="/comprehensive-cash-flow-analysis"
-                  className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800"
+                  href={comprehensiveNavHref}
+                  className={
+                    hasPaidComprehensiveAccess
+                      ? 'rounded-full bg-gradient-to-r from-slate-900 to-sky-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:from-slate-800 hover:to-sky-800'
+                      : 'rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-800'
+                  }
                   id="header-link-dscr-check"
                 >
-                  DSCR Check
+                  {hasPaidComprehensiveAccess ? 'My Cash Flow' : 'DSCR Check'}
                 </Link>
               ) : null}
               <DesktopTemplatesMenu
@@ -344,7 +356,7 @@ const Header = () => {
             </>
           ) : (
             <>
-              {!hideAffordabilityCta ? (
+              {!hideAffordabilityCta && !hasPaidComprehensiveAccess ? (
                 <Link
                   href="/cash-flow-analysis?showCalculator=true"
                   className="rounded-full bg-gradient-to-r from-slate-900 to-sky-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:from-slate-800 hover:to-sky-800"
@@ -354,11 +366,15 @@ const Header = () => {
                 </Link>
               ) : null}
               <Link
-                href="/cash-flow-analysis"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                href={comprehensiveNavHref}
+                className={
+                  hasPaidComprehensiveAccess
+                    ? 'rounded-full bg-gradient-to-r from-slate-900 to-sky-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:from-slate-800 hover:to-sky-800'
+                    : 'rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900'
+                }
                 id="header-link-cash-flow-analysis"
               >
-                Cash Flow Analysis
+                {comprehensiveNavLabel}
               </Link>
               <DesktopTemplatesMenu
                 menuRef={templatesMenuRef}
@@ -441,7 +457,7 @@ const Header = () => {
               </div>
 
               <nav className="flex flex-col gap-2 px-4 py-4">
-                {!isPackagingWorkspace && !hideAffordabilityCta ? (
+                {!isPackagingWorkspace && !hideAffordabilityCta && !hasPaidComprehensiveAccess ? (
                   <Link
                     href="/cash-flow-analysis?showCalculator=true"
                     className="mb-2 rounded-xl bg-gradient-to-r from-slate-900 to-sky-900 px-4 py-3 text-center text-base font-bold text-white"
@@ -458,7 +474,12 @@ const Header = () => {
                       <MenuItem href="/admin" label="Admin" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-admin-dashboard" />
                     ) : null}
                     {isLoggedIn && canAccessComprehensive ? (
-                      <MenuItem href="/comprehensive-cash-flow-analysis" label="DSCR Check" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-dscr-check" />
+                      <MenuItem
+                        href={comprehensiveNavHref}
+                        label={hasPaidComprehensiveAccess ? 'My Cash Flow' : 'DSCR Check'}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        id="header-mobile-link-dscr-check"
+                      />
                     ) : null}
                     <MobileTemplatesMenu
                       pathname={pathname}
@@ -470,7 +491,12 @@ const Header = () => {
                   </>
                 ) : (
                   <>
-                    <MenuItem href="/cash-flow-analysis" label="Cash Flow Analysis" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-cash-flow-analysis" />
+                    <MenuItem
+                      href={comprehensiveNavHref}
+                      label={comprehensiveNavLabel}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      id="header-mobile-link-cash-flow-analysis"
+                    />
                     <MobileTemplatesMenu
                       pathname={pathname}
                       isOpen={isMobileTemplatesMenuOpen}

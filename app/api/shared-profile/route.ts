@@ -6,6 +6,7 @@ import {
   getSharedProfileSnapshot,
   upsertSharedProfileAndSync,
 } from '@/lib/server/shared-profile';
+import { isApiUserFailure, requireApiUser } from '@/lib/server/request-auth';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 
 export const runtime = 'nodejs';
@@ -46,20 +47,25 @@ async function createCookieClient() {
   });
 }
 
-async function requireSessionUser() {
+async function requireSessionUser(req: NextRequest) {
   const supabase = await createCookieClient();
   const { data, error } = await supabase.auth.getSession();
 
-  if (error || !data.session?.user) {
+  if (!error && data.session?.user) {
+    return data.session.user;
+  }
+
+  const bearerAuth = await requireApiUser(req);
+  if (isApiUserFailure(bearerAuth)) {
     return null;
   }
 
-  return data.session.user;
+  return bearerAuth.user;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const user = await requireSessionUser();
+    const user = await requireSessionUser(req);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -80,7 +86,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await requireSessionUser();
+    const user = await requireSessionUser(req);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

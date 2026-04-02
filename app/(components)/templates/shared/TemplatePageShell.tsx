@@ -70,9 +70,11 @@ export default function TemplatePageShell({
               <p className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]">
                 Guided Template
               </p>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+              <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.08rem,5.4vw,1.45rem)] font-semibold tracking-tight sm:text-4xl">
+                {title}
+              </h1>
               {subtitle ? <p className="text-sm text-slate-300 sm:text-base">{subtitle}</p> : null}
-              <p className="text-xs text-slate-300/90 sm:text-sm">{description}</p>
+              <p className="hidden text-xs text-slate-300/90 sm:block sm:text-sm">{description}</p>
               {statusLabel ? (
                 <div
                   className={`${hideStatusOnMobile ? 'hidden sm:inline-flex ' : 'inline-flex '}items-center gap-2 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-xs text-slate-200`}

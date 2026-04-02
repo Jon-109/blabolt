@@ -923,6 +923,7 @@ export default function LoanPackagingDashboardClient({
   const loanAmountValue = parseNullableNumber(loanForm.loanAmount) ?? 0;
   const selectedLoanPurposeLabel = loanForm.loanPurpose.trim() || 'this request';
   const currentFinancingDefaults = getFinancingDefaults(loanForm.loanPurpose);
+  const isInterestOnlyFinancing = currentFinancingDefaults.paymentMode === 'interest_only';
   const financingInterestRateValue = parseNullableNumber(financingEstimate.interestRate) ?? currentFinancingDefaults.annualRatePct;
   const financingDownPaymentAmountValue = parseNullableNumber(financingEstimate.downPaymentAmount) ?? 0;
   const financingTermYearsValue = Math.max(
@@ -930,7 +931,9 @@ export default function LoanPackagingDashboardClient({
     1,
   );
   const financingTermMonthsValue = financingTermYearsValue * 12;
-  const financedAmount = Math.max(loanAmountValue - financingDownPaymentAmountValue, 0);
+  const financedAmount = isInterestOnlyFinancing
+    ? loanAmountValue
+    : Math.max(loanAmountValue - financingDownPaymentAmountValue, 0);
   const estimatedMonthlyPayment = calculateEstimatedMonthlyPayment(
     financedAmount,
     financingInterestRateValue,
@@ -1086,6 +1089,18 @@ export default function LoanPackagingDashboardClient({
     }
 
     setFinancingEstimate((previous) => {
+      if (currentFinancingDefaults.paymentMode === 'interest_only') {
+        if (previous.downPaymentPct === '0' && previous.downPaymentAmount === '') {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          downPaymentPct: '0',
+          downPaymentAmount: '',
+        };
+      }
+
       const currentPct =
         parseNullableNumber(previous.downPaymentPct) ?? currentFinancingDefaults.downPaymentPct;
       const nextAmount = Math.max(loanAmountValue * (currentPct / 100), 0);
@@ -1103,6 +1118,7 @@ export default function LoanPackagingDashboardClient({
     });
   }, [
     currentFinancingDefaults.downPaymentPct,
+    currentFinancingDefaults.paymentMode,
     financingEstimate.purposeKey,
     loanAmountValue,
     loanForm.loanPurpose,
@@ -1411,6 +1427,15 @@ export default function LoanPackagingDashboardClient({
   }, []);
 
   const handleDownPaymentPctChange = useCallback((value: string) => {
+    if (currentFinancingDefaults.paymentMode === 'interest_only') {
+      setFinancingEstimate((previous) => ({
+        ...previous,
+        downPaymentPct: '0',
+        downPaymentAmount: '',
+      }));
+      return;
+    }
+
     const nextPct = clampNumber(
       parseNullableNumber(sanitizeCurrencyInput(value)) ?? 0,
       0,
@@ -1423,9 +1448,18 @@ export default function LoanPackagingDashboardClient({
       downPaymentPct: formatPercentInput(nextPct),
       downPaymentAmount: formatCurrencyInput(String(nextAmount)),
     }));
-  }, [loanAmountValue]);
+  }, [currentFinancingDefaults.paymentMode, loanAmountValue]);
 
   const handleDownPaymentAmountChange = useCallback((value: string) => {
+    if (currentFinancingDefaults.paymentMode === 'interest_only') {
+      setFinancingEstimate((previous) => ({
+        ...previous,
+        downPaymentPct: '0',
+        downPaymentAmount: '',
+      }));
+      return;
+    }
+
     const nextAmount = parseNullableNumber(sanitizeCurrencyInput(value)) ?? 0;
     const cappedAmount = Math.min(nextAmount, loanAmountValue);
     const nextPct = loanAmountValue > 0 ? (cappedAmount / loanAmountValue) * 100 : 0;
@@ -1435,7 +1469,7 @@ export default function LoanPackagingDashboardClient({
       downPaymentAmount: formatCurrencyInput(String(cappedAmount)),
       downPaymentPct: formatPercentInput(nextPct),
     }));
-  }, [loanAmountValue]);
+  }, [currentFinancingDefaults.paymentMode, loanAmountValue]);
 
   const handleTermYearsChange = useCallback((value: string) => {
     const sanitized = value.replace(/[^\d]/g, '');
@@ -1944,7 +1978,9 @@ export default function LoanPackagingDashboardClient({
                       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">Estimated Loan Structure</p>
                       <h3 className={`${headingClassName} mt-0.5 text-[1.35rem] leading-tight`}>See the financing picture right away</h3>
                       <p className="mt-1 max-w-none text-[13px] leading-5 text-slate-600 2xl:max-w-[96%]">
-                        These starting numbers reflect what is typically seen for {selectedLoanPurposeLabel}. If your lender has different terms, requires a different equity injection, or you want to put more down to lower the payment, adjust them here. Otherwise, we recommend leaving them as-is.
+                        {isInterestOnlyFinancing
+                          ? `These starting numbers reflect how lenders often size a ${selectedLoanPurposeLabel.toLowerCase()}: assuming the full line is drawn and estimating the payment as amount x rate / 12.`
+                          : `These starting numbers reflect what is typically seen for ${selectedLoanPurposeLabel}. If your lender has different terms, requires a different equity injection, or you want to put more down to lower the payment, adjust them here. Otherwise, we recommend leaving them as-is.`}
                       </p>
                     </div>
                   </div>
@@ -1978,39 +2014,59 @@ export default function LoanPackagingDashboardClient({
                       </span>
                       <div className="mt-2.5 flex justify-center">
                         <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={financingEstimate.downPaymentPct}
-                            onChange={(event) => handleDownPaymentPctChange(event.target.value)}
-                            className="w-[5ch] bg-transparent text-center text-lg font-semibold text-slate-900 outline-none"
-                            placeholder="10.00"
-                          />
-                          <span className="text-sm font-semibold text-slate-500">%</span>
+                          {isInterestOnlyFinancing ? (
+                            <span className="text-center text-lg font-semibold text-slate-900">0%</span>
+                          ) : (
+                            <>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={financingEstimate.downPaymentPct}
+                                onChange={(event) => handleDownPaymentPctChange(event.target.value)}
+                                className="w-[5ch] bg-transparent text-center text-lg font-semibold text-slate-900 outline-none"
+                                placeholder="10.00"
+                              />
+                              <span className="text-sm font-semibold text-slate-500">%</span>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500">Editing the percent updates the dollar amount.</p>
+                      <p className="mt-1.5 text-xs leading-5 text-slate-500">
+                        {isInterestOnlyFinancing
+                          ? 'LOC estimates use the full requested amount, so down payment is fixed at 0%.'
+                          : 'Editing the percent updates the dollar amount.'}
+                      </p>
                     </label>
 
                     <label className="group rounded-2xl border border-slate-200 bg-white/90 p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                       <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                         <Clock3 className="h-4 w-4 text-violet-600" />
-                        Term
+                        {isInterestOnlyFinancing ? 'Payment Basis' : 'Term'}
                       </span>
                       <div className="mt-2.5 flex justify-center">
                         <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={financingEstimate.termYears}
-                            onChange={(event) => handleTermYearsChange(event.target.value)}
-                            className="w-[3ch] bg-transparent text-center text-lg font-semibold text-slate-900 outline-none"
-                            placeholder={String(Math.max(currentFinancingDefaults.termMonths / 12, 1))}
-                          />
-                          <span className="text-sm font-semibold text-slate-500">yr</span>
+                          {isInterestOnlyFinancing ? (
+                            <span className="text-center text-lg font-semibold text-slate-900">Amount x rate / 12</span>
+                          ) : (
+                            <>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={financingEstimate.termYears}
+                                onChange={(event) => handleTermYearsChange(event.target.value)}
+                                className="w-[3ch] bg-transparent text-center text-lg font-semibold text-slate-900 outline-none"
+                                placeholder={String(Math.max(currentFinancingDefaults.termMonths / 12, 1))}
+                              />
+                              <span className="text-sm font-semibold text-slate-500">yr</span>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500">Adjust if your lender is offering a different repayment term.</p>
+                      <p className="mt-1.5 text-xs leading-5 text-slate-500">
+                        {isInterestOnlyFinancing
+                          ? 'For LOC-style estimates, term does not drive the monthly payment.'
+                          : 'Adjust if your lender is offering a different repayment term.'}
+                      </p>
                     </label>
 
                     <label className="group rounded-2xl border border-slate-200 bg-white/90 p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -2020,18 +2076,28 @@ export default function LoanPackagingDashboardClient({
                       </span>
                       <div className="mt-2.5 flex justify-center">
                         <div className="inline-flex min-w-[9.75rem] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2">
-                          <span className="text-base font-semibold text-slate-500">$</span>
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={financingEstimate.downPaymentAmount}
-                            onChange={(event) => handleDownPaymentAmountChange(event.target.value)}
-                            className="w-[7ch] bg-transparent text-center text-lg font-semibold tabular-nums text-slate-900 outline-none"
-                            placeholder="5,000"
-                          />
+                          {isInterestOnlyFinancing ? (
+                            <span className="text-center text-lg font-semibold tabular-nums text-slate-900">$0</span>
+                          ) : (
+                            <>
+                              <span className="text-base font-semibold text-slate-500">$</span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={financingEstimate.downPaymentAmount}
+                                onChange={(event) => handleDownPaymentAmountChange(event.target.value)}
+                                className="w-[7ch] bg-transparent text-center text-lg font-semibold tabular-nums text-slate-900 outline-none"
+                                placeholder="5,000"
+                              />
+                            </>
+                          )}
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500">Editing the amount updates the percentage.</p>
+                      <p className="mt-1.5 text-xs leading-5 text-slate-500">
+                        {isInterestOnlyFinancing
+                          ? 'No down payment reduction is applied to the LOC payment estimate.'
+                          : 'Editing the amount updates the percentage.'}
+                      </p>
                     </label>
 
                     <div className="rounded-2xl border border-slate-900 bg-slate-950 p-3.5 text-white shadow-sm">
@@ -2044,7 +2110,9 @@ export default function LoanPackagingDashboardClient({
                           {formatCurrency(estimatedMonthlyPayment ?? 0)}
                         </p>
                         <p className="mt-1 text-center text-xs leading-5 text-slate-300">
-                          Based on approximately {formatCurrency(financedAmount)} financed.
+                          {isInterestOnlyFinancing
+                            ? `Assumes the full requested amount of ${formatCurrency(financedAmount)} is drawn.`
+                            : `Based on approximately ${formatCurrency(financedAmount)} financed.`}
                         </p>
                       </div>
                     </div>

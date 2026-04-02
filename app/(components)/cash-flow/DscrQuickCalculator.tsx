@@ -408,8 +408,13 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   const selectedTerm = customTermMonths;
   const selectedDownPaymentPct = customDownPaymentPercent / 100;
   const selectedPaymentMode = activePurpose.paymentMode ?? 'amortized';
-  const downPaymentAmount = Math.min(Math.round(principal * selectedDownPaymentPct), principal);
-  const financedPrincipal = Math.max(principal - downPaymentAmount, 0);
+  const isLineOfCreditPurpose = loanPurpose === 'Line of Credit';
+  const downPaymentAmount = isLineOfCreditPurpose
+    ? 0
+    : Math.min(Math.round(principal * selectedDownPaymentPct), principal);
+  const financedPrincipal = isLineOfCreditPurpose
+    ? principal
+    : Math.max(principal - downPaymentAmount, 0);
   const estimatedPayment = financedPrincipal && loanPurpose
     ? Math.round(
         calculateMonthlyLoanPayment(
@@ -649,6 +654,9 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   );
   const additionalCapacity = Math.max(maxLoanAmountAtBenchmark - principal, 0);
   const amountAboveBenchmarkTarget = Math.max(principal - maxLoanAmountAtBenchmark, 0);
+  const estimatedPaymentSummary = isLineOfCreditPurpose
+    ? `Assumes the full line is drawn. Estimated as ${formatCurrency(financedPrincipal)} x ${(selectedRate * 100).toFixed(2)}% / 12.`
+    : `${selectedTerm} months at ${(selectedRate * 100).toFixed(2)}% ${selectedPaymentMode === 'interest_only' ? 'interest-only' : 'amortized'}`;
 
   const getDebtFieldMobileLabel = (fieldName: (typeof debtFieldMeta)[number]['name']) => {
     if (!compactMobileLayout) return undefined;
@@ -1111,7 +1119,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                               <div>
                                 <span className="text-sm font-semibold text-emerald-950">Estimated Loan Payment</span>
                                 <p className="mt-0.5 text-xs text-emerald-700">
-                                  {selectedTerm} months at {(selectedRate * 100).toFixed(2)}% {selectedPaymentMode === 'interest_only' ? 'interest-only' : 'amortized'}
+                                  {estimatedPaymentSummary}
                                 </p>
                               </div>
                               <span className="text-sm font-semibold text-emerald-950">{formatCurrency(estimatedPayment)}</span>
@@ -1172,7 +1180,12 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
                               <div className="min-w-0 rounded-2xl border border-white bg-white px-3 py-3 sm:px-4">
                                 <p className="text-[11px] font-medium leading-4 text-slate-500 sm:text-xs">{isEditingAssumptions ? 'Term (Months)' : 'Term'}</p>
-                                {isEditingAssumptions ? (
+                                {isLineOfCreditPurpose ? (
+                                  <>
+                                    <p className="mt-1 text-sm font-semibold text-slate-950">Not used for LOC payment</p>
+                                    <p className="mt-1 text-xs leading-5 text-slate-500">Line-of-credit estimates use full amount x rate / 12.</p>
+                                  </>
+                                ) : isEditingAssumptions ? (
                                   <Select value={customTermMonths ? String(customTermMonths) : ''} onValueChange={handleTermSelectChange}>
                                     <SelectTrigger className="mt-2 h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm font-semibold text-slate-950 focus:border-slate-900 focus:ring-4 focus:ring-slate-200">
                                       <span>{customTermMonths ? String(customTermMonths) : 'Select'}</span>
@@ -1217,7 +1230,12 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                                   <span className="sm:hidden">Down Payment %</span>
                                   <span className="hidden sm:inline">{isEditingAssumptions ? 'Down Payment (%)' : 'Down Payment'}</span>
                                 </p>
-                                {isEditingAssumptions ? (
+                                {isLineOfCreditPurpose ? (
+                                  <>
+                                    <p className="mt-1 text-sm font-semibold text-slate-950">0%</p>
+                                    <p className="mt-1 text-xs leading-5 text-slate-500">LOC estimate assumes the full requested line is outstanding.</p>
+                                  </>
+                                ) : isEditingAssumptions ? (
                                   <div className="relative mt-2">
                                     <input
                                       type="text"
@@ -1237,7 +1255,12 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                                   <span className="sm:hidden">Down Payment $</span>
                                   <span className="hidden sm:inline">Down Payment Amount</span>
                                 </p>
-                                {isEditingAssumptions ? (
+                                {isLineOfCreditPurpose ? (
+                                  <>
+                                    <p className="mt-1 text-sm font-semibold text-slate-950">{formatCurrency(0)}</p>
+                                    <p className="mt-1 text-xs leading-5 text-slate-500">No reduction is applied before estimating the LOC payment.</p>
+                                  </>
+                                ) : isEditingAssumptions ? (
                                   <div className="relative mt-2">
                                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">$</span>
                                     <input

@@ -1,3 +1,5 @@
+import { supabase } from '@/supabase/helpers/client';
+
 export type TemplateSharedProfile = {
   personalName?: string;
   businessName?: string;
@@ -9,11 +11,27 @@ export type TemplateSharedProfile = {
   businessDescription?: string;
 };
 
+async function getSharedProfileAuthHeaders(): Promise<HeadersInit | undefined> {
+  const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  const accessToken = data.session?.access_token;
+
+  if (!accessToken) {
+    return undefined;
+  }
+
+  return {
+    Authorization: `Bearer ${accessToken}`,
+  };
+}
+
 async function requestSharedProfile<T>(path: string, options?: RequestInit): Promise<T> {
+  const authHeaders = await getSharedProfileAuthHeaders();
+
   const response = await fetch(path, {
     cache: 'no-store',
     ...options,
     headers: {
+      ...(authHeaders ?? {}),
       ...(options?.headers ?? {}),
       ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
     },

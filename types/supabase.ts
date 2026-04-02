@@ -12,59 +12,74 @@ export type Database = {
     Tables: {
       cash_flow_analyses: {
         Row: {
+          annualized_loan: number | null
           business_name: string
           cash_flow_pdf_url: string | null
           created_at: string
           debt_summary_pdf_url: string | null
           debts: Json | null
           desired_amount: number | null
-          dscr: number | null
+          down_payment: number | null
+          down_payment293: string | null
+          dscr: Json | null
           estimated_payment: number | null
           financials: Json | null
           first_name: string | null
           id: string
-
+          interest_rate: number | null
           last_name: string | null
           loan_purpose: string | null
-          status: string | null
+          proposed_loan: number | null
+          status: string
+          term: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          annualized_loan?: number | null
           business_name: string
           cash_flow_pdf_url?: string | null
           created_at?: string
           debt_summary_pdf_url?: string | null
           debts?: Json | null
           desired_amount?: number | null
-          dscr?: number | null
+          down_payment?: number | null
+          down_payment293?: string | null
+          dscr?: Json | null
           estimated_payment?: number | null
           financials?: Json | null
           first_name?: string | null
           id?: string
-
+          interest_rate?: number | null
           last_name?: string | null
           loan_purpose?: string | null
-          status?: string | null
+          proposed_loan?: number | null
+          status?: string
+          term?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          annualized_loan?: number | null
           business_name?: string
           cash_flow_pdf_url?: string | null
           created_at?: string
           debt_summary_pdf_url?: string | null
           debts?: Json | null
           desired_amount?: number | null
-          dscr?: number | null
+          down_payment?: number | null
+          down_payment293?: string | null
+          dscr?: Json | null
           estimated_payment?: number | null
           financials?: Json | null
           first_name?: string | null
           id?: string
-
+          interest_rate?: number | null
           last_name?: string | null
           loan_purpose?: string | null
-          status?: string | null
+          proposed_loan?: number | null
+          status?: string
+          term?: string | null
           updated_at?: string
           user_id?: string
         }

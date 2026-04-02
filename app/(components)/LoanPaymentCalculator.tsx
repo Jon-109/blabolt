@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { loanPurposes } from '@/lib/loanPurposes';
+import { calculateMonthlyLoanPayment } from '@/lib/financial/dscr';
 
 type Variant = 'default' | 'compact';
 
@@ -43,6 +44,16 @@ const LoanPaymentCalculator = React.forwardRef<HTMLDivElement, LoanPaymentCalcul
     const loanTerm = selectedPurposeData?.defaultTerm ?? 120; // fallback 10 years
     const interestRate = selectedPurposeData?.defaultRate ? selectedPurposeData.defaultRate * 100 : 7.5; // fallback 7.5%
     const paymentMode = selectedPurposeData?.paymentMode ?? 'amortized';
+    const isInterestOnly = paymentMode === 'interest_only';
+    const paymentBasisLabel = isInterestOnly ? 'Full Draw Assumed' : 'Term Length';
+    const paymentBasisValue = isInterestOnly
+      ? 'Amount x rate / 12'
+      : loanTerm >= 12
+        ? `${loanTerm / 12} Years`
+        : `${loanTerm} Months`;
+    const paymentExplanation = isInterestOnly
+      ? `This estimate assumes the full ${loanPurpose.toLowerCase()} amount is outstanding and uses amount x rate / 12.`
+      : `This is a quick estimate for ${loanAmount ?? '$0'} based on the typical starting assumptions for ${loanPurpose}.`;
 
     const calculateMonthlyPayment = () => {
       if (!loanAmount) {
@@ -51,13 +62,14 @@ const LoanPaymentCalculator = React.forwardRef<HTMLDivElement, LoanPaymentCalcul
       }
       
       const principal = parseFloat(loanAmount.replace(/[$,]/g, ''));
-      const rate = interestRate / 100 / 12;
-      const term = loanTerm;
 
       if (!isNaN(principal) && principal > 0) {
-        const payment = paymentMode === 'interest_only'
-          ? principal * rate
-          : (principal * rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
+        const payment = calculateMonthlyLoanPayment(
+          principal,
+          interestRate / 100,
+          loanTerm,
+          isInterestOnly,
+        );
         setMonthlyPayment(Math.round(payment));
       } else {
         setMonthlyPayment(null);
@@ -241,17 +253,16 @@ const LoanPaymentCalculator = React.forwardRef<HTMLDivElement, LoanPaymentCalcul
                       <p className="font-semibold text-white text-lg">{Number(interestRate.toFixed(2)).toLocaleString()}%</p>
                     </div>
                     <div>
-                      <p className="text-blue-200 mb-1">Term Length</p>
+                      <p className="text-blue-200 mb-1">{paymentBasisLabel}</p>
                       <p className="font-semibold text-white text-lg">
-                        {loanTerm >= 12 ? `${loanTerm / 12} Years` : `${loanTerm} Months`}
+                        {paymentBasisValue}
                       </p>
                     </div>
                   </div>
                   <div className="mt-3 rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-left">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">How to read this</p>
                     <p className="mt-1.5 text-sm leading-6 text-blue-50">
-                      This is a quick estimate for <span className="font-semibold">{loanAmount}</span> based on the
-                      typical starting assumptions for <span className="font-semibold">{loanPurpose}</span>.
+                      {paymentExplanation}
                     </p>
                   </div>
                 </div>
