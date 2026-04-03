@@ -242,7 +242,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
   // --- Component Rendering ---
 
   return (
-    <div className="pt-0 pb-4 px-3 bg-white rounded-lg shadow-md max-w-4xl mx-auto print:mt-0 print:pt-0 print:pb-0 print:px-0 print:rounded-none print:shadow-none">
+    <div className="pt-0 pb-4 px-3 bg-white rounded-lg shadow-md max-w-4xl mx-auto print:mt-0 print:pt-0 print:pb-0 print:px-4 print:rounded-none print:shadow-none">
       {/* --- Report Header --- */}
       <header className="mt-0 mb-1 text-center border-b pb-1 print:mt-0 print:pt-0">
         <h1 className="text-2xl font-bold text-gray-800">Comprehensive Cash Flow Analysis</h1>
@@ -401,7 +401,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
       <div className="page-break" />
       {/* --- Income Breakdown Section --- */}
       <section className="mb-8">
-        <div className="max-w-3xl mx-auto">
+        <div className="w-full">
           <h2 className="text-3xl font-bold text-center mb-2 mt-2 border-b-2 border-gray-300 pb-2">Income Breakdown</h2>
           <table className="w-full border-collapse border text-sm table-fixed">
             <colgroup>

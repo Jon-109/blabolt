@@ -200,6 +200,7 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
 
   // State to track the first input field with a validation error
   const [errorFields, setErrorFields] = useState<Record<string, boolean>>({});
+  const debtSectionTopRef = useRef<HTMLElement | null>(null);
 
   // --- Validation Logic --- 
   const runValidation = useCallback((): boolean => { 
@@ -540,10 +541,21 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
   const overallUtilization =
     revolvingTotals.totalOriginal > 0 ? (revolvingTotals.totalBalance / revolvingTotals.totalOriginal) * 100 : null;
 
+  const scrollToDebtSectionTop = useCallback(() => {
+    if (typeof window === 'undefined') return;
+
+    window.requestAnimationFrame(() => {
+      debtSectionTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
   return (
     <div className="space-y-6">
       <Toast message={message} visible={visible} onClose={closeToast} />
-      <section className="rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_16px_35px_-24px_rgba(15,23,42,0.3)] sm:p-6">
+      <section
+        ref={debtSectionTopRef}
+        className="rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_16px_35px_-24px_rgba(15,23,42,0.3)] sm:p-6"
+      >
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Debt Intake</div>
@@ -779,7 +791,10 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setActiveCategoryIndex((prev) => Math.max(0, prev - 1))}
+              onClick={() => {
+                setActiveCategoryIndex((prev) => Math.max(0, prev - 1));
+                scrollToDebtSectionTop();
+              }}
               disabled={activeCategoryIndex === 0}
               className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -793,7 +808,10 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
             {activeCategoryIndex < categories.length - 1 ? (
               <button
                 type="button"
-                onClick={() => setActiveCategoryIndex((prev) => Math.min(categories.length - 1, prev + 1))}
+                onClick={() => {
+                  setActiveCategoryIndex((prev) => Math.min(categories.length - 1, prev + 1));
+                  scrollToDebtSectionTop();
+                }}
                 className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
               >
                 Next Category
