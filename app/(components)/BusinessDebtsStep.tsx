@@ -790,14 +790,15 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
               {isCategoryComplete(activeCategory.id) ? 'Category complete' : 'Add a description and monthly payment for each listed account'}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setActiveCategoryIndex((prev) => Math.min(categories.length - 1, prev + 1))}
-              disabled={activeCategoryIndex === categories.length - 1}
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Next Category
-            </button>
+            {activeCategoryIndex < categories.length - 1 ? (
+              <button
+                type="button"
+                onClick={() => setActiveCategoryIndex((prev) => Math.min(categories.length - 1, prev + 1))}
+                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+              >
+                Next Category
+              </button>
+            ) : null}
           </div>
         </div>
       </section>

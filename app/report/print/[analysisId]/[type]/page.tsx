@@ -7,7 +7,6 @@ import CashFlowBusinessDebtSummaryTemplate from '@/app/(components)/cash-flow/Ca
 import './print-report.css';
 import { verifyPdfRenderToken } from '@/lib/server/pdf-render-token';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
-import { normalizeFinancialsPayload } from '@/lib/financial/calculations';
 
 export default async function PrintReportPage({ params, searchParams }: any) {
   const resolvedParams = await params;
@@ -47,12 +46,12 @@ export default async function PrintReportPage({ params, searchParams }: any) {
   // Transform LoanInfo (already correct)
   const finalLoanInfo = raw.loanInfo;
 
-  // Transform Financials
-  const normalizedFinancials = normalizeFinancialsPayload(raw.financials);
-  const transformedFinancials: any = {
-    '2024': normalizedFinancials.year2024,
-    '2025': normalizedFinancials.year2025,
-    '2026YTD': normalizedFinancials.year2026YTD,
+  // `getCashFlowAnalysisById` already normalizes DB payloads into year-keyed report data.
+  // Re-normalizing here drops those keys and zeroes the financial sections in the PDF.
+  const transformedFinancials: any = raw.financials ?? {
+    '2024': null,
+    '2025': null,
+    '2026YTD': null,
   };
 
   // Transform Debts

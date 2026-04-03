@@ -154,6 +154,7 @@ const Header = () => {
   const [canAccessComprehensive, setCanAccessComprehensive] = useState(false);
   const [hasPaidComprehensiveAccess, setHasPaidComprehensiveAccess] = useState(false);
   const [hasTemplatesAccess, setHasTemplatesAccess] = useState(false);
+  const [hasLoanPackagingAccess, setHasLoanPackagingAccess] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileTemplatesMenuOpen, setIsMobileTemplatesMenuOpen] = useState(false);
@@ -170,6 +171,7 @@ const Header = () => {
         setCanAccessComprehensive(false);
         setHasPaidComprehensiveAccess(false);
         setHasTemplatesAccess(false);
+        setHasLoanPackagingAccess(false);
         return;
       }
 
@@ -179,12 +181,14 @@ const Header = () => {
       setCanAccessComprehensive(Boolean(json?.canAccessComprehensive));
       setHasPaidComprehensiveAccess(Boolean(json?.hasPaidComprehensiveAccess));
       setHasTemplatesAccess(Boolean(json?.canAccessTemplates));
+      setHasLoanPackagingAccess(Boolean(json?.canAccessLoanPackaging));
     } catch {
       setIsLoggedIn(fallbackLoggedIn);
       setIsAdmin(fallbackAdmin);
       setCanAccessComprehensive(false);
       setHasPaidComprehensiveAccess(false);
       setHasTemplatesAccess(false);
+      setHasLoanPackagingAccess(false);
     }
   }, []);
 
@@ -195,6 +199,7 @@ const Header = () => {
       setCanAccessComprehensive(false);
       setHasPaidComprehensiveAccess(false);
       setHasTemplatesAccess(false);
+      setHasLoanPackagingAccess(false);
       setDisplayName(null);
       return;
     }
@@ -287,6 +292,8 @@ const Header = () => {
   const comprehensiveNavLabel = hasPaidComprehensiveAccess ? 'My Cash Flow' : 'Cash Flow Analysis';
   const templatesNavHref = '/templates';
   const templatesNavLabel = 'My Templates';
+  const loanPackagingNavHref = '/loan-packaging';
+  const loanPackagingNavLabel = 'Loan Package';
 
   if (pathname.startsWith('/report/print/')) return null;
 
@@ -364,11 +371,15 @@ const Header = () => {
                 />
               )}
               <Link
-                href="/loan-packaging"
-                className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                href={loanPackagingNavHref}
+                className={
+                  hasLoanPackagingAccess
+                    ? 'rounded-full bg-gradient-to-r from-slate-900 to-sky-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:from-slate-800 hover:to-sky-800'
+                    : 'rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700'
+                }
                 id="header-link-loan-packaging"
               >
-                Loan Package
+                {loanPackagingNavLabel}
               </Link>
             </>
           ) : (
@@ -412,13 +423,23 @@ const Header = () => {
                   variant="text"
                 />
               )}
-              <Link
-                href="/loan-services"
-                className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                id="header-link-loan-services"
-              >
-                Loan Services
-              </Link>
+              {hasLoanPackagingAccess ? (
+                <Link
+                  href={loanPackagingNavHref}
+                  className="rounded-full bg-gradient-to-r from-slate-900 to-sky-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:from-slate-800 hover:to-sky-800"
+                  id="header-link-loan-packaging"
+                >
+                  {loanPackagingNavLabel}
+                </Link>
+              ) : (
+                <Link
+                  href="/loan-services"
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                  id="header-link-loan-services"
+                >
+                  Loan Services
+                </Link>
+              )}
               {isLoggedIn && isAdmin ? (
                 <Link
                   href="/admin"
@@ -523,7 +544,12 @@ const Header = () => {
                         onToggle={() => setIsMobileTemplatesMenuOpen((open) => !open)}
                       />
                     )}
-                    <MenuItem href="/loan-packaging" label="Loan Package" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-packaging" />
+                    <MenuItem
+                      href={loanPackagingNavHref}
+                      label={loanPackagingNavLabel}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      id="header-mobile-link-loan-packaging"
+                    />
                   </>
                 ) : (
                   <>
@@ -548,7 +574,16 @@ const Header = () => {
                         onToggle={() => setIsMobileTemplatesMenuOpen((open) => !open)}
                       />
                     )}
-                    <MenuItem href="/loan-services" label="Loan Services" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-services" />
+                    {hasLoanPackagingAccess ? (
+                      <MenuItem
+                        href={loanPackagingNavHref}
+                        label={loanPackagingNavLabel}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        id="header-mobile-link-loan-packaging"
+                      />
+                    ) : (
+                      <MenuItem href="/loan-services" label="Loan Services" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-services" />
+                    )}
                   </>
                 )}
 

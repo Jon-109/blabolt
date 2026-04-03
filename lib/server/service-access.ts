@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import { isAllowedAdminEmail } from '@/lib/server/admin-access';
 import { TEMPLATE_TYPES, isTemplateType } from '@/lib/stripe/catalog';
 import type { TemplateType } from '@/lib/templates/types';
+import { getGrantedTemplateTypes } from '@/lib/admin/client-dashboard';
 
 export type ServiceAccess = {
   availableTemplates: TemplateType[];
@@ -78,7 +79,7 @@ export async function resolveServiceAccessForUser(user: Pick<User, 'id' | 'email
       .limit(25),
     admin
       .from('client_accounts')
-      .select('service_level,access_comprehensive,access_templates,access_packaging')
+      .select('service_level,access_comprehensive,access_templates,access_packaging,granted_template_types')
       .or(`user_id.eq.${user.id},email.eq.${normalizedEmail}`)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -122,6 +123,7 @@ export async function resolveServiceAccessForUser(user: Pick<User, 'id' | 'email
   const accountComprehensive = Boolean(clientAccount?.access_comprehensive);
   const accountTemplates = Boolean(clientAccount?.access_templates);
   const accountPackaging = Boolean(clientAccount?.access_packaging);
+  const grantedTemplateTypes = new Set(getGrantedTemplateTypes(clientAccount));
   const isAdmin = Boolean(adminMatch.data?.id);
   const hasFullService =
     hasLoanPackaging ||
@@ -152,7 +154,9 @@ export async function resolveServiceAccessForUser(user: Pick<User, 'id' | 'email
     accountServiceLevel === 'brokering' ||
     hasTemplatesBundlePurchase
       ? [...TEMPLATE_TYPES]
-      : TEMPLATE_TYPES.filter((templateType) => purchasedTemplateTypes.has(templateType));
+      : TEMPLATE_TYPES.filter(
+          (templateType) => purchasedTemplateTypes.has(templateType) || grantedTemplateTypes.has(templateType),
+        );
   const canAccessTemplates = availableTemplates.length > 0;
   const canAccessComprehensive =
     hasPaidComprehensiveAccess ||

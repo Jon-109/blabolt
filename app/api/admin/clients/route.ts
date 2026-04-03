@@ -2,22 +2,57 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminApiIdentity } from '@/lib/server/admin-api-auth';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
+import {
+  type AnyRow,
+  buildPackagingProgress,
+  computeTemplateProgress,
+  deriveAccessFlags,
+  derivePrimaryServiceLabel,
+  deriveServicePills,
+  filterApplicableRequirements,
+  getGrantedTemplateTypes,
+  normalizeDscrSnapshot,
+} from '@/lib/admin/client-dashboard';
+
+const templateTypeSchema = z.enum([
+  'balance_sheet',
+  'income_statement',
+  'business_debt_summary',
+  'personal_financial_statement',
+  'personal_debt_summary',
+]);
 
 export const runtime = 'nodejs';
 
-type AnyRow = Record<string, unknown>;
+const optionalNameSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  },
+  z.string().min(2).max(180).optional(),
+);
 
-const TEMPLATE_ORDER = [
-  'personal_debt_summary',
-  'personal_financial_statement',
-  'business_debt_summary',
-  'balance_sheet',
-  'income_statement',
-] as const;
+const optionalEmailSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim().toLowerCase();
+    return trimmed.length > 0 ? trimmed : undefined;
+  },
+  z.string().email().optional(),
+);
 
 const createClientSchema = z.object({
-  fullName: z.string().trim().min(2).max(180),
-  email: z.string().email().transform((value) => value.toLowerCase()),
+  fullName: optionalNameSchema,
+  email: optionalEmailSchema,
+}).superRefine((value, ctx) => {
+  if (!value.fullName && !value.email) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Either a client name or email is required.',
+      path: ['fullName'],
+    });
+  }
 });
 
 const actionSchema = z.object({
@@ -25,84 +60,68 @@ const actionSchema = z.object({
   action: z.enum([
     'grant_templates',
     'revoke_templates',
+    'grant_template',
+    'revoke_template',
     'grant_packaging',
     'revoke_packaging',
     'grant_comprehensive',
     'revoke_comprehensive',
   ]),
+  templateType: templateTypeSchema.optional(),
 });
 
-function hasMeaningfulFormData(value: unknown): boolean {
-  if (!value || typeof value !== 'object') return false;
-  return Object.keys(value as Record<string, unknown>).length > 0;
-}
-
-function deriveServiceLabel(row: AnyRow): string {
-  if (row.access_packaging || row.service_level === 'packaging') return 'Loan Packaging';
-  if (row.service_level === 'brokering') return 'Loan Brokering';
-  if (row.access_templates || row.service_level === 'templates') return 'Templates';
-  if (row.access_comprehensive || row.service_level === 'comprehensive') return 'Comprehensive Only';
-  return 'No Access';
-}
-
-function computeTemplateProgress(templateRows: AnyRow[]): { progressPct: number; nextStep: string } {
-  if (!templateRows.length) {
-    return { progressPct: 0, nextStep: 'Start Personal Debt Summary' };
-  }
-
-  const byType = new Map<string, AnyRow>();
-  for (const row of templateRows) {
-    const type = String(row.template_type ?? '');
-    if (!type || byType.has(type)) continue;
-    byType.set(type, row);
-  }
-
-  let completed = 0;
-  for (const type of TEMPLATE_ORDER) {
-    const row = byType.get(type);
-    const done = Boolean(row?.pdf_url) || hasMeaningfulFormData(row?.form_data);
-    if (done) completed += 1;
-  }
-
-  const progressPct = Math.round((completed / TEMPLATE_ORDER.length) * 100);
-
-  for (const type of TEMPLATE_ORDER) {
-    const row = byType.get(type);
-    const done = Boolean(row?.pdf_url) || hasMeaningfulFormData(row?.form_data);
-    if (!done) {
-      const label = type.replaceAll('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-      return { progressPct, nextStep: `Complete ${label}` };
+function latestIsoDate(...values: unknown[]): string {
+  const latest = values.reduce<number>((current, value) => {
+    if (typeof value !== 'string' && !(value instanceof Date)) {
+      return current;
     }
-  }
 
-  return { progressPct: 100, nextStep: 'Templates Completed' };
+    const parsed = new Date(value).getTime();
+    if (Number.isNaN(parsed)) {
+      return current;
+    }
+
+    return Math.max(current, parsed);
+  }, 0);
+
+  return latest > 0 ? new Date(latest).toISOString() : new Date().toISOString();
 }
 
-function computePackagingProgress(loanRequest: AnyRow | null, uploadedDocsCount: number): { progressPct: number; nextStep: string } {
-  if (!loanRequest) {
-    return { progressPct: 0, nextStep: 'Loan Details' };
+async function ensureClientAccountRow(admin: ReturnType<typeof getSupabaseAdmin>, clientId: string) {
+  const existing = await admin
+    .from('client_accounts')
+    .select('*')
+    .or(`id.eq.${clientId},user_id.eq.${clientId}`)
+    .maybeSingle();
+
+  if (existing.data) {
+    return existing.data as AnyRow;
   }
 
-  const hasLoanDetails = Boolean(loanRequest.business_name) && Boolean(loanRequest.loan_purpose) && Number(loanRequest.loan_amount ?? 0) > 0;
-  const status = String(loanRequest.status ?? 'draft');
+  const authUserResult = await admin.auth.admin.getUserById(clientId);
+  const authUser = authUserResult.data.user;
 
-  if (!hasLoanDetails) {
-    return { progressPct: 15, nextStep: 'Loan Details' };
+  if (!authUser?.email) {
+    return null;
   }
 
-  if (uploadedDocsCount === 0) {
-    return { progressPct: 35, nextStep: 'Upload Required Documents' };
-  }
+  const { data } = await admin
+    .from('client_accounts')
+    .upsert(
+      {
+        user_id: authUser.id,
+        email: authUser.email.toLowerCase(),
+        full_name:
+          (typeof authUser.user_metadata?.full_name === 'string' && authUser.user_metadata.full_name) ||
+          (typeof authUser.user_metadata?.name === 'string' && authUser.user_metadata.name) ||
+          null,
+      },
+      { onConflict: 'email' },
+    )
+    .select('*')
+    .single();
 
-  if (status === 'submitted') {
-    return { progressPct: 90, nextStep: 'Review Submission + Lender Outreach' };
-  }
-
-  if (status === 'completed') {
-    return { progressPct: 100, nextStep: 'Package Complete' };
-  }
-
-  return { progressPct: Math.min(85, 35 + uploadedDocsCount * 10), nextStep: 'Finalize Package' };
+  return (data as AnyRow | null) ?? null;
 }
 
 export async function GET(req: NextRequest) {
@@ -111,7 +130,17 @@ export async function GET(req: NextRequest) {
 
   const admin = getSupabaseAdmin();
 
-  const [clientsResult, usersPage, loanRequestsResult, templateSubmissionsResult, documentsResult] = await Promise.all([
+  const [
+    clientsResult,
+    usersPage,
+    loanRequestsResult,
+    templateSubmissionsResult,
+    documentsResult,
+    purchasesResult,
+    cashFlowResult,
+    requirementsResult,
+    brokerAgreementResult,
+  ] = await Promise.all([
     admin
       .from('client_accounts')
       .select('*')
@@ -125,27 +154,71 @@ export async function GET(req: NextRequest) {
       .limit(10000),
     admin
       .from('template_submissions')
-      .select('id,user_id,template_type,form_data,pdf_url,updated_at')
+      .select('id,user_id,template_type,form_data,pdf_url,updated_at,archived_at')
       .order('updated_at', { ascending: false })
       .limit(20000),
     admin
       .from('loan_request_documents')
-      .select('loan_request_id,user_id,status,updated_at')
+      .select('loan_request_id,user_id,requirement_key,status,updated_at,uploaded_at')
       .order('updated_at', { ascending: false })
       .limit(20000),
+    admin
+      .from('purchases')
+      .select('user_id,product_type,paid')
+      .eq('paid', true)
+      .limit(20000),
+    admin
+      .from('cash_flow_analyses')
+      .select('id,user_id,status,dscr,updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(5000),
+    admin
+      .from('document_requirements')
+      .select('requirement_key,service_type,loan_purpose,display_name,description,required,sort_order,is_active')
+      .eq('is_active', true)
+      .limit(500),
+    admin
+      .from('broker_fee_agreements')
+      .select('user_id,status')
+      .eq('status', 'signed')
+      .limit(5000),
   ]);
 
-  if (clientsResult.error) {
-    return NextResponse.json({ error: clientsResult.error.message }, { status: 500 });
+  if (
+    clientsResult.error ||
+    loanRequestsResult.error ||
+    templateSubmissionsResult.error ||
+    documentsResult.error ||
+    purchasesResult.error ||
+    cashFlowResult.error ||
+    requirementsResult.error ||
+    brokerAgreementResult.error
+  ) {
+    return NextResponse.json({
+      error:
+        clientsResult.error?.message ||
+        loanRequestsResult.error?.message ||
+        templateSubmissionsResult.error?.message ||
+        documentsResult.error?.message ||
+        purchasesResult.error?.message ||
+        cashFlowResult.error?.message ||
+        requirementsResult.error?.message ||
+        brokerAgreementResult.error?.message ||
+        'Failed to load clients.',
+    }, { status: 500 });
   }
 
   const users = usersPage.data?.users ?? [];
-  const rows = (clientsResult.data ?? []) as AnyRow[];
+  const accountRows = (clientsResult.data ?? []) as AnyRow[];
   const loanRequests = (loanRequestsResult.data ?? []) as AnyRow[];
   const templateSubmissions = (templateSubmissionsResult.data ?? []) as AnyRow[];
   const documents = (documentsResult.data ?? []) as AnyRow[];
+  const purchases = (purchasesResult.data ?? []) as AnyRow[];
+  const cashFlowAnalyses = (cashFlowResult.data ?? []) as AnyRow[];
+  const requirements = (requirementsResult.data ?? []) as AnyRow[];
+  const brokerAgreements = (brokerAgreementResult.data ?? []) as AnyRow[];
 
-  const rowsByEmail = new Map(rows.map((row) => [String(row.email ?? '').toLowerCase(), row]));
+  const accountByEmail = new Map(accountRows.map((row) => [String(row.email ?? '').toLowerCase(), row]));
 
   const latestLoanRequestByUser = new Map<string, AnyRow>();
   for (const row of loanRequests) {
@@ -162,135 +235,179 @@ export async function GET(req: NextRequest) {
     templatesByUser.get(key)!.push(row);
   }
 
-  const docsByLoanRequest = new Map<string, number>();
+  const documentsByLoanRequest = new Map<string, AnyRow[]>();
   for (const row of documents) {
     const key = String(row.loan_request_id ?? '');
     if (!key) continue;
-    const status = String(row.status ?? '');
-    if (status === 'uploaded' || status === 'generated' || status === 'approved') {
-      docsByLoanRequest.set(key, (docsByLoanRequest.get(key) ?? 0) + 1);
-    }
+    if (!documentsByLoanRequest.has(key)) documentsByLoanRequest.set(key, []);
+    documentsByLoanRequest.get(key)!.push(row);
   }
 
+  const purchaseTypesByUser = new Map<string, Set<string>>();
+  for (const row of purchases) {
+    const key = String(row.user_id ?? '');
+    const productType = String(row.product_type ?? '').trim();
+    if (!key || !productType) continue;
+    if (!purchaseTypesByUser.has(key)) purchaseTypesByUser.set(key, new Set<string>());
+    purchaseTypesByUser.get(key)!.add(productType);
+  }
+
+  const latestCashFlowByUser = new Map<string, AnyRow>();
+  for (const row of cashFlowAnalyses) {
+    const key = String(row.user_id ?? '');
+    if (!key || latestCashFlowByUser.has(key)) continue;
+    latestCashFlowByUser.set(key, row);
+  }
+
+  const signedBrokerAgreementUsers = new Set(
+    brokerAgreements
+      .map((row) => String(row.user_id ?? ''))
+      .filter(Boolean),
+  );
+
   const clientsFromUsers = users
-    .filter((u) => Boolean(u.email))
-    .map((u) => {
-      const email = String(u.email).toLowerCase();
-      const row = rowsByEmail.get(email);
-      const userId = String(u.id);
+    .filter((user) => Boolean(user.email))
+    .map((user) => {
+      const email = String(user.email).toLowerCase();
+      const accountRow = accountByEmail.get(email);
+      const userId = String(user.id);
       const latestLoanRequest = latestLoanRequestByUser.get(userId) ?? null;
       const userTemplates = templatesByUser.get(userId) ?? [];
+      const purchaseTypes = purchaseTypesByUser.get(userId) ?? new Set<string>();
+      const latestCashFlow = latestCashFlowByUser.get(userId) ?? null;
+      const hasSignedBrokerAgreement = signedBrokerAgreementUsers.has(userId);
 
-      const merged: AnyRow = { ...(row ?? {}) };
-      if (!merged.service_level && latestLoanRequest?.service_type === 'loan_packaging') merged.service_level = 'packaging';
-      if (!merged.service_level && latestLoanRequest?.service_type === 'loan_brokering') merged.service_level = 'brokering';
-
-      const hasTemplateAccess = Boolean(
-        row?.access_templates ||
-          merged.service_level === 'templates' ||
-          merged.service_level === 'packaging' ||
-          merged.service_level === 'brokering',
-      );
-      const hasPackagingAccess = Boolean(
-        row?.access_packaging ||
-          merged.service_level === 'packaging' ||
-          merged.service_level === 'brokering',
-      );
-      const hasComprehensiveAccess = Boolean(
-        row?.access_comprehensive ||
-          merged.service_level === 'comprehensive' ||
-          merged.service_level === 'templates' ||
-          merged.service_level === 'packaging' ||
-          merged.service_level === 'brokering',
-      );
+      const access = deriveAccessFlags(accountRow, latestLoanRequest, purchaseTypes, hasSignedBrokerAgreement);
+      const services = deriveServicePills({
+        accountRow,
+        latestLoanRequest,
+        purchaseTypes,
+        hasSignedBrokerAgreement,
+      });
 
       let progressPct = 0;
       let nextStep = 'No active service';
 
-      if (hasPackagingAccess) {
-        const uploadedDocsCount = latestLoanRequest ? docsByLoanRequest.get(String(latestLoanRequest.id)) ?? 0 : 0;
-        const packaging = computePackagingProgress(latestLoanRequest, uploadedDocsCount);
-        progressPct = packaging.progressPct;
-        nextStep = packaging.nextStep;
-      } else if (hasTemplateAccess) {
-        const template = computeTemplateProgress(userTemplates);
-        progressPct = template.progressPct;
-        nextStep = template.nextStep;
-      } else if (hasComprehensiveAccess) {
+      if (access.hasLoanPackaging && latestLoanRequest) {
+        const applicableRequirements = filterApplicableRequirements(
+          requirements,
+          String(latestLoanRequest.service_type ?? 'loan_packaging'),
+          typeof latestLoanRequest.loan_purpose === 'string' ? latestLoanRequest.loan_purpose : null,
+        );
+        const packagingProgress = buildPackagingProgress(
+          applicableRequirements,
+          documentsByLoanRequest.get(String(latestLoanRequest.id ?? '')) ?? [],
+        );
+        progressPct = packagingProgress.percentage;
+        nextStep = packagingProgress.nextRequirement?.displayName ?? 'Package Complete';
+      } else if (access.hasTemplateAccess) {
+        const templateProgress = computeTemplateProgress(userTemplates);
+        progressPct = templateProgress.progressPct;
+        nextStep = templateProgress.nextStep;
+      } else if (latestCashFlow) {
+        progressPct = String(latestCashFlow.status ?? '') === 'submitted' ? 100 : 70;
+        nextStep = String(latestCashFlow.status ?? '') === 'submitted'
+          ? 'Analysis Submitted'
+          : 'Finish Comprehensive Cash Flow Analysis';
+      } else if (access.hasComprehensiveAccess) {
         progressPct = 10;
         nextStep = 'Complete DSCR Check';
       }
 
-      const updatedAt = String(
-        row?.updated_at ?? latestLoanRequest?.updated_at ?? u.last_sign_in_at ?? u.created_at ?? new Date().toISOString(),
-      );
+      if (typeof accountRow?.next_step === 'string' && accountRow.next_step.trim()) {
+        nextStep = accountRow.next_step.trim();
+      }
+
+      const dscr = normalizeDscrSnapshot(latestCashFlow?.dscr ?? null);
 
       return {
-        id: String(row?.id ?? userId),
-        fullName: String(row?.full_name ?? u.user_metadata?.full_name ?? u.user_metadata?.name ?? ''),
+        id: userId,
+        fullName: String(accountRow?.full_name ?? user.user_metadata?.full_name ?? user.user_metadata?.name ?? ''),
         email,
-        service: deriveServiceLabel(merged),
+        service: derivePrimaryServiceLabel(services),
+        services,
+        grantedTemplateTypes: getGrantedTemplateTypes(accountRow),
+        dscr: dscr.currentValue,
+        dscrYear: dscr.currentYear,
         nextStep,
         progressPct,
-        lastUpdate: updatedAt,
+        lastUpdate: latestIsoDate(
+          accountRow?.updated_at,
+          latestLoanRequest?.updated_at,
+          latestCashFlow?.updated_at,
+          user.last_sign_in_at,
+          user.created_at,
+        ),
         hasAccount: true,
-        hasTemplateAccess,
-        hasPackagingAccess,
-        hasComprehensiveAccess,
+        hasTemplateAccess: access.hasTemplateAccess,
+        hasPackagingAccess: access.hasLoanPackaging,
+        hasComprehensiveAccess: access.hasComprehensiveAccess,
+        hasTemplateBundleGrant: Boolean(accountRow?.access_templates),
+        hasPackagingGrant: Boolean(accountRow?.access_packaging),
+        hasComprehensiveGrant: Boolean(accountRow?.access_comprehensive),
       };
     });
 
-  const userEmailSet = new Set(users.filter((u) => Boolean(u.email)).map((u) => String(u.email).toLowerCase()));
+  const userEmailSet = new Set(
+    users.filter((user) => Boolean(user.email)).map((user) => String(user.email).toLowerCase()),
+  );
+  const userIdSet = new Set(users.map((user) => String(user.id)));
 
-  const clientsWithoutAuthUser = rows
+  const clientsWithoutAuthUser = accountRows
     .filter((row) => {
+      const userId = String(row.user_id ?? '');
       const email = String(row.email ?? '').toLowerCase();
-      return email && !userEmailSet.has(email);
+      if (userId) {
+        return !userIdSet.has(userId);
+      }
+
+      if (email) {
+        return !userEmailSet.has(email);
+      }
+
+      return true;
     })
     .map((row) => {
-      const hasTemplateAccess = Boolean(
-        row.access_templates ||
-          row.service_level === 'templates' ||
-          row.service_level === 'packaging' ||
-          row.service_level === 'brokering',
-      );
-      const hasPackagingAccess = Boolean(
-        row.access_packaging ||
-          row.service_level === 'packaging' ||
-          row.service_level === 'brokering',
-      );
-      const hasComprehensiveAccess = Boolean(
-        row.access_comprehensive ||
-          row.service_level === 'comprehensive' ||
-          row.service_level === 'templates' ||
-          row.service_level === 'packaging' ||
-          row.service_level === 'brokering',
-      );
+      const purchaseTypes = new Set<string>();
+      const latestLoanRequest = null;
+      const access = deriveAccessFlags(row, latestLoanRequest, purchaseTypes, false);
+      const services = deriveServicePills({ accountRow: row, latestLoanRequest, purchaseTypes });
 
       let nextStep = 'Invite client to sign in';
       let progressPct = 0;
 
-      if (hasPackagingAccess) nextStep = 'Loan Details';
-      else if (hasTemplateAccess) nextStep = 'Start Personal Debt Summary';
-      else if (hasComprehensiveAccess) nextStep = 'Complete DSCR Check';
+      if (access.hasLoanPackaging) nextStep = 'Loan Details';
+      else if (access.hasTemplateAccess) nextStep = 'Start Personal Debt Summary';
+      else if (access.hasComprehensiveAccess) nextStep = 'Complete DSCR Check';
+
+      if (typeof row.next_step === 'string' && row.next_step.trim()) {
+        nextStep = row.next_step.trim();
+      }
 
       return {
         id: String(row.id),
         fullName: String(row.full_name ?? ''),
         email: String(row.email ?? '').toLowerCase(),
-        service: deriveServiceLabel(row),
+        service: derivePrimaryServiceLabel(services),
+        services,
+        grantedTemplateTypes: getGrantedTemplateTypes(row),
+        dscr: null,
+        dscrYear: null,
         nextStep,
         progressPct,
-        lastUpdate: String(row.updated_at ?? row.created_at ?? new Date().toISOString()),
+        lastUpdate: latestIsoDate(row.updated_at, row.created_at),
         hasAccount: false,
-        hasTemplateAccess,
-        hasPackagingAccess,
-        hasComprehensiveAccess,
+        hasTemplateAccess: access.hasTemplateAccess,
+        hasPackagingAccess: access.hasLoanPackaging,
+        hasComprehensiveAccess: access.hasComprehensiveAccess,
+        hasTemplateBundleGrant: Boolean(row.access_templates),
+        hasPackagingGrant: Boolean(row.access_packaging),
+        hasComprehensiveGrant: Boolean(row.access_comprehensive),
       };
     });
 
   const clients = [...clientsFromUsers, ...clientsWithoutAuthUser].sort(
-    (a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime(),
+    (left, right) => new Date(right.lastUpdate).getTime() - new Date(left.lastUpdate).getTime(),
   );
 
   return NextResponse.json({ clients });
@@ -308,15 +425,23 @@ export async function POST(req: NextRequest) {
   const admin = getSupabaseAdmin();
   const { fullName, email } = parsed.data;
 
-  const { data, error } = await admin
-    .from('client_accounts')
-    .upsert(
-      {
-        email,
-        full_name: fullName,
-      },
-      { onConflict: 'email' },
-    )
+  const mutation = email
+    ? admin
+        .from('client_accounts')
+        .upsert(
+          {
+            email,
+            full_name: fullName ?? null,
+          },
+          { onConflict: 'email' },
+        )
+    : admin
+        .from('client_accounts')
+        .insert({
+          full_name: fullName ?? null,
+        });
+
+  const { data, error } = await mutation
     .select('*')
     .single();
 
@@ -337,11 +462,21 @@ export async function PATCH(req: NextRequest) {
   }
 
   const admin = getSupabaseAdmin();
-  const { clientId, action } = parsed.data;
+  const { clientId, action, templateType } = parsed.data;
+
+  if ((action === 'grant_template' || action === 'revoke_template') && !templateType) {
+    return NextResponse.json({ error: 'templateType is required for template grant actions.' }, { status: 400 });
+  }
+
+  const accountRow = await ensureClientAccountRow(admin, clientId);
+  if (!accountRow) {
+    return NextResponse.json({ error: 'Client account not found.' }, { status: 404 });
+  }
 
   const updates: AnyRow = {
     updated_at: new Date().toISOString(),
   };
+  const grantedTemplateTypes = getGrantedTemplateTypes(accountRow);
 
   if (action === 'grant_templates') updates.access_templates = true;
   if (action === 'revoke_templates') updates.access_templates = false;
@@ -349,11 +484,17 @@ export async function PATCH(req: NextRequest) {
   if (action === 'revoke_packaging') updates.access_packaging = false;
   if (action === 'grant_comprehensive') updates.access_comprehensive = true;
   if (action === 'revoke_comprehensive') updates.access_comprehensive = false;
+  if (action === 'grant_template' && templateType) {
+    updates.granted_template_types = Array.from(new Set([...grantedTemplateTypes, templateType]));
+  }
+  if (action === 'revoke_template' && templateType) {
+    updates.granted_template_types = grantedTemplateTypes.filter((value) => value !== templateType);
+  }
 
   const { data, error } = await admin
     .from('client_accounts')
     .update(updates)
-    .or(`id.eq.${clientId},user_id.eq.${clientId}`)
+    .eq('id', String(accountRow.id))
     .select('*')
     .single();
 

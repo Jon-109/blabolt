@@ -6,6 +6,7 @@ import {
   useEffect, 
   memo, 
   useCallback, 
+  useMemo,
   useRef, 
   forwardRef, 
   useImperativeHandle 
@@ -88,6 +89,8 @@ interface FinancialInputsProps {
   setData: React.Dispatch<React.SetStateAction<FullFinancialData>>;
   ytdMonth: string;
   setYtdMonth: (month: string) => void;
+  availableYtdMonths?: ReadonlyArray<{ value: string; label: string }>;
+  defaultYtdMonthLabel?: string;
   skip: boolean; 
   errors: FinancialErrorData & { ytdMonth?: boolean }; // Add errors prop
   showErrors: boolean; // new flag to control when to display errors
@@ -173,6 +176,56 @@ const createEmptyFinancialData = (): FullFinancialData => ({
   taxes: '',     // NEW
 });
 
+const MONTH_OPTIONS = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+] as const;
+
+const CASH_FLOW_YTD_YEAR = 2026;
+
+const toMonthValue = (monthNumber: number) => monthNumber.toString().padStart(2, '0');
+
+const getAvailableYtdMonths = (today: Date) => {
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+
+  if (currentYear < CASH_FLOW_YTD_YEAR) {
+    return MONTH_OPTIONS.slice(0, 1);
+  }
+
+  if (currentYear === CASH_FLOW_YTD_YEAR) {
+    return MONTH_OPTIONS.slice(0, Math.max(currentMonth, 1));
+  }
+
+  return MONTH_OPTIONS;
+};
+
+const getDefaultYtdMonthValue = (today: Date) => {
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+
+  if (currentYear < CASH_FLOW_YTD_YEAR) {
+    return '01';
+  }
+
+  if (currentYear === CASH_FLOW_YTD_YEAR) {
+    const lastFullMonth = currentMonth - 1;
+    return toMonthValue(lastFullMonth >= 1 ? lastFullMonth : currentMonth);
+  }
+
+  return '12';
+};
+
 const formatCurrency = (rawValue: string) => {
   // If empty string, return empty (for placeholder)
   if (rawValue === '' || rawValue === undefined || rawValue === null) {
@@ -215,6 +268,8 @@ const FinancialInputs = memo(({
   setData,
   ytdMonth,
   setYtdMonth,
+  availableYtdMonths = MONTH_OPTIONS,
+  defaultYtdMonthLabel = 'the last full month',
   skip,
   errors,
   showErrors
@@ -254,14 +309,15 @@ const FinancialInputs = memo(({
       {year === '2026' && (
         <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <FormField
-            label="YTD Month"
+            label="Last Full Month Included"
             htmlFor={`${year}-ytd-month`}
             required
-            help="Choose the last month included in your 2026 year-to-date income statement so we know how much of the year is covered."
+            help={`Select the last full month included in your 2026 year-to-date income statement. We default this to ${defaultYtdMonthLabel}, but you can change it if your statement covers a different month.`}
             error={showErrors && errors.ytdMonth ? `YTD Month is required for ${year}.` : undefined}
             className="max-w-xs"
           >
             <select
+              id={`${year}-ytd-month`}
               value={ytdMonth}
               onChange={(e) => setYtdMonth(e.target.value)}
               className={cn(
@@ -271,21 +327,17 @@ const FinancialInputs = memo(({
               required
               disabled={skip}
             >
-              <option value="" disabled>Select month...</option>
-              <option value="01">January</option>
-              <option value="02">February</option>
-              <option value="03">March</option>
-              <option value="04">April</option>
-              <option value="05">May</option>
-              <option value="06">June</option>
-              <option value="07">July</option>
-              <option value="08">August</option>
-              <option value="09">September</option>
-              <option value="10">October</option>
-              <option value="11">November</option>
-              <option value="12">December</option>
+              <option value="" disabled>Select last full month...</option>
+              {availableYtdMonths.map((month) => (
+                <option key={month.value} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
             </select>
           </FormField>
+          <p className="mt-3 text-xs leading-5 text-slate-500">
+            Only months reached so far in 2026 are shown. Choose the last fully completed month covered by your statement.
+          </p>
         </div>
       )}
       <div className="grid gap-4 md:grid-cols-2">
@@ -405,6 +457,10 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
 
   const lastNonSkipped2024 = useRef<FullFinancialData | null>(null);
   const lastNonSkipped2026 = useRef<FullFinancialData | null>(null);
+  const availableYtdMonths = useMemo(() => getAvailableYtdMonths(new Date()), []);
+  const defaultYtdMonthValue = useMemo(() => getDefaultYtdMonthValue(new Date()), []);
+  const defaultYtdMonthLabel =
+    availableYtdMonths.find((month) => month.value === defaultYtdMonthValue)?.label ?? 'the last full month';
 
   useEffect(() => {
     // console.log("[DEBUG FinancialsStep] Mount effect running.");
@@ -445,6 +501,19 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
       setData2026(lastNonSkipped2026.current);
     }
   }, [skip2026]);
+
+  useEffect(() => {
+    if (skip2026) return;
+
+    const allowedMonthValues = new Set<string>(availableYtdMonths.map((month) => month.value));
+    if (ytdMonth && allowedMonthValues.has(ytdMonth)) {
+      return;
+    }
+
+    if (defaultYtdMonthValue && ytdMonth !== defaultYtdMonthValue) {
+      setYtdMonth(defaultYtdMonthValue);
+    }
+  }, [availableYtdMonths, defaultYtdMonthValue, skip2026, ytdMonth]);
 
   const safeToString = (value: number | null | undefined): string => {
     if (value === null || value === undefined || value === 0) {
@@ -693,6 +762,8 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
                 setData={setData2024}
                 ytdMonth={ytdMonth} 
                 setYtdMonth={() => {}} // Pass dummy function
+                availableYtdMonths={availableYtdMonths}
+                defaultYtdMonthLabel={defaultYtdMonthLabel}
                 skip={skip2024}
                 errors={fieldErrors['2024']}
                 showErrors={showErrors}
@@ -707,6 +778,8 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
                 skip={false}
                 ytdMonth={ytdMonth} // Doesn't need ytdMonth or setYtdMonth
                 setYtdMonth={() => {}} // Pass dummy function
+                availableYtdMonths={availableYtdMonths}
+                defaultYtdMonthLabel={defaultYtdMonthLabel}
                 errors={fieldErrors['2025']}
                 showErrors={showErrors}
               />
@@ -744,6 +817,8 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
                 skip={skip2026}
                 ytdMonth={ytdMonth}
                 setYtdMonth={setYtdMonth}
+                availableYtdMonths={availableYtdMonths}
+                defaultYtdMonthLabel={defaultYtdMonthLabel}
                 errors={fieldErrors['2026']}
                 showErrors={showErrors}
               />

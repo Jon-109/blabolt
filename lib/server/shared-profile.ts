@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
+import { normalizeFinancialsPayload } from '@/lib/financial/calculations';
 
 type AnyRow = Record<string, unknown>;
 
@@ -109,6 +110,18 @@ function mapSharedProfileRow(row: AnyRow | null): SharedProfileSnapshot {
   };
 }
 
+function getCashFlowAnnualRevenue(row: AnyRow | null): number | undefined {
+  if (!row) {
+    return undefined;
+  }
+
+  const financials = normalizeFinancialsPayload(row.financials);
+  return pickFirstNumber(
+    financials.year2025?.input?.revenue,
+    financials.year2025?.summary?.revenue,
+  );
+}
+
 export function normalizeSharedProfilePatch(
   patch: SharedProfilePatch,
 ): Record<string, string | number | null> {
@@ -165,7 +178,7 @@ export async function getSharedProfileSnapshot(
       .maybeSingle(),
     admin
       .from('cash_flow_analyses')
-      .select('business_name,loan_purpose,desired_amount,updated_at')
+      .select('business_name,loan_purpose,desired_amount,financials,updated_at')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -175,6 +188,7 @@ export async function getSharedProfileSnapshot(
   const profile = mapSharedProfileRow((profileResult.data as AnyRow | null) ?? null);
   const loanRequest = (loanRequestResult.data as AnyRow | null) ?? null;
   const cashFlow = (cashFlowResult.data as AnyRow | null) ?? null;
+  const cashFlowAnnualRevenue = getCashFlowAnnualRevenue(cashFlow);
 
   return {
     personalName: profile.personalName,
@@ -200,7 +214,7 @@ export async function getSharedProfileSnapshot(
       loanRequest?.loan_amount,
       cashFlow?.desired_amount,
     ),
-    annualRevenue: pickFirstNumber(profile.annualRevenue, loanRequest?.annual_revenue),
+    annualRevenue: pickFirstNumber(cashFlowAnnualRevenue, profile.annualRevenue, loanRequest?.annual_revenue),
     yearsInBusiness: pickFirstNumber(profile.yearsInBusiness, loanRequest?.years_in_business),
     businessDescription: pickFirstString(
       profile.businessDescription,
@@ -254,6 +268,33 @@ export async function upsertSharedProfileAndSync(
       .update(loanRequestUpdates)
       .eq('user_id', userId)
       .in('status', ['draft', 'in_progress', 'submitted', 'completed']);
+  }
+
+  if ('annual_revenue' in normalized) {
+    const latestCashFlowResult = await admin
+      .from('cash_flow_analyses')
+      .select('id,financials')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const latestCashFlow = (latestCashFlowResult.data as AnyRow | null) ?? null;
+    if (latestCashFlow?.id) {
+      const nextFinancials = normalizeFinancialsPayload(latestCashFlow.financials);
+      nextFinancials.year2025.input.revenue = normalized.annual_revenue == null
+        ? ''
+        : String(normalized.annual_revenue);
+
+      await admin
+        .from('cash_flow_analyses')
+        .update({
+          financials: nextFinancials,
+          updated_at: nowIso,
+        })
+        .eq('id', String(latestCashFlow.id))
+        .eq('user_id', userId);
+    }
   }
 
   if ('business_name' in normalized) {

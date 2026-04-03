@@ -16,17 +16,19 @@ const DownloadButton: React.FC<DownloadButtonProps> = ({ analysisId, type, child
 
   const handleDownload = async () => {
     setErrorMessage(null);
-    if (existingUrl) {
-      window.open(existingUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
 
     setLoading(true);
     try {
-      // Get the user's Supabase access token
+      // Always generate a fresh PDF so downloads stay in sync with the latest saved analysis data.
       const session = await supabase.auth.getSession();
       const accessToken = session?.data?.session?.access_token;
       if (!accessToken) {
+        if (existingUrl) {
+          window.open(existingUrl, '_blank', 'noopener,noreferrer');
+          setLoading(false);
+          return;
+        }
+
         setErrorMessage('You must be logged in to download the PDF.');
         setLoading(false);
         return;

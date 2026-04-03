@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { syncClientAccountForAuthUser } from '@/lib/server/client-account-sync';
+import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +41,16 @@ export async function GET(request: Request) {
         },
       });
 
-      await supabase.auth.exchangeCodeForSession(code);
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+      if (!error) {
+        try {
+          const { data } = await supabase.auth.getUser();
+          await syncClientAccountForAuthUser(getSupabaseAdmin(), data.user ?? null);
+        } catch (syncError) {
+          console.error('Failed to sync client account during auth callback:', syncError);
+        }
+      }
     }
   }
 
