@@ -288,7 +288,10 @@ const Header = () => {
     return `Hi, ${displayName}`;
   }, [displayName]);
 
-  const comprehensiveNavHref = '/comprehensive-cash-flow-analysis';
+  const comprehensiveNavHref =
+    isLoggedIn && canAccessComprehensive
+      ? '/comprehensive-cash-flow-analysis'
+      : '/cash-flow-analysis';
   const comprehensiveNavLabel = hasPaidComprehensiveAccess ? 'My Cash Flow' : 'Cash Flow Analysis';
   const templatesNavHref = '/templates';
   const templatesNavLabel = 'My Templates';
