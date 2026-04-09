@@ -232,8 +232,8 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       lenderPerspective:
         'This suggests the business is not currently generating enough cash flow to cover the debt load in the structure being reviewed.',
       bullets: [
-        'Many lenders would pause or decline the request as-is.',
-        'The file usually needs a smaller request, lower payment, or stronger cash flow support.',
+        'Many lenders would pause or decline the request as structured.',
+        'The deal usually needs a smaller request, lower payment, or stronger cash flow support.',
         'A deeper review may still uncover valid add-backs or structure changes worth testing.',
       ],
       bottomLine:
@@ -289,7 +289,7 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
         'A lender can still see this as too tight because there is very little room for softer revenue, expense pressure, or underwriting adjustments.',
       bullets: [
         'Requests in this range often need a smaller amount or lower payment.',
-        'Lenders may ask for stronger compensating factors before moving forward.',
+        'Lenders usually want stronger compensating factors before moving forward.',
         'This is a good range for a bank-style review before you package anything.',
       ],
       bottomLine:
@@ -346,8 +346,8 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
         'A lender may see a workable file here, but often wants better structure, more support, or a clearer story before feeling fully comfortable.',
       bullets: [
         'This range often triggers tighter scrutiny on credit, liquidity, and documentation.',
-        'Small changes in payment structure can materially affect lender comfort here.',
-        'A fuller review can be especially valuable before you package or apply.',
+        'Small changes in payment structure can materially improve lender comfort here.',
+        'A fuller review is often valuable before you package or apply.',
       ],
       bottomLine:
         'Bottom line: possible, but this is still a tune-the-structure range rather than an easy green light.',
@@ -403,8 +403,8 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
         'This usually reads as a supportable payment at first glance, though lenders still care about the quality and consistency of the rest of the file.',
       bullets: [
         'This range often supports moving into packaging and lender preparation.',
-        'Credit, documentation, and cash flow consistency still matter.',
-        'A deeper review can help confirm whether the strength holds up under fuller underwriting scrutiny.',
+        'Credit, documentation, and cash flow consistency still matter here.',
+        'A deeper review can confirm whether the strength holds up in fuller underwriting.',
       ],
       bottomLine:
         'Bottom line: a credible starting point for packaging, provided the rest of the file is clean.',
@@ -459,7 +459,7 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
         'A lender often reads this as a file with solid repayment room, assuming the tax returns, statements, and overall business profile support the same story.',
       bullets: [
         'This range tends to support a stronger first impression in underwriting.',
-        'Good packaging can help the strength of the file come through more clearly.',
+        'Good packaging can help that strength come through more clearly.',
         'A deeper analysis can still add confidence before you shop the request.',
       ],
       bottomLine:
@@ -514,8 +514,8 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
         'At this level, the payment often looks comfortably affordable from a cash flow standpoint, assuming no other major weaknesses show up in underwriting.',
       bullets: [
         'This range can support stronger lender confidence and cleaner conversations.',
-        'The file may still benefit from polished packaging and positioning.',
-        'Credit, documentation quality, and deal structure still influence final terms and lender choice.',
+        'The file can still benefit from polished packaging and positioning.',
+        'Credit, documentation quality, and structure still influence final terms and lender choice.',
       ],
       bottomLine:
         'Bottom line: a very strong quick-read position that deserves a polished lender-facing presentation.',

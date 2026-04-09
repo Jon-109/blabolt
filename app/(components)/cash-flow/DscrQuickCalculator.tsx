@@ -200,11 +200,6 @@ export const DscrGauge: React.FC<{ value: number }> = ({ value }) => {
             <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${status.badgeClassName}`}>{status.label}</span>
           </div>
         </div>
-
-        <div className="hidden rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right sm:block">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Bank Benchmark</p>
-          <p className="mt-1 text-lg font-bold text-slate-950">{DSCR_BENCHMARK.toFixed(2)}x</p>
-        </div>
       </div>
 
       <div className="mt-6">

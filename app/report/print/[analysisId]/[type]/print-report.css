@@ -1,6 +1,7 @@
 /* Print-specific styles for PDF generation and print preview */
 @page {
-  margin: 0;
+  size: Letter;
+  margin: 0.3in;
 }
 
 @media print {
@@ -15,6 +16,29 @@
   }
   .page-break {
     page-break-before: always;
+  }
+  .report-first-page {
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    min-height: calc(11in - 0.6in);
+    max-height: calc(11in - 0.6in);
+    overflow: hidden;
+  }
+  .report-first-page-fit {
+    width: 103.25%;
+    transform: scale(0.9685);
+    transform-origin: top left;
+  }
+  .report-first-page-fit > section:last-child,
+  .report-first-page-fit > div:last-child,
+  .report-first-page-fit > header:last-child {
+    margin-bottom: 0 !important;
+  }
+  .report-first-page + section {
+    border-top: 0 !important;
+    box-shadow: none !important;
   }
   #__next, #__next > div {
     margin: 0 !important;
