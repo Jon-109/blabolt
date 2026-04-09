@@ -102,38 +102,14 @@ function getBrowserlessApiKey() {
   return apiKey;
 }
 
-async function generatePdfBuffer(printUrl: string, browserlessApiKey: string) {
-  const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
-  const requestBody = {
-    url: printUrl,
-    options: {
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' },
-    },
-  };
-
-  const browserlessResponse = await fetch(browserlessUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-    signal: AbortSignal.timeout(PDF_REQUEST_TIMEOUT_MS),
-  });
-
-  if (!browserlessResponse.ok) {
-    const errorText = await browserlessResponse.text();
-    throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} - ${errorText}`);
-  }
-
-  return Buffer.from(await browserlessResponse.arrayBuffer());
-}
-
 function getLegacyPrintUrl(req: NextRequest, analysisId: string, type: string) {
   const origin = getOrigin(req);
   const renderToken = createPdfRenderToken(analysisId, type as 'full' | 'summary');
   return `${origin}/report/print/${analysisId}/${type}?renderToken=${encodeURIComponent(renderToken)}`;
+}
+
+function getPrintWaitSelector(type: 'full' | 'summary') {
+  return type === 'full' ? '#cash-flow-report-root' : '#business-debt-summary';
 }
 
 export async function POST(req: NextRequest) {
@@ -165,7 +141,11 @@ export async function POST(req: NextRequest) {
 
     const browserlessApiKey = getBrowserlessApiKey();
     const printUrl = getLegacyPrintUrl(req, analysisId, type);
-    const pdfBuffer = await generatePdfBuffer(printUrl, browserlessApiKey);
+    const pdfBuffer = await generatePdfBuffer(
+      printUrl,
+      browserlessApiKey,
+      getPrintWaitSelector(type),
+    );
 
     let pdfUrl: string | null = null;
     try {
@@ -234,6 +214,43 @@ export async function POST(req: NextRequest) {
     console.error('[generate-pdf] Overall PDF generation error:', message);
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
   }
+}
+
+async function generatePdfBuffer(
+  printUrl: string,
+  browserlessApiKey: string,
+  selector: string,
+) {
+  const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
+  const requestBody = {
+    url: printUrl,
+    waitForSelector: {
+      selector,
+      timeout: 10_000,
+    },
+    waitForTimeout: 750,
+    options: {
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' },
+    },
+  };
+
+  const browserlessResponse = await fetch(browserlessUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(PDF_REQUEST_TIMEOUT_MS),
+  });
+
+  if (!browserlessResponse.ok) {
+    const errorText = await browserlessResponse.text();
+    throw new Error(`Browserless PDF generation failed: ${browserlessResponse.status} - ${errorText}`);
+  }
+
+  return Buffer.from(await browserlessResponse.arrayBuffer());
 }
 
 async function handleTemplatesPdfGeneration(req: NextRequest, body: Record<string, unknown>) {

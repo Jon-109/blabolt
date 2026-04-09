@@ -1,10 +1,8 @@
 import React from 'react';
 import { InfoIcon } from 'lucide-react';
-import { DscrGauge } from '@/app/(components)/cash-flow/DscrQuickCalculator';
 import CashFlowBusinessDebtSummaryTemplate from '@/app/(components)/cash-flow/CashFlowBusinessDebtSummaryTemplate';
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/app/(components)/ui/tooltip';
 import { calculateFinancialSummary, formatLoanTermLabel } from '@/lib/financial/calculations';
-import { DSCR_BENCHMARK, getDscrBand } from '@/lib/financial/dscr';
+import { DSCR_BENCHMARK, DSCR_GAUGE_MAX, getDscrBand } from '@/lib/financial/dscr';
 
 // --- Type Definitions ---
 
@@ -117,6 +115,63 @@ export const formatPercentage = (value: number | null | undefined, digits: numbe
 
 const formatRatioDollarAmount = (value: number): string => {
   return `$${value.toFixed(2)}`;
+};
+
+const ReportDscrGauge: React.FC<{ value: number }> = ({ value }) => {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const status = getDscrBand(safeValue).quickStatus;
+  const pointerPosition = Math.max(0, Math.min((safeValue / DSCR_GAUGE_MAX) * 100, 100));
+  const benchmarkPosition = (DSCR_BENCHMARK / DSCR_GAUGE_MAX) * 100;
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">DSCR Score</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div className={`text-5xl font-black tracking-[-0.05em] ${status.valueClassName}`}>
+              {safeValue.toFixed(2)}
+            </div>
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${status.badgeClassName}`}>
+              {status.label}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <div className="relative pt-8">
+          <div className="h-4 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+            <div className="h-full w-full bg-[linear-gradient(90deg,#ef4444_0%,#f59e0b_50%,#10b981_100%)]" />
+          </div>
+          <div
+            className="absolute top-1 flex -translate-x-1/2 flex-col items-center"
+            style={{ left: `${benchmarkPosition}%` }}
+          >
+            <div className="rounded-full bg-slate-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
+              {DSCR_BENCHMARK.toFixed(2)}x
+            </div>
+            <div className="mt-1 h-5 w-px bg-slate-900" />
+          </div>
+          <div
+            className="absolute top-5 flex -translate-x-1/2 flex-col items-center"
+            style={{ left: `${pointerPosition}%` }}
+          >
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full border-4 border-white shadow-lg ${status.panelClassName}`}>
+              <div className={`h-2.5 w-2.5 rounded-full ${status.valueClassName.replace('text', 'bg')}`} />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+          <span>0.00</span>
+          <span>1.00</span>
+          <span>{DSCR_BENCHMARK.toFixed(2)} Standard</span>
+          <span>{DSCR_GAUGE_MAX.toFixed(2)}+</span>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // Simple function to get year data safely
@@ -297,7 +352,10 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
   // --- Component Rendering ---
 
   return (
-    <div className="pt-0 pb-4 px-3 bg-white rounded-2xl border border-slate-200 shadow-[0_28px_60px_-36px_rgba(15,23,42,0.35)] max-w-4xl mx-auto print:mt-0 print:pt-0 print:pb-0 print:px-4 print:rounded-none print:border-0 print:shadow-none">
+    <div
+      id="cash-flow-report-root"
+      className="pt-0 pb-4 px-3 bg-white rounded-2xl border border-slate-200 shadow-[0_28px_60px_-36px_rgba(15,23,42,0.35)] max-w-4xl mx-auto print:mt-0 print:pt-0 print:pb-0 print:px-4 print:rounded-none print:border-0 print:shadow-none"
+    >
       <div className="report-first-page print:overflow-hidden">
         <div className="report-first-page-fit">
           {/* --- Report Header --- */}
@@ -445,7 +503,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                   const denominator = (annualDebtService['2025'] ?? dscr2025?.debtService ?? 0) + (annualizedLoanPayments['2025'] ?? safeLoanInfo?.annualizedLoan ?? 0);
                   return (
                     <>
-                      <DscrGauge value={dscr2025Calc} />
+                      <ReportDscrGauge value={dscr2025Calc} />
                       {Number.isFinite(dscr2025Calc) && denominator > 0 ? (
                         <div className="mt-2 flex flex-col items-center">
                           <div className="border-l-4 border-blue-400 bg-blue-50 p-2 w-full">
@@ -655,24 +713,11 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
   {show2026 && <td className="border border-slate-200 p-2 text-center font-semibold tabular-nums text-slate-900">{formatCurrency(getSummary(ytdKey)?.nonRecurringExpenses ?? 0)}</td>}
 </tr>
 <tr className="bg-emerald-200 font-bold">
-  <td className="border border-slate-200 p-2 flex items-center gap-2 text-slate-950">
+  <td className="border border-slate-200 p-2 text-slate-950">
+    <div className="flex items-center gap-2">
     Adjusted EBITDA
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="cursor-pointer">
-            <InfoIcon className="inline-block h-4 w-4 text-emerald-700" />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs text-left">
-          <span className="font-semibold">Adjusted EBITDA</span> gives lenders a clearer picture of your business's true, recurring earning power.
-          <br /><br />
-          It starts with EBITDA, then subtracts any unusual, non-recurring income (like a grant or COVID relief) and adds back any one-time expenses (like a lawsuit or flood).
-          <br /><br />
-          <span className="text-green-700 font-semibold">Why?</span> Lenders want to know your sustainable cash flow for repaying debt, not figures distorted by rare events. Adjusted EBITDA helps show your business’s real, ongoing ability to make loan payments.
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+      <InfoIcon className="inline-block h-4 w-4 text-emerald-700" />
+    </div>
   </td>
   {show2024 && (
     <td className="border border-slate-200 p-2 text-center font-bold tabular-nums text-slate-950">

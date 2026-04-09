@@ -8,6 +8,8 @@ import './print-report.css';
 import { verifyPdfRenderToken } from '@/lib/server/pdf-render-token';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PrintReportPage({ params, searchParams }: any) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
