@@ -1,7 +1,21 @@
 /* Print-specific styles for PDF generation and print preview */
 @page {
-  size: Letter;
-  margin: 0.3in;
+  size: A4;
+  margin: 0;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #000;
+}
+
+.page-break {
+  display: block;
+  height: 0;
+  break-before: page;
+  page-break-before: always;
 }
 
 @media print {
@@ -22,8 +36,8 @@
     page-break-after: always;
     break-inside: avoid;
     page-break-inside: avoid;
-    min-height: calc(11in - 0.6in);
-    max-height: calc(11in - 0.6in);
+    min-height: calc(297mm - 20px);
+    max-height: calc(297mm - 20px);
     overflow: hidden;
   }
   .report-first-page-fit {
@@ -51,15 +65,4 @@
   .no-print {
     display: none !important;
   }
-}
-
-/* Optional: Style for PDF preview in browser (not just print) */
-body {
-  background: #f9f9f9;
-  color: #222;
-}
-
-.page-break {
-  display: block;
-  height: 40px;
 }

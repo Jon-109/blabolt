@@ -7,7 +7,7 @@ type Props = {
 
 const WIDTH = 816;
 const HEIGHT = 1056;
-const PAGE_MARGIN_X = 20;
+const PAGE_MARGIN_X = 10;
 const BASE_LEFT = 44;
 const BASE_CONTENT_WIDTH = 728;
 const CONTENT_WIDTH = WIDTH - PAGE_MARGIN_X * 2;
@@ -117,8 +117,8 @@ export default function BusinessDebtSummarySvgTemplate({ data }: Props) {
     return [header, ...entries];
   });
 
-  const topY = 28;
-  const summaryTop = 160;
+  const topY = 18;
+  const summaryTop = 148;
   const summaryCardsTop = summaryTop + 8;
   const detailTop = summaryCardsTop + 72 + 42;
 

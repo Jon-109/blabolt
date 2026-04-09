@@ -11,6 +11,8 @@ import { createPdfRenderToken } from '@/lib/server/pdf-render-token';
 
 export const runtime = 'nodejs';
 const PDF_REQUEST_TIMEOUT_MS = 60000;
+const PDF_PAGE_MARGIN = '10px';
+const PDF_VIEWPORT = { width: 1440, height: 2200 };
 const TEMPLATE_TYPES = new Set([
   'balance_sheet',
   'income_statement',
@@ -224,6 +226,8 @@ async function generatePdfBuffer(
   const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
   const requestBody = {
     url: printUrl,
+    emulateMediaType: 'screen',
+    viewport: PDF_VIEWPORT,
     waitForSelector: {
       selector,
       timeout: 10_000,
@@ -232,7 +236,12 @@ async function generatePdfBuffer(
     options: {
       format: 'A4',
       printBackground: true,
-      margin: { top: '24px', bottom: '24px', left: '16px', right: '16px' },
+      margin: {
+        top: PDF_PAGE_MARGIN,
+        right: PDF_PAGE_MARGIN,
+        bottom: PDF_PAGE_MARGIN,
+        left: PDF_PAGE_MARGIN,
+      },
     },
   };
 

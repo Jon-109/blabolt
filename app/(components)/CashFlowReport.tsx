@@ -354,7 +354,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
   return (
     <div
       id="cash-flow-report-root"
-      className="pt-0 pb-4 px-3 bg-white rounded-2xl border border-slate-200 shadow-[0_28px_60px_-36px_rgba(15,23,42,0.35)] max-w-4xl mx-auto print:mt-0 print:pt-0 print:pb-0 print:px-4 print:rounded-none print:border-0 print:shadow-none"
+      className="pt-0 pb-4 px-3 bg-white rounded-2xl border border-slate-200 shadow-[0_28px_60px_-36px_rgba(15,23,42,0.35)] max-w-4xl mx-auto print:mt-0 print:pt-0 print:pb-0 print:px-3 print:rounded-none print:border-0 print:shadow-none"
     >
       <div className="report-first-page print:overflow-hidden">
         <div className="report-first-page-fit">
@@ -407,7 +407,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Financing Structure</p>
                   <h3 className="mt-0.5 text-lg font-semibold tracking-[-0.03em] text-slate-950">Loan Purpose &amp; Details</h3>
                 </div>
-                <p className="max-w-sm whitespace-nowrap text-right text-[11px] leading-4 text-slate-500 print:max-w-[16rem]">
+                <p className="max-w-sm text-right text-[11px] leading-4 text-slate-500 print:max-w-[14rem] print:text-[10.5px]">
                   Snapshot of the request and assumptions used in this analysis.
                 </p>
               </div>
