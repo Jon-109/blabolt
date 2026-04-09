@@ -7,13 +7,15 @@ type Props = {
 
 const WIDTH = 816;
 const HEIGHT = 1056;
-const PAGE_MARGIN_X = 10;
+const PAGE_MARGIN_X = 5;
 const BASE_LEFT = 44;
 const BASE_CONTENT_WIDTH = 728;
 const CONTENT_WIDTH = WIDTH - PAGE_MARGIN_X * 2;
+const FONT_SCALE = 1.14;
 
 const scaleX = (value: number) => PAGE_MARGIN_X + ((value - BASE_LEFT) / BASE_CONTENT_WIDTH) * CONTENT_WIDTH;
 const scaleW = (value: number) => (value / BASE_CONTENT_WIDTH) * CONTENT_WIDTH;
+const fs = (value: number) => Math.round(value * FONT_SCALE * 10) / 10;
 
 const FONT_SANS = "'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif";
 const FONT_NUM = FONT_SANS;
@@ -127,34 +129,34 @@ export default function BusinessDebtSummarySvgTemplate({ data }: Props) {
       <rect x="0" y="0" width={WIDTH} height={HEIGHT} fill="#ffffff" />
 
       <rect x={scaleX(44)} y={topY} width={scaleW(728)} height="98" rx="10" fill="#0f172a" />
-      <text x={scaleX(64)} y={topY + 33} fontSize="23" fontWeight="700" fontFamily={FONT_SANS} fill="#ffffff">
+      <text x={scaleX(64)} y={topY + 33} fontSize={fs(23)} fontWeight="700" fontFamily={FONT_SANS} fill="#ffffff">
         Business Debt Summary
       </text>
-      <text x={scaleX(64)} y={topY + 57} fontSize="11" fontFamily={FONT_SANS} fill="#cbd5e1">
+      <text x={scaleX(64)} y={topY + 57} fontSize={fs(11)} fontFamily={FONT_SANS} fill="#cbd5e1">
         Lender Credit Profile | Category-Based Debt Service Breakdown
       </text>
-      <text x={scaleX(64)} y={topY + 81} fontSize="12" fontWeight="600" fontFamily={FONT_SANS} fill="#ffffff">
+      <text x={scaleX(64)} y={topY + 81} fontSize={fs(12)} fontWeight="600" fontFamily={FONT_SANS} fill="#ffffff">
         Business: {data.businessInfo.name || '-'}
       </text>
       <rect x={scaleX(510)} y={topY + 18} width={scaleW(248)} height="40" rx="8" fill="#0b1431" stroke="#334155" />
-      <text x={scaleX(522)} y={topY + 33} fontSize="8.8" fontFamily={FONT_SANS} fill="#94a3b8">
+      <text x={scaleX(522)} y={topY + 33} fontSize={fs(8.8)} fontFamily={FONT_SANS} fill="#94a3b8">
         Monthly Debt Service
       </text>
-      <text x={scaleX(522)} y={topY + 49} fontSize="11.5" fontWeight="700" fontFamily={FONT_NUM} fill="#e2e8f0">
+      <text x={scaleX(522)} y={topY + 49} fontSize={fs(11.5)} fontWeight="700" fontFamily={FONT_NUM} fill="#e2e8f0">
         {money(totalMonthlyDebtService)}
       </text>
-      <text x={scaleX(640)} y={topY + 33} fontSize="8.8" fontFamily={FONT_SANS} fill="#94a3b8">
+      <text x={scaleX(640)} y={topY + 33} fontSize={fs(8.8)} fontFamily={FONT_SANS} fill="#94a3b8">
         Total Debt Exposure
       </text>
-      <text x={scaleX(640)} y={topY + 49} fontSize="11.5" fontWeight="700" fontFamily={FONT_NUM} fill="#e2e8f0">
+      <text x={scaleX(640)} y={topY + 49} fontSize={fs(11.5)} fontWeight="700" fontFamily={FONT_NUM} fill="#e2e8f0">
         {money(totalDebtExposure)}
       </text>
-      <text x={scaleX(548)} y={topY + 81} fontSize="12" fontWeight="600" fontFamily={FONT_SANS} fill="#ffffff">
+      <text x={scaleX(548)} y={topY + 81} fontSize={fs(12)} fontWeight="600" fontFamily={FONT_SANS} fill="#ffffff">
         As of Date: {formattedAsOfDate}
       </text>
 
       <rect x={scaleX(44)} y={summaryTop - 26} width={scaleW(728)} height="28" rx="8" fill="#0f172a" />
-      <text x={scaleX(58)} y={summaryTop - 8} fontSize="11" fontWeight="700" fontFamily={FONT_SANS} fill="#ffffff">
+      <text x={scaleX(58)} y={summaryTop - 8} fontSize={fs(11)} fontWeight="700" fontFamily={FONT_SANS} fill="#ffffff">
         Debt Group Summary
       </text>
       {groupStats.map((group, index) => {
@@ -171,36 +173,36 @@ export default function BusinessDebtSummarySvgTemplate({ data }: Props) {
           <g key={group.id}>
             <rect x={x} y={summaryCardsTop} width={cardWidth} height="72" rx="12" fill="#ffffff" stroke="#cbd5e1" />
             <rect x={x + 1} y={summaryCardsTop + 1} width={cardWidth - 2} height="18" rx="11" fill={accent.chip} />
-            <text x={x + 14} y={summaryCardsTop + 14} fontSize="9.5" fontWeight="700" fontFamily={FONT_SANS} fill={accent.chipText}>
+            <text x={x + 14} y={summaryCardsTop + 14} fontSize={fs(9.5)} fontWeight="700" fontFamily={FONT_SANS} fill={accent.chipText}>
               {group.label}
             </text>
             {group.id === 'revolving' ? (
               <>
-                <text x={x + 14} y={summaryCardsTop + 38} fontSize="8.8" fontFamily={FONT_SANS} fill="#64748b">Balance</text>
-                <text x={x + 14} y={summaryCardsTop + 52} fontSize="10.5" fontWeight="700" fontFamily={FONT_NUM} fill={accent.value}>
+                <text x={x + 14} y={summaryCardsTop + 38} fontSize={fs(8.8)} fontFamily={FONT_SANS} fill="#64748b">Balance</text>
+                <text x={x + 14} y={summaryCardsTop + 52} fontSize={fs(10.5)} fontWeight="700" fontFamily={FONT_NUM} fill={accent.value}>
                   {money(group.totalBalance)}
                 </text>
-                <text x={x + 90} y={summaryCardsTop + 38} fontSize="8.8" fontFamily={FONT_SANS} fill="#64748b">Credit Limit</text>
-                <text x={x + 90} y={summaryCardsTop + 52} fontSize="10.5" fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">
+                <text x={x + 90} y={summaryCardsTop + 38} fontSize={fs(8.8)} fontFamily={FONT_SANS} fill="#64748b">Credit Limit</text>
+                <text x={x + 90} y={summaryCardsTop + 52} fontSize={fs(10.5)} fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">
                   {money(group.totalLimit)}
                 </text>
-                <text x={x + 176} y={summaryCardsTop + 38} fontSize="8.8" fontFamily={FONT_SANS} fill="#64748b">Utilization</text>
-                <text x={x + 176} y={summaryCardsTop + 52} fontSize="10.5" fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">
+                <text x={x + 176} y={summaryCardsTop + 38} fontSize={fs(8.8)} fontFamily={FONT_SANS} fill="#64748b">Utilization</text>
+                <text x={x + 176} y={summaryCardsTop + 52} fontSize={fs(10.5)} fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">
                   {percent(group.utilization)}
                 </text>
               </>
             ) : (
               <>
-                <text x={x + 14} y={summaryCardsTop + 38} fontSize="9.5" fontFamily={FONT_SANS} fill="#64748b">
+                <text x={x + 14} y={summaryCardsTop + 38} fontSize={fs(9.5)} fontFamily={FONT_SANS} fill="#64748b">
                   Total Balance
                 </text>
-                <text x={x + 14} y={summaryCardsTop + 52} fontSize="11.5" fontWeight="700" fontFamily={FONT_NUM} fill={accent.value}>
+                <text x={x + 14} y={summaryCardsTop + 52} fontSize={fs(11.5)} fontWeight="700" fontFamily={FONT_NUM} fill={accent.value}>
                   {money(group.totalBalance)}
                 </text>
-                <text x={x + 126} y={summaryCardsTop + 38} fontSize="9.5" fontFamily={FONT_SANS} fill="#64748b">
+                <text x={x + 126} y={summaryCardsTop + 38} fontSize={fs(9.5)} fontFamily={FONT_SANS} fill="#64748b">
                   Monthly Payment
                 </text>
-                <text x={x + 126} y={summaryCardsTop + 52} fontSize="11.5" fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">
+                <text x={x + 126} y={summaryCardsTop + 52} fontSize={fs(11.5)} fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">
                   {money(group.monthlyPayment)}
                 </text>
               </>
@@ -210,16 +212,16 @@ export default function BusinessDebtSummarySvgTemplate({ data }: Props) {
       })}
 
       <rect x={scaleX(44)} y={detailTop - 30} width={scaleW(728)} height="32" rx="8" fill="#0f172a" />
-      <text x={scaleX(58)} y={detailTop - 10} fontSize="12" fontWeight="700" fontFamily={FONT_SANS} fill="#ffffff">
+      <text x={scaleX(58)} y={detailTop - 10} fontSize={fs(12)} fontWeight="700" fontFamily={FONT_SANS} fill="#ffffff">
         Debt Detail by Category
       </text>
 
       <rect x={scaleX(44)} y={detailTop} width={scaleW(728)} height="28" fill="#334155" />
-      <text x={scaleX(54)} y={detailTop + 19} fontSize="10" fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Category</text>
-      <text x={scaleX(160)} y={detailTop + 19} fontSize="10" fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Creditor / Description</text>
-      <text x={scaleX(502)} y={detailTop + 19} textAnchor="end" fontSize="10" fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Monthly Payment</text>
-      <text x={scaleX(630)} y={detailTop + 19} textAnchor="end" fontSize="10" fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Current Balance</text>
-      <text x={scaleX(758)} y={detailTop + 19} textAnchor="end" fontSize="10" fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Credit Limit</text>
+      <text x={scaleX(54)} y={detailTop + 19} fontSize={fs(10)} fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Category</text>
+      <text x={scaleX(160)} y={detailTop + 19} fontSize={fs(10)} fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Creditor / Description</text>
+      <text x={scaleX(502)} y={detailTop + 19} textAnchor="end" fontSize={fs(10)} fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Monthly Payment</text>
+      <text x={scaleX(630)} y={detailTop + 19} textAnchor="end" fontSize={fs(10)} fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Current Balance</text>
+      <text x={scaleX(758)} y={detailTop + 19} textAnchor="end" fontSize={fs(10)} fontWeight="700" fontFamily={FONT_SANS} fill="#f8fafc">Credit Limit</text>
 
       {(() => {
         const blocks: ReactElement[] = [];
@@ -230,11 +232,11 @@ export default function BusinessDebtSummarySvgTemplate({ data }: Props) {
             blocks.push(
               <g key={`${row.category}-header-${index}`}>
                 <rect x={scaleX(44)} y={y} width={scaleW(728)} height="24" fill="#e2e8f0" stroke="#cbd5e1" />
-                <text x={scaleX(54)} y={y + 16} fontSize="9.5" fontWeight="700" fontFamily={FONT_SANS} fill="#0f172a">{row.category}</text>
-                <text x={scaleX(160)} y={y + 16} fontSize="9" fontFamily={FONT_SANS} fill="#334155">{row.creditor}</text>
-                <text x={scaleX(502)} y={y + 16} textAnchor="end" fontSize="9" fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">{money(row.monthly)}</text>
-                <text x={scaleX(630)} y={y + 16} textAnchor="end" fontSize="9" fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">{money(row.balance)}</text>
-                <text x={scaleX(758)} y={y + 16} textAnchor="end" fontSize="9" fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">{row.limit > 0 ? money(row.limit) : '-'}</text>
+                <text x={scaleX(54)} y={y + 16} fontSize={fs(9.5)} fontWeight="700" fontFamily={FONT_SANS} fill="#0f172a">{row.category}</text>
+                <text x={scaleX(160)} y={y + 16} fontSize={fs(9)} fontFamily={FONT_SANS} fill="#334155">{row.creditor}</text>
+                <text x={scaleX(502)} y={y + 16} textAnchor="end" fontSize={fs(9)} fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">{money(row.monthly)}</text>
+                <text x={scaleX(630)} y={y + 16} textAnchor="end" fontSize={fs(9)} fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">{money(row.balance)}</text>
+                <text x={scaleX(758)} y={y + 16} textAnchor="end" fontSize={fs(9)} fontWeight="700" fontFamily={FONT_NUM} fill="#0f172a">{row.limit > 0 ? money(row.limit) : '-'}</text>
               </g>,
             );
             y += 24;
@@ -244,11 +246,11 @@ export default function BusinessDebtSummarySvgTemplate({ data }: Props) {
           blocks.push(
             <g key={`${row.category}-${row.creditor}-${index}`}>
               <rect x={scaleX(44)} y={y} width={scaleW(728)} height="28" fill={index % 2 === 0 ? '#ffffff' : '#f8fafc'} stroke="#e2e8f0" />
-              <text x={scaleX(54)} y={y + 18} fontSize="9.5" fontFamily={FONT_SANS} fill="#1e293b">-</text>
-              <text x={scaleX(160)} y={y + 18} fontSize="9.5" fontFamily={FONT_SANS} fill="#1e293b">{row.creditor}</text>
-              <text x={scaleX(502)} y={y + 18} textAnchor="end" fontSize="9.5" fontFamily={FONT_NUM} fill="#111827">{money(row.monthly)}</text>
-              <text x={scaleX(630)} y={y + 18} textAnchor="end" fontSize="9.5" fontFamily={FONT_NUM} fill="#111827">{money(row.balance)}</text>
-              <text x={scaleX(758)} y={y + 18} textAnchor="end" fontSize="9.5" fontFamily={FONT_NUM} fill="#111827">{row.limit > 0 ? money(row.limit) : '-'}</text>
+              <text x={scaleX(54)} y={y + 18} fontSize={fs(9.5)} fontFamily={FONT_SANS} fill="#1e293b">-</text>
+              <text x={scaleX(160)} y={y + 18} fontSize={fs(9.5)} fontFamily={FONT_SANS} fill="#1e293b">{row.creditor}</text>
+              <text x={scaleX(502)} y={y + 18} textAnchor="end" fontSize={fs(9.5)} fontFamily={FONT_NUM} fill="#111827">{money(row.monthly)}</text>
+              <text x={scaleX(630)} y={y + 18} textAnchor="end" fontSize={fs(9.5)} fontFamily={FONT_NUM} fill="#111827">{money(row.balance)}</text>
+              <text x={scaleX(758)} y={y + 18} textAnchor="end" fontSize={fs(9.5)} fontFamily={FONT_NUM} fill="#111827">{row.limit > 0 ? money(row.limit) : '-'}</text>
             </g>,
           );
           y += 28;

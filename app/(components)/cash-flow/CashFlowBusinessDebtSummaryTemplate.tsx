@@ -103,7 +103,7 @@ export default function CashFlowBusinessDebtSummaryTemplate({
   const data = buildCashFlowBusinessDebtSummaryData({ debts, businessName, asOfDate });
 
   return (
-    <div className={className ? `mx-auto w-full max-w-[816px] ${className}` : 'mx-auto w-full max-w-[816px]'}>
+    <div className={className ? `mx-auto w-full max-w-[844px] ${className}` : 'mx-auto w-full max-w-[844px]'}>
       <BusinessDebtSummarySvgTemplate data={data} />
     </div>
   );
