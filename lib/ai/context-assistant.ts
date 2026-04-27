@@ -1,8 +1,10 @@
 import {
   COMPLETED_DOCUMENT_STATUSES,
   TEMPLATE_KEYS,
+  documentRequirementMatchesLoanPurpose,
   type TemplateKey,
 } from '@/lib/loan-packaging/constants';
+import { isDocumentExcludedFromPackage } from '@/lib/loan-packaging/document-state';
 import {
   computeTemplateMetrics,
   getTemplateCompletionPercentage,
@@ -196,7 +198,7 @@ export async function buildDashboardAssistantContext(args: {
     loanRequestResult,
     admin
       .from('document_requirements')
-      .select('requirement_key,display_name,description,required,template_key,service_type')
+      .select('requirement_key,display_name,description,required,template_key,service_type,loan_purpose')
       .eq('service_type', 'loan_packaging')
       .eq('is_active', true),
   ]);
@@ -209,7 +211,7 @@ export async function buildDashboardAssistantContext(args: {
     ? await Promise.all([
         admin
           .from('loan_request_documents')
-          .select('requirement_key,status,updated_at')
+          .select('requirement_key,status,updated_at,excluded_from_package,excluded_at')
           .eq('loan_request_id', resolvedLoanRequestId)
           .eq('user_id', userId),
         admin
@@ -231,7 +233,12 @@ export async function buildDashboardAssistantContext(args: {
   );
 
   const requirements = ((requirementsResponse.data as AnyRow[] | null) ?? []).filter(
-    (row) => String(row.service_type ?? '') === 'loan_packaging',
+    (row) =>
+      String(row.service_type ?? '') === 'loan_packaging' &&
+      documentRequirementMatchesLoanPurpose(
+        typeof row.loan_purpose === 'string' ? row.loan_purpose : null,
+        typeof loanRequest?.loan_purpose === 'string' ? loanRequest.loan_purpose : null,
+      ),
   );
 
   const missingRequiredDocuments = requirements
@@ -239,6 +246,9 @@ export async function buildDashboardAssistantContext(args: {
     .map((row) => {
       const requirementKey = String(row.requirement_key ?? '');
       const document = documentByKey.get(requirementKey);
+      if (isDocumentExcludedFromPackage(document)) {
+        return null;
+      }
       const status = String(document?.status ?? 'not_started');
 
       return {
@@ -252,6 +262,7 @@ export async function buildDashboardAssistantContext(args: {
         status,
       };
     })
+    .filter((row): row is NonNullable<typeof row> => Boolean(row))
     .filter((row) => !COMPLETED_DOCUMENT_STATUSES.has(row.status as never));
 
   const completedRequired = requirements.filter((row) => {
@@ -260,11 +271,22 @@ export async function buildDashboardAssistantContext(args: {
     }
 
     const requirementKey = String(row.requirement_key ?? '');
-    const status = String(documentByKey.get(requirementKey)?.status ?? 'not_started');
+    const document = documentByKey.get(requirementKey);
+    if (isDocumentExcludedFromPackage(document)) {
+      return false;
+    }
+    const status = String(document?.status ?? 'not_started');
     return COMPLETED_DOCUMENT_STATUSES.has(status as never);
   }).length;
 
-  const totalRequired = requirements.filter((row) => Boolean(row.required)).length;
+  const totalRequired = requirements.filter((row) => {
+    if (!row.required) {
+      return false;
+    }
+
+    const requirementKey = String(row.requirement_key ?? '');
+    return !isDocumentExcludedFromPackage(documentByKey.get(requirementKey));
+  }).length;
   const percentage =
     totalRequired > 0 ? Math.round((completedRequired / totalRequired) * 100) : 0;
 

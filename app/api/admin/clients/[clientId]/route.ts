@@ -19,6 +19,7 @@ import {
   normalizeDscrSnapshot,
   parseFiniteNumber,
 } from '@/lib/admin/client-dashboard';
+import { isDocumentExcludedFromPackage } from '@/lib/loan-packaging/document-state';
 import { requireAdminApiIdentity } from '@/lib/server/admin-api-auth';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 import {
@@ -416,6 +417,9 @@ async function buildClientDetailPayload(
     .filter((requirement) => Boolean(requirement.required))
     .filter((requirement) => {
       const document = documentByRequirement.get(String(requirement.requirement_key ?? ''));
+      if (isDocumentExcludedFromPackage(document)) {
+        return false;
+      }
       return !document || !['uploaded', 'generated', 'approved'].includes(String(document.status ?? ''));
     })
     .slice(0, 6)

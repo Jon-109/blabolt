@@ -159,7 +159,7 @@ export async function GET(req: NextRequest) {
       .limit(20000),
     admin
       .from('loan_request_documents')
-      .select('loan_request_id,user_id,requirement_key,status,updated_at,uploaded_at')
+      .select('loan_request_id,user_id,requirement_key,status,updated_at,uploaded_at,excluded_from_package,excluded_at')
       .order('updated_at', { ascending: false })
       .limit(20000),
     admin

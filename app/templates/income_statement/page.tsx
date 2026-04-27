@@ -25,6 +25,11 @@ import {
   deriveIncomeStatementTitle,
   normalizeIncomeStatementType,
 } from '@/lib/templates/income-statement-labels';
+import {
+  buildIncomeStatementFormFromPreset,
+  getIncomeStatementPresetByRequirementKey,
+  matchesIncomeStatementPreset,
+} from '@/lib/templates/income-statement-presets';
 import { getTemplateSharedProfile, upsertTemplateSharedProfile } from '@/lib/templates/profile';
 
 type IncomeStatementSubmission = {
@@ -227,6 +232,7 @@ export default function IncomeStatementFormPage() {
   const searchParams = useSearchParams();
   const requestedSubmissionId = searchParams.get('submissionId');
   const loanRequestId = searchParams.get('loanRequestId');
+  const requirementKey = searchParams.get('requirementKey');
   const forceNew = searchParams.get('new') === '1';
 
   const [user, setUser] = useState<any>(null);
@@ -269,6 +275,58 @@ export default function IncomeStatementFormPage() {
     return rows;
   };
 
+  const ensurePresetSubmission = async (
+    userId: string,
+    existingSubmissions: IncomeStatementSubmission[],
+  ) => {
+    const preset = getIncomeStatementPresetByRequirementKey(requirementKey);
+    if (!preset) {
+      return { submissions: existingSubmissions, submission: null as IncomeStatementSubmission | null };
+    }
+
+    const matchedExisting = existingSubmissions.find((submission) =>
+      matchesIncomeStatementPreset(submission.form_data, preset),
+    );
+
+    if (matchedExisting) {
+      return { submissions: existingSubmissions, submission: matchedExisting };
+    }
+
+    if (existingSubmissions.length >= MAX_STATEMENTS) {
+      return { submissions: existingSubmissions, submission: null as IncomeStatementSubmission | null };
+    }
+
+    const { data, error } = await supabase
+      .from('template_submissions')
+      .insert({
+        user_id: userId,
+        template_type: 'income_statement',
+        template_slot: preset.templateSlot,
+        form_data: buildIncomeStatementFormFromPreset(preset),
+      })
+      .select('id,form_data,pdf_url,updated_at')
+      .single();
+
+    if (error || !data) {
+      const refreshedSubmissions = await loadSubmissions(userId);
+      const refreshedMatch = refreshedSubmissions.find((submission) =>
+        matchesIncomeStatementPreset(submission.form_data, preset),
+      );
+
+      if (refreshedMatch) {
+        return { submissions: refreshedSubmissions, submission: refreshedMatch };
+      }
+
+      throw error ?? new Error('Failed to initialize income statement template');
+    }
+
+    const nextSubmission = data as IncomeStatementSubmission;
+    const nextSubmissions = [nextSubmission, ...existingSubmissions];
+    setSubmissions(nextSubmissions);
+
+    return { submissions: nextSubmissions, submission: nextSubmission };
+  };
+
   const loadSubmissionIntoForm = (submission: IncomeStatementSubmission) => {
     const normalized = normalizeIncomeForm(submission.form_data);
     const parsedEnd = parseIsoDate(normalized.periodEnd);
@@ -308,20 +366,26 @@ export default function IncomeStatementFormPage() {
       }
 
       const existingSubmissions = await loadSubmissions(sessionUser.id);
+      const presetResolution = await ensurePresetSubmission(sessionUser.id, existingSubmissions);
+      const availableSubmissions = presetResolution.submissions;
       const profile = await getTemplateSharedProfile(sessionUser.id);
       const sharedBusinessName = profile.businessName || profile.businessLegalName || '';
 
       if (!isActive) return;
 
       if (requestedSubmissionId) {
-        const requested = existingSubmissions.find((item) => item.id === requestedSubmissionId);
+        const requested = availableSubmissions.find((item) => item.id === requestedSubmissionId);
         if (requested) {
           loadSubmissionIntoForm(requested);
-        } else if (!forceNew && existingSubmissions[0]) {
-          loadSubmissionIntoForm(existingSubmissions[0]);
+        } else if (!forceNew && presetResolution.submission) {
+          loadSubmissionIntoForm(presetResolution.submission);
+        } else if (!forceNew && availableSubmissions[0]) {
+          loadSubmissionIntoForm(availableSubmissions[0]);
         }
-      } else if (!forceNew && existingSubmissions[0]) {
-        loadSubmissionIntoForm(existingSubmissions[0]);
+      } else if (!forceNew && presetResolution.submission) {
+        loadSubmissionIntoForm(presetResolution.submission);
+      } else if (!forceNew && availableSubmissions[0]) {
+        loadSubmissionIntoForm(availableSubmissions[0]);
       }
 
       if (sharedBusinessName) {
@@ -348,7 +412,7 @@ export default function IncomeStatementFormPage() {
     return () => {
       isActive = false;
     };
-  }, [forceNew, pathname, requestedSubmissionId, router]);
+  }, [forceNew, pathname, requestedSubmissionId, requirementKey, router]);
 
   const queueSave = () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -443,6 +507,14 @@ export default function IncomeStatementFormPage() {
   };
 
   const onGenerate = async () => {
+    const boundPreset = getIncomeStatementPresetByRequirementKey(requirementKey);
+    if (boundPreset && !matchesIncomeStatementPreset(form, boundPreset)) {
+      alert(
+        `This checklist item is tied to ${boundPreset.statementLabel}. Keep the statement period on that preset before generating the PDF.`,
+      );
+      return;
+    }
+
     if (!validateForm()) {
       alert('Please fix the validation errors before generating PDF.');
       return;
@@ -464,6 +536,7 @@ export default function IncomeStatementFormPage() {
           submissionId: resolvedSubmissionId,
           templateType: 'income_statement',
           loanRequestId,
+          requirementKey,
         }),
       });
 

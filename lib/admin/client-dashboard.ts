@@ -3,6 +3,7 @@ import {
   COMPLETED_DOCUMENT_STATUSES,
   documentRequirementMatchesLoanPurpose,
 } from '@/lib/loan-packaging/constants';
+import { isDocumentExcludedFromPackage } from '@/lib/loan-packaging/document-state';
 import { isTemplateType } from '@/lib/stripe/catalog';
 import type { TemplateType } from '@/lib/templates/types';
 
@@ -143,11 +144,16 @@ export function sortRequirementsByPriority(requirements: AnyRow[]): AnyRow[] {
 }
 
 export function buildPackagingProgress(requirements: AnyRow[], documents: AnyRow[]) {
-  const requiredRequirements = sortRequirementsByPriority(
-    requirements.filter((requirement) => Boolean(requirement.required)),
-  );
   const documentByRequirement = new Map(
     documents.map((document) => [String(document.requirement_key ?? ''), document]),
+  );
+  const requiredRequirements = sortRequirementsByPriority(
+    requirements
+      .filter((requirement) => Boolean(requirement.required))
+      .filter((requirement) => {
+        const document = documentByRequirement.get(String(requirement.requirement_key ?? ''));
+        return !isDocumentExcludedFromPackage(document);
+      }),
   );
 
   const completedRequired = requiredRequirements.filter((requirement) => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { COMPLETED_DOCUMENT_STATUSES, type DocumentStatus } from '@/lib/loan-packaging/constants';
+import { isDocumentCompleted, isDocumentExcludedFromPackage } from '@/lib/loan-packaging/document-state';
 import { verifyPassword } from '@/lib/server/password-hash';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
 
@@ -21,18 +21,6 @@ function getClientIp(req: NextRequest): string | null {
 
   const firstIp = forwarded.split(',')[0]?.trim();
   return firstIp || null;
-}
-
-function toDocumentStatus(value: unknown): DocumentStatus {
-  switch (value) {
-    case 'uploaded':
-    case 'generated':
-    case 'approved':
-    case 'not_started':
-      return value;
-    default:
-      return 'not_started';
-  }
 }
 
 export async function POST(req: NextRequest) {
@@ -120,7 +108,11 @@ export async function POST(req: NextRequest) {
 
   const lenderDocuments = await Promise.all(
     documents
-      .filter((document) => COMPLETED_DOCUMENT_STATUSES.has(toDocumentStatus(document.status)) && document.file_path)
+      .filter((document) => (
+        !isDocumentExcludedFromPackage(document) &&
+        isDocumentCompleted(document) &&
+        document.file_path
+      ))
       .map(async (document) => {
         const metadata = (document.metadata ?? {}) as Record<string, unknown>;
         const bucket = typeof metadata.bucket === 'string' ? metadata.bucket : 'loan-package-documents';

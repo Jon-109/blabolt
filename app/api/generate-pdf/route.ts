@@ -270,6 +270,7 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: Record<strin
       : null;
   const accessToken = isNonEmptyString(body.accessToken) ? body.accessToken : null;
   const loanRequestId = isNonEmptyString(body.loanRequestId) ? body.loanRequestId : null;
+  const requirementKey = isNonEmptyString(body.requirementKey) ? body.requirementKey : null;
 
   if (!submissionId || !templateType) {
     return NextResponse.json({ error: 'Missing submissionId or templateType' }, { status: 400 });
@@ -333,15 +334,17 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: Record<strin
         .maybeSingle();
 
       if (loanRequest) {
-        const requirementKey =
-          TEMPLATE_REQUIREMENT_KEY_BY_TEMPLATE[templateType as TemplateKey] ?? templateType;
+        const resolvedRequirementKey =
+          requirementKey ??
+          TEMPLATE_REQUIREMENT_KEY_BY_TEMPLATE[templateType as TemplateKey] ??
+          templateType;
         const nowIso = new Date().toISOString();
 
         await serviceSupabase.from('loan_request_documents').upsert(
           {
             loan_request_id: loanRequestId,
             user_id: authContext.user.id,
-            requirement_key: requirementKey,
+            requirement_key: resolvedRequirementKey,
             status: 'generated',
             source: 'template',
             file_path: result.filePath,
@@ -351,6 +354,7 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: Record<strin
             metadata: {
               bucket: 'pdfs',
               template_submission_id: submissionId,
+              template_requirement_key: resolvedRequirementKey,
               template_key: templateType,
               generated_at: nowIso,
               original_file_name: `${templateType}.pdf`,

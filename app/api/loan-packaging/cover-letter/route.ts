@@ -10,32 +10,74 @@ export const runtime = 'nodejs';
 
 type AnyRow = Record<string, unknown>;
 
+interface CoverLetterStructuredInputs {
+  businessDescription: string;
+  operatingHistory: string;
+  businessModelType: string;
+  businessLocationDetails: string;
+  businessLocation: string;
+  currentBusinessTraits: string[];
+  currentBusinessTraitsOther: string;
+  currentBusinessTraitsDetails: string;
+  employeeCount: string;
+  useOfFundsBreakdown: UseOfFundsBreakdownItem[];
+  useOfFundsNarrative: string;
+  timingNarrative: string;
+  repaymentSource: string;
+  repaymentSourceOther: string;
+  revenueStreams: string[];
+  revenueStreamsOther: string;
+  financingImpact: string[];
+  financingImpactOther: string;
+  repaymentNotes: string;
+  supportingFactors: string[];
+  supportingFactorsOther: string;
+  additionalLenderNotes: string;
+}
+
+interface UseOfFundsBreakdownItem {
+  description: string;
+  amount: number;
+}
+
 interface CoverLetterInput {
   businessName: string;
   loanPurpose: string;
   loanAmount: number | null;
   annualRevenue: number | null;
-  foundedYear: number | null;
-  yearsInBusiness: number | null;
   businessDescription: string;
-  businessOverview: string;
-  targetCustomers: string;
-  competitiveAdvantage: string;
-  fundUseDetails: string;
-  urgencyReason: string;
-  noLoanConsequence: string;
-  expectedOutcome: string;
-  recentPerformance: string;
-  recentChanges: string;
-  revenueCashflowImpact: string;
-  repaymentConfidence: string;
-  ownerStrengths: string;
-  riskManagement: string;
-  additionalContext: string;
-  priorDebtExperience: string;
-  priorDebtExperienceDetails: string;
-  purposeSpecificAnswers: Record<string, string>;
+  operatingHistory: string;
+  businessModelType: string;
+  businessLocation: string;
+  businessLocationDetails: string;
+  currentBusinessTraits: string[];
+  currentBusinessTraitsDetails: string;
+  employeeCount: string;
+  useOfFundsBreakdown: UseOfFundsBreakdownItem[];
+  useOfFundsNarrative: string;
+  timingNarrative: string;
+  repaymentSource: string;
+  revenueStreams: string[];
+  financingImpact: string[];
+  repaymentNotes: string;
+  supportingFactors: string[];
+  additionalLenderNotes: string;
 }
+
+const COVER_LETTER_GENERATION_BLUEPRINT = [
+  'Write the cover letter using exactly six body paragraphs after the greeting and before the sign-off.',
+  'Paragraph 1 is The Request and must contain exactly 3 sentences: define the financing request, connect the loan to business purpose, and frame the request strategically.',
+  'Paragraph 2 is Business Overview and must contain exactly 4 sentences: describe the business model, establish operating history and market, show real activity and traction, and reinforce credibility and stability.',
+  'Paragraph 3 is Use of Funds and must contain exactly 4 sentences: summarize the use of funds, explain operational impact, explain timing, and reinforce financial alignment.',
+  'Paragraph 4 is Repayment and must contain exactly 4 sentences: define the primary repayment source, explain how revenue is generated, support repayment capacity, and align the financing with cash flow.',
+  'Paragraph 5 is Business Strengths and must contain exactly 4 sentences: highlight ownership or leadership strength, highlight operational strengths, show commitment and stability, and summarize risk reduction.',
+  'Paragraph 6 is Closing and must contain exactly 3 sentences: express appreciation, reference supporting documentation, and maintain forward momentum.',
+  'Do not use section headings, bullet points, numbered lists, or labels inside the letter body.',
+  'No sentence may introduce new information that is not backed by the provided input.',
+  'Do not rely heavily on projections or speculative future performance.',
+  'Only mention DSCR, underwriting metrics, or financial analysis if those details are explicitly provided in the input.',
+  'Keep the tone factual, lender-aware, professional, and free of hype.',
+].join(' ');
 
 const nullableNumberSchema = z.preprocess(
   (value) => {
@@ -53,32 +95,47 @@ const nullableNumberSchema = z.preprocess(
   z.number().finite().nonnegative().nullable(),
 );
 
+const stringArraySchema = z.array(z.string().trim().min(1).max(200)).max(12);
+const useOfFundsBreakdownSchema = z.array(
+  z.object({
+    description: z.string().trim().min(1).max(300),
+    amount: z.number().finite().positive(),
+  }),
+).max(20);
+
+const coverLetterStructuredInputsSchema = z.object({
+  businessDescription: z.string().trim().max(3000),
+  operatingHistory: z.string().trim().max(300),
+  businessModelType: z.string().trim().max(50).optional().default(''),
+  businessLocationDetails: z.string().trim().max(500).optional().default(''),
+  businessLocation: z.string().trim().max(300),
+  currentBusinessTraits: stringArraySchema.max(5),
+  currentBusinessTraitsOther: z.string().trim().max(300).optional().default(''),
+  currentBusinessTraitsDetails: z.string().trim().max(3000).optional().default(''),
+  employeeCount: z.string().trim().max(50).optional().default(''),
+  useOfFundsBreakdown: useOfFundsBreakdownSchema.optional().default([]),
+  useOfFundsNarrative: z.string().trim().max(4000),
+  timingNarrative: z.string().trim().max(3000),
+  repaymentSource: z.string().trim().max(300),
+  repaymentSourceOther: z.string().trim().max(300).optional().default(''),
+  revenueStreams: stringArraySchema.max(5),
+  revenueStreamsOther: z.string().trim().max(300).optional().default(''),
+  financingImpact: stringArraySchema.max(3),
+  financingImpactOther: z.string().trim().max(300).optional().default(''),
+  repaymentNotes: z.string().trim().max(3000).optional().default(''),
+  supportingFactors: stringArraySchema.max(5),
+  supportingFactorsOther: z.string().trim().max(300).optional().default(''),
+  additionalLenderNotes: z.string().trim().max(4000).optional().default(''),
+});
+
 const coverLetterGenerateSchema = z.object({
   loanRequestId: z.string().uuid(),
   businessName: z.string().trim().max(200).optional().nullable(),
   loanPurpose: z.string().trim().max(300).optional().nullable(),
   loanAmount: nullableNumberSchema.optional(),
   annualRevenue: nullableNumberSchema.optional(),
-  foundedYear: nullableNumberSchema.optional(),
-  yearsInBusiness: nullableNumberSchema.optional(),
   businessDescription: z.string().trim().max(5000).optional().nullable(),
-  businessOverview: z.string().trim().max(3000).optional().nullable(),
-  targetCustomers: z.string().trim().max(2000).optional().nullable(),
-  competitiveAdvantage: z.string().trim().max(3000).optional().nullable(),
-  fundUseDetails: z.string().trim().max(3000).optional().nullable(),
-  urgencyReason: z.string().trim().max(3000).optional().nullable(),
-  noLoanConsequence: z.string().trim().max(3000).optional().nullable(),
-  expectedOutcome: z.string().trim().max(3000).optional().nullable(),
-  recentPerformance: z.string().trim().max(3000).optional().nullable(),
-  recentChanges: z.string().trim().max(3000).optional().nullable(),
-  revenueCashflowImpact: z.string().trim().max(3000).optional().nullable(),
-  repaymentConfidence: z.string().trim().max(3000).optional().nullable(),
-  ownerStrengths: z.string().trim().max(3000).optional().nullable(),
-  riskManagement: z.string().trim().max(3000).optional().nullable(),
-  additionalContext: z.string().trim().max(4000).optional().nullable(),
-  priorDebtExperience: z.enum(['yes', 'no']).optional().nullable(),
-  priorDebtExperienceDetails: z.string().trim().max(3000).optional().nullable(),
-  purposeSpecificAnswers: z.record(z.string(), z.string().trim().max(3000)).optional(),
+  coverLetterInputs: coverLetterStructuredInputsSchema.optional(),
 });
 
 const coverLetterUpdateSchema = z.object({
@@ -177,6 +234,20 @@ function asString(value: unknown, fallback: string): string {
     : fallback;
 }
 
+function getFirstNonEmptyText(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+
+  return '';
+}
+
 function asNullableNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value)
     ? value
@@ -189,54 +260,268 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function normalizePurposeSpecificAnswers(value: unknown): Record<string, string> {
-  const source = asRecord(value);
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
 
-  return Object.fromEntries(
-    Object.entries(source).flatMap(([key, entryValue]) => {
-      if (typeof entryValue !== 'string') {
-        return [];
-      }
+  return Array.from(
+    new Set(
+      value.flatMap((entry) => {
+        if (typeof entry !== 'string') {
+          return [];
+        }
 
-      const trimmed = entryValue.trim();
-      return trimmed.length > 0 ? [[key, trimmed]] : [];
-    }),
+        const trimmed = entry.trim();
+        return trimmed.length > 0 ? [trimmed] : [];
+      }),
+    ),
   );
 }
 
-function formatPurposeSpecificAnswers(value: Record<string, string>): string {
-  const entries = Object.entries(value);
-  if (entries.length === 0) {
+function asUseOfFundsBreakdown(value: unknown): UseOfFundsBreakdownItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      return [];
+    }
+
+    const source = entry as Record<string, unknown>;
+    const description = typeof source.description === 'string'
+      ? source.description.trim()
+      : typeof source.label === 'string'
+        ? source.label.trim()
+        : '';
+    const amount = typeof source.amount === 'number'
+      ? source.amount
+      : typeof source.amount === 'string'
+        ? Number(source.amount.replace(/,/g, '').trim())
+        : NaN;
+
+    if (!description || !Number.isFinite(amount) || amount <= 0) {
+      return [];
+    }
+
+    return [{ description, amount }];
+  });
+}
+
+function formatList(values: string[]): string {
+  if (values.length === 0) {
     return '';
   }
 
-  return entries
-    .map(([key, answer]) => `${key.replace(/_/g, ' ')}: ${answer}`)
-    .join(' ');
+  if (values.length === 1) {
+    return values[0] ?? '';
+  }
+
+  if (values.length === 2) {
+    return `${values[0] ?? ''} and ${values[1] ?? ''}`;
+  }
+
+  return `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1] ?? ''}`;
 }
 
-function formatPurposeSpecificAnswersForPrompt(value: Record<string, string>): string {
-  const entries = Object.entries(value);
-  if (entries.length === 0) {
-    return 'None provided.';
-  }
-
-  return entries
-    .map(([key, answer]) => `- ${key.replace(/_/g, ' ')}: ${answer}`)
-    .join('\n');
+function appendOtherSelection(values: string[], otherText: string): string[] {
+  const trimmedOtherText = otherText.trim();
+  const baseValues = values.filter((value) => value !== 'Other');
+  return trimmedOtherText ? [...baseValues, trimmedOtherText] : baseValues;
 }
 
-function deriveYearsInBusiness(foundedYear: number | null): number | null {
-  if (typeof foundedYear !== 'number' || !Number.isFinite(foundedYear)) {
-    return null;
+function resolveOtherSelection(value: string, otherText: string): string {
+  if (value !== 'Other') {
+    return value;
   }
 
-  const currentYear = new Date().getFullYear();
-  if (foundedYear < 1800 || foundedYear > currentYear) {
-    return null;
+  return otherText.trim();
+}
+
+function mergeStructuredCoverLetterInputs(
+  existingInputs: Record<string, unknown>,
+  payloadInputs: z.infer<typeof coverLetterStructuredInputsSchema> | undefined,
+): CoverLetterStructuredInputs {
+  return {
+    businessDescription:
+      payloadInputs?.businessDescription ??
+      getFirstNonEmptyText(existingInputs.businessDescription, existingInputs.businessOverview),
+    operatingHistory:
+      payloadInputs?.operatingHistory ??
+      getFirstNonEmptyText(existingInputs.operatingHistory, existingInputs.foundedYear, existingInputs.yearsInBusiness),
+    businessModelType:
+      payloadInputs?.businessModelType ??
+      getFirstNonEmptyText(existingInputs.businessModelType),
+    businessLocationDetails:
+      payloadInputs?.businessLocationDetails ??
+      getFirstNonEmptyText(existingInputs.businessLocationDetails),
+    businessLocation:
+      payloadInputs?.businessLocation ??
+      getFirstNonEmptyText(existingInputs.businessLocation),
+    currentBusinessTraits:
+      payloadInputs?.currentBusinessTraits ?? asStringArray(existingInputs.currentBusinessTraits),
+    currentBusinessTraitsOther:
+      payloadInputs?.currentBusinessTraitsOther ??
+      getFirstNonEmptyText(existingInputs.currentBusinessTraitsOther),
+    currentBusinessTraitsDetails:
+      payloadInputs?.currentBusinessTraitsDetails ??
+      getFirstNonEmptyText(existingInputs.currentBusinessTraitsDetails),
+    employeeCount:
+      payloadInputs?.employeeCount ??
+      getFirstNonEmptyText(existingInputs.employeeCount),
+    useOfFundsBreakdown:
+      payloadInputs?.useOfFundsBreakdown ?? asUseOfFundsBreakdown(existingInputs.useOfFundsBreakdown),
+    useOfFundsNarrative:
+      payloadInputs?.useOfFundsNarrative ??
+      getFirstNonEmptyText(existingInputs.useOfFundsNarrative, existingInputs.fundUseDetails),
+    timingNarrative:
+      payloadInputs?.timingNarrative ??
+      getFirstNonEmptyText(existingInputs.timingNarrative, existingInputs.timingDetails, existingInputs.timingReason, existingInputs.urgencyReason),
+    repaymentSource:
+      payloadInputs?.repaymentSource ??
+      getFirstNonEmptyText(existingInputs.repaymentSource),
+    repaymentSourceOther:
+      payloadInputs?.repaymentSourceOther ??
+      getFirstNonEmptyText(existingInputs.repaymentSourceOther),
+    revenueStreams:
+      payloadInputs?.revenueStreams ?? asStringArray(existingInputs.revenueStreams),
+    revenueStreamsOther:
+      payloadInputs?.revenueStreamsOther ??
+      getFirstNonEmptyText(existingInputs.revenueStreamsOther),
+    financingImpact:
+      payloadInputs?.financingImpact ?? asStringArray(existingInputs.financingImpact),
+    financingImpactOther:
+      payloadInputs?.financingImpactOther ??
+      getFirstNonEmptyText(existingInputs.financingImpactOther, existingInputs.expectedOutcome),
+    repaymentNotes:
+      payloadInputs?.repaymentNotes ??
+      getFirstNonEmptyText(existingInputs.repaymentNotes, existingInputs.repaymentNarrativeNotes),
+    supportingFactors:
+      payloadInputs?.supportingFactors ?? asStringArray(existingInputs.supportingFactors),
+    supportingFactorsOther:
+      payloadInputs?.supportingFactorsOther ??
+      getFirstNonEmptyText(existingInputs.supportingFactorsOther, existingInputs.ownerStrengths),
+    additionalLenderNotes:
+      payloadInputs?.additionalLenderNotes ??
+      getFirstNonEmptyText(existingInputs.additionalLenderNotes, existingInputs.additionalContext),
+  };
+}
+
+function buildNarrativeSelections(input: CoverLetterStructuredInputs) {
+  return {
+    currentBusinessTraits: appendOtherSelection(input.currentBusinessTraits, input.currentBusinessTraitsOther),
+    repaymentSource: resolveOtherSelection(input.repaymentSource, input.repaymentSourceOther),
+    revenueStreams: appendOtherSelection(input.revenueStreams, input.revenueStreamsOther),
+    financingImpact: appendOtherSelection(input.financingImpact, input.financingImpactOther),
+    supportingFactors: appendOtherSelection(input.supportingFactors, input.supportingFactorsOther),
+  };
+}
+
+function formatOptionalSentence(value: string, prefix = ''): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
   }
 
-  return Math.max(currentYear - foundedYear, 0);
+  return prefix ? `${prefix}${trimmed}` : trimmed;
+}
+
+function formatUseOfFundsBreakdown(value: UseOfFundsBreakdownItem[]): string {
+  if (value.length === 0) {
+    return '';
+  }
+
+  return value
+    .map((item) => `${item.description} (${formatCurrency(item.amount)})`)
+    .join(', ');
+}
+
+function formatOperatingHistorySentence(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (/^\d{4}$/.test(trimmed)) {
+    return `The business was established in ${trimmed}.`;
+  }
+
+  return `The business has been operating for ${trimmed}.`;
+}
+
+function inferLoanStructure(loanPurpose: string): string {
+  switch (loanPurpose.trim()) {
+    case 'Revolving Line of Credit':
+      return 'a revolving line of credit';
+    case 'Bridge Financing':
+      return 'a bridge loan';
+    case 'Commercial Real Estate Purchase':
+      return 'a commercial real estate term loan';
+    case 'Commercial Real Estate Refinance':
+      return 'a commercial real estate refinance loan';
+    case 'Debt Refinance / Consolidation':
+      return 'a debt refinance term loan';
+    case 'Equipment Purchase':
+      return 'an equipment term loan';
+    case 'Inventory Purchase':
+      return 'an inventory financing loan';
+    case 'Business Acquisition':
+      return 'a business acquisition term loan';
+    case 'Business Expansion / New Location':
+      return 'a business expansion term loan';
+    case 'Tenant Improvements / Renovation':
+      return 'a tenant improvement term loan';
+    case 'Partner Buyout':
+      return 'a partner buyout term loan';
+    case 'Franchise Purchase':
+      return 'a franchise purchase term loan';
+    case 'Working Capital':
+      return 'a working capital term loan';
+    default:
+      return 'a business loan';
+  }
+}
+
+function formatSentence(value: string): string {
+  const trimmed = value.replace(/\s+/g, ' ').trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function formatUseOfFundsSummary(value: UseOfFundsBreakdownItem[]): string {
+  if (value.length === 0) {
+    return 'the borrower’s stated business needs';
+  }
+
+  const topItems = [...value]
+    .sort((left, right) => right.amount - left.amount)
+    .slice(0, 3)
+    .map((item) => `${item.description} (${formatCurrency(item.amount)})`);
+
+  return topItems.length > 0 ? topItems.join(', ') : 'the borrower’s stated business needs';
+}
+
+function formatBusinessLocationAndHistory(location: string, operatingHistory: string): string {
+  const trimmedLocation = location.trim();
+  const historySentence = formatOperatingHistorySentence(operatingHistory).replace(/\.$/, '');
+
+  if (trimmedLocation && historySentence) {
+    return `The business operates in ${trimmedLocation}, and ${historySentence.toLowerCase()}.`;
+  }
+
+  if (trimmedLocation) {
+    return `The business operates in ${trimmedLocation}.`;
+  }
+
+  if (historySentence) {
+    return `${historySentence}.`;
+  }
+
+  return 'The business operates in its current market with an established operating history.';
 }
 
 function generateFallbackCoverLetter(input: CoverLetterInput): string {
@@ -245,6 +530,69 @@ function generateFallbackCoverLetter(input: CoverLetterInput): string {
     month: 'long',
     day: 'numeric',
   });
+  const loanStructure = inferLoanStructure(input.loanPurpose);
+  const requestParagraph = [
+    `${input.businessName} is requesting ${formatCurrency(input.loanAmount)} through ${loanStructure} for ${input.loanPurpose.toLowerCase()}.`,
+    `The financing is intended to support ${input.loanPurpose.toLowerCase()} in a way that is tied directly to active business operations and defined funding needs.`,
+    'This request is being presented as a deliberate financing decision intended to support stable operations, responsible growth, or improved execution within the business.',
+  ].join(' ');
+  const businessOverviewParagraph = [
+    formatSentence(input.businessDescription),
+    formatBusinessLocationAndHistory(input.businessLocation, input.operatingHistory),
+    formatSentence(
+      input.employeeCount
+        ? `The company currently operates with ${input.employeeCount} employees and generates revenue through ${formatList(input.revenueStreams)}`
+        : `Revenue is generated through ${formatList(input.revenueStreams)}`
+    ),
+    formatSentence(
+      input.currentBusinessTraitsDetails
+        ? input.currentBusinessTraitsDetails
+        : input.currentBusinessTraits.length > 0
+        ? `Key indicators of business stability include ${formatList(input.currentBusinessTraits)}`
+        : 'The business presents as an established operating company with ongoing customer activity'
+    ),
+  ].join(' ');
+  const useOfFundsParagraph = [
+    formatSentence(`Loan proceeds are expected to be allocated across ${formatUseOfFundsSummary(input.useOfFundsBreakdown)}`),
+    formatSentence(input.useOfFundsNarrative),
+    formatSentence(input.timingNarrative),
+    'Overall, the proposed use of proceeds appears aligned with the company’s current operations and intended to support sustainable business performance.',
+  ].join(' ');
+  const repaymentParagraph = [
+    formatSentence(`The primary source of repayment is expected to be ${input.repaymentSource.toLowerCase()}`),
+    formatSentence(`The business currently generates income through ${formatList(input.revenueStreams)}`),
+    formatSentence(
+      input.repaymentNotes
+        ? input.repaymentNotes
+        : input.annualRevenue != null
+          ? `Current annual revenue of approximately ${formatCurrency(input.annualRevenue)} helps frame the scale of operations supporting this request`
+          : 'Based on the operating profile described, repayment is intended to be supported by ongoing business activity rather than speculative future events'
+    ),
+    formatSentence(`Management expects this financing to ${formatList(input.financingImpact)}, which should help the facility fit within the business’s cash flow cycle`),
+  ].join(' ');
+  const strengthsParagraph = [
+    formatSentence(
+      input.supportingFactors.length > 0
+        ? `Management strengths supporting this request include ${input.supportingFactors[0]}`
+        : 'The request is supported by experienced ownership and ongoing management oversight'
+    ),
+    formatSentence(
+      input.supportingFactors.length > 1
+        ? `Additional business strengths include ${formatList(input.supportingFactors.slice(1))}`
+        : 'The business also shows operating characteristics that support lender confidence'
+    ),
+    formatSentence(
+      input.additionalLenderNotes
+        ? input.additionalLenderNotes
+        : 'The borrower appears meaningfully invested in the business and focused on long-term operating stability'
+    ),
+    'Taken together, these factors help reduce perceived credit risk and support the credibility of the repayment narrative.',
+  ].join(' ');
+  const closingParagraph = [
+    'Thank you for your time and consideration of this request.',
+    'Supporting documentation has been provided to substantiate the request and facilitate underwriting review.',
+    'We welcome the opportunity to work with your team and respond promptly to any additional diligence questions.',
+  ].join(' ');
 
   return [
     today,
@@ -255,33 +603,17 @@ function generateFallbackCoverLetter(input: CoverLetterInput): string {
     '',
     'Dear Credit Committee,',
     '',
-    'Introduction',
+    requestParagraph,
     '',
-    `${input.businessName} is requesting ${formatCurrency(input.loanAmount)} for ${input.loanPurpose}. ${input.businessDescription}`,
+    businessOverviewParagraph,
     '',
-    'Business Overview',
+    useOfFundsParagraph,
     '',
-    `${input.businessOverview} The business primarily serves ${input.targetCustomers}. ${input.competitiveAdvantage}`,
+    repaymentParagraph,
     '',
-    'Use of Funds',
+    strengthsParagraph,
     '',
-    `Funds will be used for ${input.fundUseDetails} This financing is needed now because ${input.urgencyReason} If financing is not secured, ${input.noLoanConsequence} The expected outcome is ${input.expectedOutcome}`,
-    '',
-    'Financial Position',
-    '',
-    `Current annual revenue is approximately ${formatCurrency(input.annualRevenue)}, and the business was founded in ${input.foundedYear ?? 'an earlier year'}${input.yearsInBusiness != null ? `, representing about ${input.yearsInBusiness} years in operation` : ''}. Recent performance: ${input.recentPerformance} ${input.recentChanges ? `Additional context: ${input.recentChanges}` : ''}`,
-    '',
-    'Impact of Loan',
-    '',
-    `${input.revenueCashflowImpact} ${input.expectedOutcome ? `Expected outcome: ${input.expectedOutcome}` : ''} ${input.noLoanConsequence ? `Without financing: ${input.noLoanConsequence}` : ''}`.trim(),
-    '',
-    'Repayment Confidence',
-    '',
-    `${input.repaymentConfidence} ${formatPurposeSpecificAnswers(input.purposeSpecificAnswers)} ${input.priorDebtExperience ? `Debt track record: ${input.priorDebtExperience === 'yes' ? 'The business owner reports prior successful debt repayment.' : 'The business owner reports limited prior debt history.'}` : ''} ${input.priorDebtExperienceDetails}`.trim(),
-    '',
-    'Closing',
-    '',
-    `Management strengths include ${input.ownerStrengths} Risk is managed through ${input.riskManagement} ${input.additionalContext ? `${input.additionalContext} ` : ''}We appreciate your consideration and welcome any additional diligence requests.`,
+    closingParagraph,
     '',
     'Sincerely,',
     input.businessName,
@@ -294,7 +626,7 @@ async function generateAiCoverLetter(input: CoverLetterInput): Promise<string | 
     return null;
   }
 
-  const model = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
+  const model = process.env.OPENAI_MODEL || 'gpt-5.1';
   const client = new OpenAI({ apiKey });
 
   const systemPrompt = [
@@ -303,34 +635,51 @@ async function generateAiCoverLetter(input: CoverLetterInput): Promise<string | 
     'Tone must be factual, professional, and conservative.',
     'Do not promise approval and do not use hype language.',
     'Do not mention AI or automation.',
-    'Use the exact section headings: Introduction, Business Overview, Use of Funds, Financial Position, Impact of Loan, Repayment Confidence, Closing.',
-    'Treat any purpose-specific answers as important lender diligence points and weave them into the appropriate sections naturally.',
+    COVER_LETTER_GENERATION_BLUEPRINT,
+    'Reuse the supplied loan amount and loan purpose without asking for them again.',
+    'Infer the financing structure from the loan purpose when needed, but stay conservative and generic if the exact facility structure is not explicit.',
+    'Turn the structured responses into polished lender language without sounding promotional or technical.',
+    'If an itemized use-of-funds breakdown is provided, reference the key allocations naturally in the Use of Funds and Timing section.',
+    'Use all provided inputs when they are helpful, but do not invent missing facts.',
     'Make the narrative persuasive but lender-credible, with clean plain-text formatting.',
   ].join(' ');
 
   const userPrompt = [
     'Generate a formal cover letter for a business loan package using this data:',
     JSON.stringify(input, null, 2),
-    '',
-    'Purpose-specific lender context:',
-    formatPurposeSpecificAnswersForPrompt(input.purposeSpecificAnswers),
+    'Follow the saved six-paragraph cover letter structure exactly every time.',
     'Output plain text only.',
   ].join('\n\n');
 
-  const response = await client.responses.create({
-    model,
-    temperature: 0.2,
-    input: [
-      {
-        role: 'system',
-        content: systemPrompt,
-      },
-      {
-        role: 'user',
-        content: userPrompt,
-      },
-    ],
-  });
+  const inputMessages = [
+    {
+      role: 'system' as const,
+      content: systemPrompt,
+    },
+    {
+      role: 'user' as const,
+      content: userPrompt,
+    },
+  ];
+
+  const response = model === 'gpt-5.1'
+    ? await client.responses.create({
+        model,
+        reasoning: { effort: 'low' },
+        temperature: 0.2,
+        input: inputMessages,
+      })
+    : model.startsWith('gpt-5')
+      ? await client.responses.create({
+          model,
+          reasoning: { effort: 'low' },
+          input: inputMessages,
+        })
+      : await client.responses.create({
+          model,
+          temperature: 0.2,
+          input: inputMessages,
+        });
 
   const generated = response.output_text?.trim();
   return generated || null;
@@ -405,14 +754,8 @@ export async function POST(req: NextRequest) {
   }
 
   const existingInputs = asRecord(loanRequest.cover_letter_inputs);
-  const purposeSpecificAnswers = {
-    ...normalizePurposeSpecificAnswers(existingInputs.purposeSpecificAnswers),
-    ...normalizePurposeSpecificAnswers(payload.purposeSpecificAnswers),
-  };
-  const foundedYear =
-    payload.foundedYear ??
-    asNullableNumber(existingInputs.foundedYear);
-  const derivedYearsInBusiness = deriveYearsInBusiness(foundedYear);
+  const structuredInputs = mergeStructuredCoverLetterInputs(existingInputs, payload.coverLetterInputs);
+  const narrativeSelections = buildNarrativeSelections(structuredInputs);
 
   const coverLetterInput: CoverLetterInput = {
     businessName:
@@ -427,69 +770,51 @@ export async function POST(req: NextRequest) {
     annualRevenue:
       payload.annualRevenue ??
       asNullableNumber(loanRequest.annual_revenue),
-    foundedYear,
-    yearsInBusiness:
-      payload.yearsInBusiness ??
-      derivedYearsInBusiness ??
-      asNullableNumber(loanRequest.years_in_business),
     businessDescription:
+      structuredInputs.businessDescription ||
       payload.businessDescription?.trim() ||
       asString(
         loanRequest.business_description,
-        'The business has an established operating history and verifiable cash flow.',
+        'The business has an established operating history and a defined customer base.',
       ),
-    businessOverview:
-      payload.businessOverview?.trim() ||
-      asString(existingInputs.businessOverview, 'The business operates in an established market with a clearly defined offering.'),
-    targetCustomers:
-      payload.targetCustomers?.trim() ||
-      asString(existingInputs.targetCustomers, 'a stable base of customers within its target market.'),
-    competitiveAdvantage:
-      payload.competitiveAdvantage?.trim() ||
-      asString(existingInputs.competitiveAdvantage, 'The business benefits from experience, market familiarity, and customer relationships.'),
-    fundUseDetails:
-      payload.fundUseDetails?.trim() ||
-      asString(existingInputs.fundUseDetails, 'supporting operations, working capital needs, and near-term growth initiatives.'),
-    urgencyReason:
-      payload.urgencyReason?.trim() ||
-      asString(existingInputs.urgencyReason, 'the timing aligns with current business needs and active growth opportunities.'),
-    noLoanConsequence:
-      payload.noLoanConsequence?.trim() ||
-      asString(existingInputs.noLoanConsequence, 'the business may need to delay planned initiatives and operate with reduced flexibility.'),
-    expectedOutcome:
-      payload.expectedOutcome?.trim() ||
-      asString(existingInputs.expectedOutcome, 'improved efficiency, stronger liquidity, and support for sustainable growth.'),
-    recentPerformance:
-      payload.recentPerformance?.trim() ||
-      asString(existingInputs.recentPerformance, 'The business has continued operating with measurable revenue activity and ongoing customer demand.'),
-    recentChanges:
-      payload.recentChanges?.trim() ||
-      asString(existingInputs.recentChanges, ''),
-    revenueCashflowImpact:
-      payload.revenueCashflowImpact?.trim() ||
-      asString(existingInputs.revenueCashflowImpact, 'The requested financing is expected to support revenue continuity and strengthen cash flow coverage.'),
-    repaymentConfidence:
-      payload.repaymentConfidence?.trim() ||
-      asString(existingInputs.repaymentConfidence, 'The requested structure is intended to match business performance, cash flow, and a realistic repayment plan.'),
-    ownerStrengths:
-      payload.ownerStrengths?.trim() ||
-      asString(
-        existingInputs.ownerStrengths || loanRequest.strengths,
-        'experienced management, disciplined execution, and close attention to business operations.',
-      ),
-    riskManagement:
-      payload.riskManagement?.trim() ||
-      asString(existingInputs.riskManagement, 'maintaining operating discipline, monitoring expenses, and managing liquidity carefully.'),
-    additionalContext:
-      payload.additionalContext?.trim() ||
-      asString(existingInputs.additionalContext, ''),
-    priorDebtExperience:
-      payload.priorDebtExperience?.trim() ||
-      asString(existingInputs.priorDebtExperience, ''),
-    priorDebtExperienceDetails:
-      payload.priorDebtExperienceDetails?.trim() ||
-      asString(existingInputs.priorDebtExperienceDetails, ''),
-    purposeSpecificAnswers,
+    operatingHistory:
+      structuredInputs.operatingHistory ||
+      getFirstNonEmptyText(loanRequest.years_in_business),
+    businessModelType: structuredInputs.businessModelType,
+    businessLocation:
+      structuredInputs.businessLocation ||
+      'its current market',
+    businessLocationDetails: structuredInputs.businessLocationDetails,
+    currentBusinessTraits:
+      narrativeSelections.currentBusinessTraits.length > 0
+        ? narrativeSelections.currentBusinessTraits
+        : ['an established local presence'],
+    currentBusinessTraitsDetails: structuredInputs.currentBusinessTraitsDetails,
+    employeeCount: structuredInputs.employeeCount,
+    useOfFundsBreakdown: structuredInputs.useOfFundsBreakdown,
+    useOfFundsNarrative:
+      structuredInputs.useOfFundsNarrative ||
+      'Loan proceeds will be used for clearly defined business needs tied to this request.',
+    timingNarrative:
+      structuredInputs.timingNarrative ||
+      'The timing of this request aligns with an active business need that management is addressing now.',
+    repaymentSource:
+      narrativeSelections.repaymentSource ||
+      'ongoing business cash flow',
+    revenueStreams:
+      narrativeSelections.revenueStreams.length > 0
+        ? narrativeSelections.revenueStreams
+        : ['ongoing customer activity'],
+    financingImpact:
+      narrativeSelections.financingImpact.length > 0
+        ? narrativeSelections.financingImpact
+        : ['support continued operations'],
+    repaymentNotes: structuredInputs.repaymentNotes,
+    supportingFactors:
+      narrativeSelections.supportingFactors.length > 0
+        ? narrativeSelections.supportingFactors
+        : ['experienced ownership'],
+    additionalLenderNotes: structuredInputs.additionalLenderNotes,
   };
 
   let coverLetterContent: string;
@@ -509,7 +834,11 @@ export async function POST(req: NextRequest) {
       cover_letter_status: 'generated',
       cover_letter_inputs: {
         ...existingInputs,
-        ...coverLetterInput,
+        ...structuredInputs,
+        businessName: coverLetterInput.businessName,
+        loanPurpose: coverLetterInput.loanPurpose,
+        loanAmount: coverLetterInput.loanAmount,
+        annualRevenue: coverLetterInput.annualRevenue,
       },
       cover_letter_content: coverLetterContent,
       updated_at: nowIso,
@@ -539,7 +868,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     coverLetterStatus: 'generated',
     coverLetterContent,
-    coverLetterInputs: coverLetterInput,
+    coverLetterInputs: structuredInputs,
   });
 }
 

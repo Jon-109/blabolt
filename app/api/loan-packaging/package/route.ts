@@ -2,11 +2,13 @@ import { extname } from 'path';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
-  COMPLETED_DOCUMENT_STATUSES,
   documentRequirementMatchesLoanPurpose,
   normalizeLoanPurpose,
-  type DocumentStatus,
 } from '@/lib/loan-packaging/constants';
+import {
+  isDocumentCompleted,
+  isDocumentExcludedFromPackage,
+} from '@/lib/loan-packaging/document-state';
 import { createZipArchive } from '@/lib/loan-packaging/zip';
 import { resolveServiceAccessForUser } from '@/lib/server/service-access';
 import { getSupabaseAdmin } from '@/lib/server/supabase-admin';
@@ -109,18 +111,6 @@ function buildPackageArchiveFileName(
     : `${baseName}-loan-package.zip`;
 }
 
-function toDocumentStatus(value: unknown): DocumentStatus {
-  switch (value) {
-    case 'uploaded':
-    case 'generated':
-    case 'approved':
-    case 'not_started':
-      return value;
-    default:
-      return 'not_started';
-  }
-}
-
 export async function POST(req: NextRequest) {
   const auth = await requireApiUser(req);
   if (isApiUserFailure(auth)) {
@@ -197,6 +187,10 @@ export async function POST(req: NextRequest) {
       const requirementKey = String(requirement.requirement_key);
       const document = documentByRequirementKey.get(requirementKey);
 
+      if (isDocumentExcludedFromPackage(document)) {
+        return [];
+      }
+
       if (!document) {
         return [{
           requirementKey,
@@ -205,7 +199,7 @@ export async function POST(req: NextRequest) {
         }];
       }
 
-      if (!COMPLETED_DOCUMENT_STATUSES.has(toDocumentStatus(document.status))) {
+      if (!isDocumentCompleted(document)) {
         return [{
           requirementKey,
           displayName: String(requirement.display_name ?? requirementKey),
@@ -238,7 +232,7 @@ export async function POST(req: NextRequest) {
   const coverLetterReady =
     String(loanRequest.cover_letter_status ?? '') === 'approved' &&
     coverLetterDocument &&
-    COMPLETED_DOCUMENT_STATUSES.has(toDocumentStatus(coverLetterDocument.status)) &&
+    isDocumentCompleted(coverLetterDocument) &&
     coverLetterDocument.file_path;
 
   if (!coverLetterReady) {
@@ -255,7 +249,8 @@ export async function POST(req: NextRequest) {
       const requirementKey = String(document.requirement_key);
       return (
         requirementByKey.has(requirementKey) &&
-        COMPLETED_DOCUMENT_STATUSES.has(toDocumentStatus(document.status)) &&
+        !isDocumentExcludedFromPackage(document) &&
+        isDocumentCompleted(document) &&
         Boolean(document.file_path)
       );
     })

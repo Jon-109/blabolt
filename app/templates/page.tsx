@@ -9,6 +9,11 @@ import { deriveBalanceSheetDashboardMeta, deriveBalanceSheetTitle } from '@/lib/
 import { getBalanceSheetProgress } from '@/lib/templates/balance-sheet-progress';
 import { getBusinessDebtSummaryProgress } from '@/lib/templates/business-debt-summary-progress';
 import { deriveIncomeStatementDashboardMeta, deriveIncomeStatementTitle } from '@/lib/templates/income-statement-labels';
+import {
+  buildIncomeStatementFormFromPreset,
+  buildIncomeStatementPresets,
+  matchesIncomeStatementPreset,
+} from '@/lib/templates/income-statement-presets';
 import { getIncomeStatementProgress } from '@/lib/templates/income-statement-progress';
 import { getPersonalDebtSummaryProgress } from '@/lib/templates/personal-debt-summary-progress';
 import { getTemplateServicePagePath } from '@/lib/template-offers';
@@ -106,6 +111,67 @@ function buildDefaultFormData(templateType: TemplateType, sequenceNumber: number
   void templateType;
   void sequenceNumber;
   return {};
+}
+
+async function ensureDefaultIncomeStatementSubmissions(userId: string): Promise<TemplateSubmissionRow[]> {
+  const { data, error } = await supabase
+    .from('template_submissions')
+    .select('id,template_type,template_slot,form_data,pdf_url,created_at,updated_at')
+    .eq('user_id', userId)
+    .eq('template_type', 'income_statement')
+    .is('archived_at', null)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  let submissions = (data ?? []) as TemplateSubmissionRow[];
+  const presets = buildIncomeStatementPresets();
+  const missingPresets = presets.filter(
+    (preset) => !submissions.some((submission) => matchesIncomeStatementPreset(submission.form_data, preset)),
+  );
+
+  if (missingPresets.length === 0 || submissions.length >= MAX_MULTI_INSTANCE_SUBMISSIONS) {
+    return submissions;
+  }
+
+  const rowsToInsert = missingPresets
+    .slice(0, Math.max(0, MAX_MULTI_INSTANCE_SUBMISSIONS - submissions.length))
+    .map((preset) => ({
+      user_id: userId,
+      template_type: 'income_statement',
+      template_slot: preset.templateSlot,
+      form_data: buildIncomeStatementFormFromPreset(preset),
+    }));
+
+  if (rowsToInsert.length === 0) {
+    return submissions;
+  }
+
+  const insertResult = await supabase
+    .from('template_submissions')
+    .insert(rowsToInsert)
+    .select('id,template_type,template_slot,form_data,pdf_url,created_at,updated_at');
+
+  if (insertResult.error) {
+    const retryResult = await supabase
+      .from('template_submissions')
+      .select('id,template_type,template_slot,form_data,pdf_url,created_at,updated_at')
+      .eq('user_id', userId)
+      .eq('template_type', 'income_statement')
+      .is('archived_at', null)
+      .order('created_at', { ascending: true });
+
+    if (retryResult.error) {
+      throw insertResult.error;
+    }
+
+    return (retryResult.data ?? []) as TemplateSubmissionRow[];
+  }
+
+  submissions = [...submissions, ...((insertResult.data ?? []) as TemplateSubmissionRow[])];
+  return submissions;
 }
 
 function estimateTemplateProgress(
@@ -322,6 +388,9 @@ export default function TemplatesHub() {
           return;
         }
         setAvailableTemplates(Array.isArray(accessPayload?.availableTemplates) ? accessPayload.availableTemplates : []);
+        const resolvedAvailableTemplates = Array.isArray(accessPayload?.availableTemplates)
+          ? accessPayload.availableTemplates
+          : [];
 
         if (pendingCheckoutSessionId && typeof window !== 'undefined') {
           const nextUrl = new URL(window.location.href);
@@ -330,6 +399,10 @@ export default function TemplatesHub() {
         }
 
         setUserId(session.user.id);
+
+        if (resolvedAvailableTemplates.includes('income_statement')) {
+          await ensureDefaultIncomeStatementSubmissions(session.user.id);
+        }
 
         const { data, error } = await supabase
           .from('template_submissions')

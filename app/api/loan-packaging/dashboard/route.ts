@@ -1,20 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
-  COMPLETED_DOCUMENT_STATUSES,
   DEFAULT_REQUIREMENT_ROWS,
   LOAN_REQUEST_STATUSES,
   SERVICE_TYPES,
   documentRequirementMatchesLoanPurpose,
   normalizeLoanPurpose,
-  type DocumentStatus,
   type ServiceType,
 } from '@/lib/loan-packaging/constants';
+import { buildPackagingProgress } from '@/lib/admin/client-dashboard';
 import {
   buildCashFlowTemplatePrefill,
   buildLoanRequestTemplateContext,
   normalizeTemplateContext,
 } from '@/lib/loan-packaging/template-data';
+import {
+  buildIncomeStatementFormFromPreset,
+  buildIncomeStatementPresets,
+  type IncomeStatementRequirementKey,
+  type IncomeStatementPreset,
+  INCOME_STATEMENT_REQUIREMENT_KEYS,
+  matchesIncomeStatementPreset,
+} from '@/lib/templates/income-statement-presets';
 import {
   getSharedProfileSnapshot,
   upsertSharedProfileAndSync,
@@ -33,6 +40,16 @@ interface SlotContext {
   slot_label: string | null;
   target_year: number | null;
   period_kind: SlotPeriodKind;
+}
+
+interface LegacyTemplateSubmissionRow {
+  id: string;
+  template_type: string;
+  template_slot: number | null;
+  form_data: Record<string, unknown> | null;
+  pdf_url: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 async function ensureLoanPackagingApiAccess(user: { id: string; email?: string | null }) {
@@ -100,18 +117,6 @@ const patchLoanRequestSchema = z.object({
   yearsInBusiness: nullableNumberSchema.optional(),
   strengths: z.string().trim().max(5000).optional().nullable(),
 });
-
-function toDocumentStatus(value: unknown): DocumentStatus {
-  switch (value) {
-    case 'uploaded':
-    case 'generated':
-    case 'approved':
-    case 'not_started':
-      return value;
-    default:
-      return 'not_started';
-  }
-}
 
 function normalizeNullableText(value: unknown): string | null {
   if (typeof value !== 'string') {
@@ -257,6 +262,30 @@ async function ensureRequirementSeed(admin: ReturnType<typeof getSupabaseAdmin>)
       onConflict: 'requirement_key',
     },
   );
+
+  const activeLoanPackagingKeys = new Set(
+    DEFAULT_REQUIREMENT_ROWS
+      .filter((row) => row.service_type === 'loan_packaging')
+      .map((row) => row.requirement_key),
+  );
+
+  const { data: existingLoanPackagingRequirements } = await admin
+    .from('document_requirements')
+    .select('requirement_key')
+    .eq('service_type', 'loan_packaging')
+    .eq('is_active', true);
+
+  const retiredRequirementKeys = (existingLoanPackagingRequirements ?? [])
+    .map((row) => String(row.requirement_key ?? ''))
+    .filter((requirementKey) => requirementKey && !activeLoanPackagingKeys.has(requirementKey));
+
+  if (retiredRequirementKeys.length > 0) {
+    await admin
+      .from('document_requirements')
+      .update({ is_active: false })
+      .eq('service_type', 'loan_packaging')
+      .in('requirement_key', retiredRequirementKeys);
+  }
 }
 
 async function fetchRequirements(
@@ -264,6 +293,8 @@ async function fetchRequirements(
   serviceType: ServiceType,
   loanPurpose?: string | null,
 ): Promise<AnyRow[]> {
+  await ensureRequirementSeed(admin);
+
   const serviceTypes =
     serviceType === 'loan_brokering'
       ? ['loan_packaging', 'loan_brokering']
@@ -277,8 +308,6 @@ async function fetchRequirements(
     .order('sort_order', { ascending: true });
 
   if (!requirements || requirements.length === 0) {
-    await ensureRequirementSeed(admin);
-
     const retry = await admin
       .from('document_requirements')
       .select('*')
@@ -297,6 +326,130 @@ async function fetchRequirements(
   );
 
   return sortRequirementsByPriority(withSlotDisplay(filteredRequirements));
+}
+
+function isIncomeStatementRequirementKey(value: string): value is IncomeStatementRequirementKey {
+  return (INCOME_STATEMENT_REQUIREMENT_KEYS as readonly string[]).includes(value);
+}
+
+async function ensureIncomeStatementTemplateBindings(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+  loanRequestId: string,
+  requirements: AnyRow[],
+) {
+  const requirementKeys = requirements
+    .map((requirement) => String(requirement.requirement_key ?? ''))
+    .filter(isIncomeStatementRequirementKey);
+
+  if (requirementKeys.length === 0) {
+    return [] as LegacyTemplateSubmissionRow[];
+  }
+
+  const presets = buildIncomeStatementPresets()
+    .filter((preset) => requirementKeys.includes(preset.requirementKey));
+
+  const [existingSubmissionResult, existingDocumentsResult] = await Promise.all([
+    admin
+      .from('template_submissions')
+      .select('id,template_type,template_slot,form_data,pdf_url,created_at,updated_at')
+      .eq('user_id', userId)
+      .eq('template_type', 'income_statement')
+      .is('archived_at', null)
+      .order('created_at', { ascending: true }),
+    admin
+      .from('loan_request_documents')
+      .select('id,requirement_key,metadata,source')
+      .eq('loan_request_id', loanRequestId)
+      .eq('user_id', userId)
+      .in('requirement_key', requirementKeys),
+  ]);
+
+  let submissions = (existingSubmissionResult.data ?? []) as LegacyTemplateSubmissionRow[];
+  const existingDocuments = (existingDocumentsResult.data ?? []) as AnyRow[];
+  const missingPresets = presets.filter(
+    (preset) => !submissions.some((submission) => matchesIncomeStatementPreset(submission.form_data, preset)),
+  );
+
+  if (missingPresets.length > 0 && submissions.length < 5) {
+    const rowsToInsert = missingPresets
+      .slice(0, Math.max(0, 5 - submissions.length))
+      .map((preset) => ({
+        user_id: userId,
+        template_type: 'income_statement',
+        template_slot: preset.templateSlot,
+        form_data: buildIncomeStatementFormFromPreset(preset),
+      }));
+
+    if (rowsToInsert.length > 0) {
+      const insertResult = await admin
+        .from('template_submissions')
+        .insert(rowsToInsert)
+        .select('id,template_type,template_slot,form_data,pdf_url,created_at,updated_at');
+
+      if (insertResult.data) {
+        submissions = [...submissions, ...(insertResult.data as LegacyTemplateSubmissionRow[])];
+      } else if (insertResult.error) {
+        const refetchResult = await admin
+          .from('template_submissions')
+          .select('id,template_type,template_slot,form_data,pdf_url,created_at,updated_at')
+          .eq('user_id', userId)
+          .eq('template_type', 'income_statement')
+          .is('archived_at', null)
+          .order('created_at', { ascending: true });
+
+        submissions = (refetchResult.data ?? []) as LegacyTemplateSubmissionRow[];
+      }
+    }
+  }
+
+  const documentsByRequirementKey = new Map(
+    existingDocuments.map((document) => [String(document.requirement_key ?? ''), document]),
+  );
+
+  await Promise.all(
+    presets.map(async (preset) => {
+      const document = documentsByRequirementKey.get(preset.requirementKey);
+      const submission = submissions.find((candidate) => matchesIncomeStatementPreset(candidate.form_data, preset));
+
+      if (!document || !submission) {
+        return;
+      }
+
+      const existingMetadata =
+        document.metadata && typeof document.metadata === 'object'
+          ? (document.metadata as Record<string, unknown>)
+          : {};
+
+      const nextMetadata = {
+        ...existingMetadata,
+        template_submission_id: submission.id,
+        template_requirement_key: preset.requirementKey,
+        period_kind: preset.statementType === 'annual' ? 'annual' : 'ytd',
+        target_year: Number(preset.periodEnd.slice(0, 4)),
+        statement_label: preset.statementLabel,
+      };
+
+      const metadataChanged = JSON.stringify(existingMetadata) !== JSON.stringify(nextMetadata);
+      const sourceChanged = String(document.source ?? '') !== 'template';
+
+      if (!metadataChanged && !sourceChanged) {
+        return;
+      }
+
+      await admin
+        .from('loan_request_documents')
+        .update({
+          source: 'template',
+          metadata: nextMetadata,
+        })
+        .eq('id', String(document.id))
+        .eq('loan_request_id', loanRequestId)
+        .eq('user_id', userId);
+    }),
+  );
+
+  return submissions;
 }
 
 async function ensureDocumentRows(
@@ -370,42 +523,6 @@ async function attachPackageDownloadUrl(
   return {
     ...loanRequest,
     package_download_url: signed.data?.signedUrl ?? null,
-  };
-}
-
-function buildProgress(requirements: AnyRow[], documents: AnyRow[]) {
-  const requiredRequirements = sortRequirementsByPriority(
-    requirements.filter((requirement) => requirement.required),
-  );
-  const documentByRequirement = new Map(
-    documents.map((document) => [String(document.requirement_key), document]),
-  );
-
-  const completedRequired = requiredRequirements.filter((requirement) => {
-    const document = documentByRequirement.get(String(requirement.requirement_key));
-    return document && COMPLETED_DOCUMENT_STATUSES.has(toDocumentStatus(document.status));
-  }).length;
-
-  const totalRequired = requiredRequirements.length;
-  const percentage = totalRequired > 0
-    ? Math.round((completedRequired / totalRequired) * 100)
-    : 0;
-
-  const nextRequirement = requiredRequirements.find((requirement) => {
-    const document = documentByRequirement.get(String(requirement.requirement_key));
-    return !(document && COMPLETED_DOCUMENT_STATUSES.has(toDocumentStatus(document.status)));
-  });
-
-  return {
-    totalRequired,
-    completedRequired,
-    percentage,
-    nextRequirement: nextRequirement
-      ? {
-          requirementKey: String(nextRequirement.requirement_key),
-          displayName: String(nextRequirement.display_name ?? nextRequirement.requirement_key),
-        }
-      : null,
   };
 }
 
@@ -499,7 +616,8 @@ async function buildDashboardPayload(
       requirements,
       documents: [],
       templateSubmissions: [],
-      progress: buildProgress(requirements, []),
+      legacyTemplateSubmissions: [],
+      progress: buildPackagingProgress(requirements, []),
       sharedProfile,
       templateSharedContext,
       loanRequestTemplateContext,
@@ -512,8 +630,22 @@ async function buildDashboardPayload(
     (await attachPackageDownloadUrl(admin, normalizedLoanRequest)) ?? normalizedLoanRequest;
 
   await ensureDocumentRows(admin, userId, String(hydratedLoanRequest.id), requirements);
+  const boundIncomeStatementSubmissions = await ensureIncomeStatementTemplateBindings(
+    admin,
+    userId,
+    String(hydratedLoanRequest.id),
+    requirements,
+  );
 
-  const [documentResult, templateResult] = await Promise.all([
+  const templateTypes = Array.from(
+    new Set(
+      requirements
+        .map((requirement) => requirement.template_key)
+        .filter((templateKey): templateKey is string => typeof templateKey === 'string' && templateKey.length > 0),
+    ),
+  );
+
+  const [documentResult, templateResult, legacyTemplateResult] = await Promise.all([
     admin
       .from('loan_request_documents')
       .select('*')
@@ -526,18 +658,32 @@ async function buildDashboardPayload(
       .eq('loan_request_id', String(hydratedLoanRequest.id))
       .eq('user_id', userId)
       .order('updated_at', { ascending: false }),
+    templateTypes.length > 0
+      ? admin
+        .from('template_submissions')
+        .select('id,template_type,template_slot,form_data,pdf_url,created_at,updated_at')
+        .eq('user_id', userId)
+        .is('archived_at', null)
+        .in('template_type', templateTypes)
+        .order('created_at', { ascending: true })
+      : Promise.resolve({ data: [] as LegacyTemplateSubmissionRow[] }),
   ]);
 
   const documents = (documentResult.data ?? []) as AnyRow[];
   const documentsWithDownloads = await attachDocumentDownloadUrls(admin, documents);
   const templateSubmissions = (templateResult.data ?? []) as AnyRow[];
+  const legacyTemplateSubmissions =
+    ((legacyTemplateResult as { data?: LegacyTemplateSubmissionRow[] })?.data ?? []).length > 0
+      ? (((legacyTemplateResult as { data?: LegacyTemplateSubmissionRow[] }).data ?? []) as LegacyTemplateSubmissionRow[])
+      : boundIncomeStatementSubmissions;
 
   return {
     loanRequest: hydratedLoanRequest,
     requirements,
     documents: documentsWithDownloads,
     templateSubmissions,
-    progress: buildProgress(requirements, documentsWithDownloads),
+    legacyTemplateSubmissions,
+    progress: buildPackagingProgress(requirements, documentsWithDownloads),
     sharedProfile,
     templateSharedContext,
     loanRequestTemplateContext,
