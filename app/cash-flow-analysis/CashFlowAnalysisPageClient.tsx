@@ -668,32 +668,35 @@ function CashFlowAnalysisInner() {
             <div className="pointer-events-none absolute -left-12 top-8 h-40 w-40 rounded-full bg-cyan-200/45 blur-3xl" />
             <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-amber-100/60 blur-3xl" />
 
-            <div className="relative border-b border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] px-4 py-4 sm:px-6 sm:py-5">
+            <div className="relative border-b border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] px-2 py-2 sm:px-6 sm:py-4">
               <div className="mx-auto max-w-6xl text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">Free Tool</p>
-                <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-[2rem] lg:text-[2.2rem]">Free High-Level DSCR Calculator</h2>
-                <p className="mx-auto mt-2 max-w-4xl text-sm leading-5.5 text-slate-600 sm:text-base sm:leading-6">
+                <p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-cyan-700 sm:block">Free Tool</p>
+                <h2 className="mt-1.5 whitespace-nowrap text-2xl font-black text-slate-900 sm:text-[2rem] lg:text-[2.2rem]">Free High-Level DSCR Calculator</h2>
+                <p className="mx-auto mt-1.5 hidden max-w-4xl text-base leading-6 text-slate-600 sm:block">
                   This is the clean first move. Test the request quickly, see the ratio lenders care about most, and get
                   an immediate sense of whether the deal looks weak, tight, or comfortably supportable.
                 </p>
-                <div className="mt-3 flex flex-wrap justify-center gap-2">
-                  <div className="rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-lg sm:text-sm">
-                    100% Free • Instant Results • No Credit Impact
+                <p className="mx-auto mt-1 text-xs leading-4 text-slate-500 sm:hidden">
+                  See what loan you may qualify for in 30 seconds.
+                </p>
+                <div className="mt-2 flex flex-wrap justify-center gap-2">
+                  <div className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-lg sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">
+                    100% Free • No Credit Impact • No Docs Needed
                   </div>
                   <div className="hidden rounded-2xl border border-cyan-200 bg-white/80 px-4 py-2.5 text-xs font-semibold text-cyan-800 sm:block sm:text-sm">
                     Designed for a fast first-pass qualification check
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-700 sm:text-sm">
+                  <div className="hidden sm:inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-700">
                     <Clock3 className="h-4 w-4 text-cyan-700" />
                     Usually takes under a minute
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="relative px-3 py-3 sm:px-5 sm:py-4">
-              <DscrQuickCalculator embedded analyticsPageTemplate="cash_flow_analysis" analyticsPlacement="cash_flow_embedded_calculator" />
-            </div>
+          <div className="relative px-1.5 py-1.5 sm:px-5 sm:py-3">
+            <DscrQuickCalculator embedded analyticsPageTemplate="cash_flow_analysis" analyticsPlacement="cash_flow_embedded_calculator" />
           </div>
         </div>
       </section>

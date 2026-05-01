@@ -11,6 +11,7 @@ import {
   Building2,
   Calculator,
   CheckCircle2,
+  Clock3,
   ClipboardCheck,
   Handshake,
   Info,
@@ -505,11 +506,11 @@ function HomeContent() {
             <div className="pointer-events-none absolute -left-12 top-8 h-40 w-40 rounded-full bg-cyan-200/45 blur-3xl" />
             <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-amber-100/60 blur-3xl" />
 
-            <div className="relative border-b border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] px-3.5 py-3.5 sm:px-6 sm:py-5">
+            <div className="relative border-b border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] px-2 py-2 sm:px-6 sm:py-5">
               <div className="mx-auto max-w-6xl text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">Free Tool</p>
+                <p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-cyan-700 sm:block">Free Tool</p>
                 <div className="mt-1.5 flex justify-center gap-0 sm:gap-2">
-                  <h2 className="max-w-full whitespace-nowrap text-[1.08rem] font-black leading-tight tracking-[-0.04em] text-slate-900 sm:max-w-4xl sm:text-[2rem] lg:text-[2.2rem]">
+                  <h2 className="max-w-full whitespace-nowrap text-[1.4rem] font-black leading-tight tracking-[-0.04em] text-slate-900 sm:max-w-4xl sm:text-[2rem] lg:text-[2.2rem]">
                     Free High-Level DSCR Calculator
                   </h2>
                   <div className="group relative mt-1 hidden shrink-0 sm:block">
@@ -525,25 +526,21 @@ function HomeContent() {
                     </div>
                   </div>
                 </div>
-                <p className="mx-auto mt-2 max-w-5xl text-[12px] leading-4.5 text-slate-600 line-clamp-4 sm:text-base sm:leading-6 sm:line-clamp-none">
+                <p className="mx-auto mt-1 hidden max-w-5xl text-base leading-6 text-slate-600 sm:mt-2 sm:block">
                   Start here to see the debt service coverage ratio lenders care about most. A weak DSCR can slow down or kill a business loan request early, while a strong one can tell you the deal is worth digging into further.
                 </p>
-                <div className="mt-2.5 flex flex-wrap justify-center gap-1.5 sm:mt-3 sm:gap-2">
-                  <div className="rounded-2xl bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white shadow-lg sm:px-4 sm:py-2.5 sm:text-sm">
-                    100% Free • Instant Results • No Credit Impact
-                  </div>
-                  <div className="hidden rounded-2xl border border-cyan-200 bg-white/80 px-4 py-2.5 text-xs font-semibold text-cyan-800 sm:block sm:text-sm">
-                    Built for a fast first-pass qualification check
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-white/80 px-3 py-1.5 text-[11px] font-medium text-slate-700 sm:text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    Takes 30-60 seconds. No documents needed.
+                <p className="mx-auto mt-1 text-xs leading-4 text-slate-500 sm:hidden">
+                  See what loan you may qualify for in 30 seconds.
+                </p>
+                <div className="mt-2 flex flex-wrap justify-center gap-1.5 sm:mt-3 sm:gap-2">
+                  <div className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-lg sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">
+                    100% Free • No Credit Impact • No Docs Needed
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="relative px-2.5 py-2.5 sm:px-5 sm:py-4">
+            <div className="relative px-1.5 py-1.5 sm:px-5 sm:py-4">
               <DscrQuickCalculator embedded compactMobileLayout analyticsPageTemplate="home" analyticsPlacement="home_embedded_calculator" />
             </div>
           </div>

@@ -114,6 +114,7 @@ const loanPurposeMeta: Record<string, { icon: LucideIcon; eyebrow: string }> = {
 const debtFieldMeta: Array<{
   name: keyof Pick<DscrFormValues, 'realEstateDebt' | 'creditCards' | 'vehicleEquipment' | 'linesOfCredit' | 'otherDebt'>;
   label: string;
+  shortLabel?: string;
   placeholder: string;
   tooltip: string;
   description: string;
@@ -123,9 +124,10 @@ const debtFieldMeta: Array<{
   {
     name: 'realEstateDebt',
     label: 'Real Estate Debt',
+    shortLabel: 'Real Estate',
     placeholder: 'e.g. 2,000',
     tooltip: 'Enter the total combined required monthly payments for all business real estate loans.',
-    description: 'Enter the total combined required monthly payments for all business real estate loans or mortgages.',
+    description: 'Enter the total combined required monthly payments for all business real estate loans.',
     icon: Landmark,
     id: 'dscr-calc-form-real-estate-debt',
   },
@@ -140,7 +142,8 @@ const debtFieldMeta: Array<{
   },
   {
     name: 'vehicleEquipment',
-    label: 'Vehicle / Equipment Loans',
+    label: 'Vehicle & Equipment Loans',
+    shortLabel: 'Vehicle & Equipment',
     placeholder: 'e.g. 300',
     tooltip: 'Enter the total combined required monthly payments for all vehicle and equipment loans.',
     description: 'Enter the total combined required monthly payments for all vehicle and equipment loans.',
@@ -150,9 +153,10 @@ const debtFieldMeta: Array<{
   {
     name: 'linesOfCredit',
     label: 'Lines of Credit',
+    shortLabel: 'Credit Lines',
     placeholder: 'e.g. 400',
     tooltip: 'Enter the total combined required monthly payments for all business lines of credit.',
-    description: 'Enter the total combined required monthly payments for all business lines of credit, not the credit limits.',
+    description: 'Enter the total combined required monthly payments for all business lines of credit.',
     icon: Wallet,
     id: 'dscr-calc-form-lines-of-credit',
   },
@@ -195,38 +199,38 @@ export const DscrGauge: React.FC<{ value: number }> = ({ value }) => {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">DSCR Score</p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <div className={`text-5xl font-black tracking-[-0.05em] ${status.valueClassName}`}>{value.toFixed(2)}</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 sm:mt-3 sm:gap-3">
+            <div className={`text-4xl font-black tracking-[-0.05em] sm:text-5xl ${status.valueClassName}`}>{value.toFixed(2)}</div>
             <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${status.badgeClassName}`}>{status.label}</span>
           </div>
         </div>
       </div>
 
-      <div className="mt-6">
-        <div className="relative pt-8">
-          <div className="h-4 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+      <div className="mt-3 sm:mt-6">
+        <div className="relative pt-6 sm:pt-8">
+          <div className="h-2.5 overflow-hidden rounded-full border border-slate-200 bg-slate-100 sm:h-4">
             <div className="h-full w-full bg-[linear-gradient(90deg,#ef4444_0%,#f59e0b_50%,#10b981_100%)]" />
           </div>
           <div
             className="absolute top-1 flex -translate-x-1/2 flex-col items-center"
             style={{ left: `${benchmarkPosition}%` }}
           >
-            <div className="rounded-full bg-slate-900 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
+            <div className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white sm:px-2 sm:py-1 sm:text-[10px] sm:tracking-[0.14em]">
               {DSCR_BENCHMARK.toFixed(2)}x
             </div>
-            <div className="mt-1 h-5 w-px bg-slate-900" />
+            <div className="mt-1 h-4 w-px bg-slate-900 sm:h-5" />
           </div>
           <div
             className="absolute top-5 flex -translate-x-1/2 flex-col items-center transition-all duration-300"
             style={{ left: `${pointerPosition}%` }}
           >
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full border-4 border-white shadow-lg ${status.panelClassName}`}>
-              <div className={`h-2.5 w-2.5 rounded-full ${status.valueClassName.replace('text', 'bg')}`} />
+            <div className={`flex h-6 w-6 items-center justify-center rounded-full border-[3px] border-white shadow-lg sm:h-8 sm:w-8 sm:border-4 ${status.panelClassName}`}>
+              <div className={`h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5 ${status.valueClassName.replace('text', 'bg')}`} />
             </div>
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+        <div className="mt-2 flex items-center justify-between text-[9px] font-medium uppercase tracking-[0.08em] text-slate-500 sm:mt-4 sm:text-[11px] sm:tracking-[0.14em]">
           <span>0.00</span>
           <span>1.00</span>
           <span>{DSCR_BENCHMARK.toFixed(2)} Standard</span>
@@ -251,6 +255,8 @@ const InputField: React.FC<{
   icon: LucideIcon;
   compact?: boolean;
   hideDescriptionOnMobile?: boolean;
+  hideTooltipOnMobile?: boolean;
+  inlineOnMobile?: boolean | 'stacked';
   optimizeLabelMobile?: boolean;
 }> = ({
   label,
@@ -266,6 +272,8 @@ const InputField: React.FC<{
   icon: Icon,
   compact = false,
   hideDescriptionOnMobile = false,
+  hideTooltipOnMobile = false,
+  inlineOnMobile = false,
   optimizeLabelMobile = false,
 }) => {
   const [displayValue, setDisplayValue] = React.useState(value ? value.toLocaleString('en-US') : '');
@@ -290,72 +298,137 @@ const InputField: React.FC<{
 
   return (
     <div
-      className={`rounded-[20px] border border-slate-200 bg-white shadow-[0_14px_45px_-36px_rgba(15,23,42,0.8)] transition-all duration-200 focus-within:-translate-y-0.5 focus-within:border-slate-900 focus-within:shadow-[0_24px_60px_-40px_rgba(15,23,42,0.75)] ${
-        compact ? 'p-2.5 sm:p-3' : 'p-3 sm:p-3.5'
+      className={`transition-all duration-200 ${
+        inlineOnMobile
+          ? 'sm:rounded-[20px] sm:border sm:border-slate-200 sm:bg-white sm:shadow-[0_14px_45px_-36px_rgba(15,23,42,0.8)] sm:focus-within:-translate-y-0.5 sm:focus-within:border-slate-900 sm:focus-within:shadow-[0_24px_60px_-40px_rgba(15,23,42,0.75)]'
+          : 'rounded-[20px] border border-slate-200 bg-white shadow-[0_14px_45px_-36px_rgba(15,23,42,0.8)] focus-within:-translate-y-0.5 focus-within:border-slate-900 focus-within:shadow-[0_24px_60px_-40px_rgba(15,23,42,0.75)]'
+      } ${
+        compact ? 'p-0 sm:p-2.5' : 'p-0 sm:p-3.5'
       }`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div
-            className={`flex shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ${
-              compact
-                ? optimizeLabelMobile
-                  ? 'h-7 w-7 rounded-xl'
-                  : 'h-8 w-8'
-                : 'h-9 w-9'
-            }`}
-          >
-            <Icon
-              className={
+      {inlineOnMobile && (
+        <>
+          {inlineOnMobile === 'stacked' ? (
+            <div className="sm:hidden">
+              <label htmlFor={id || name} className="block text-xs font-medium text-slate-600">
+                {label}
+                {required ? <span className="ml-0.5 text-emerald-600">*</span> : null}
+              </label>
+              <div className="relative mt-0.5">
+                <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">$</span>
+                <input
+                  type="text"
+                  id={id || name}
+                  name={name}
+                  placeholder={placeholder}
+                  value={displayValue}
+                  onChange={handleChange}
+                  required={required}
+                  min={0}
+                  max={10000000}
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-5 pr-2 text-sm font-semibold text-slate-900 transition-all placeholder:font-medium placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  inputMode="numeric"
+                  pattern="[0-9,]*"
+                />
+              </div>
+              {errorMessage && <p className="mt-1 text-xs font-medium text-rose-600">{errorMessage}</p>}
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 sm:hidden">
+                <label htmlFor={id || name} className="min-w-0 flex-1 text-xs font-medium text-slate-600">
+                  {label}
+                  {required ? <span className="ml-0.5 text-emerald-600">*</span> : null}
+                </label>
+                <div className="relative w-36 shrink-0">
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">$</span>
+                  <input
+                    type="text"
+                    id={id || name}
+                    name={name}
+                    placeholder={placeholder}
+                    value={displayValue}
+                    onChange={handleChange}
+                    required={required}
+                    min={0}
+                    max={10000000}
+                    className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-5 pr-2 text-sm font-semibold text-slate-900 transition-all placeholder:font-medium placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    inputMode="numeric"
+                    pattern="[0-9,]*"
+                  />
+                </div>
+              </div>
+              {errorMessage && <p className="mt-1 text-xs font-medium text-rose-600 sm:hidden">{errorMessage}</p>}
+            </>
+          )}
+        </>
+      )}
+      <div className={inlineOnMobile ? 'hidden sm:block' : ''}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className={`flex shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ${
                 compact
                   ? optimizeLabelMobile
-                    ? 'h-3 w-3'
-                    : 'h-3.5 w-3.5'
-                  : 'h-4 w-4'
-              }
-            />
+                    ? 'h-6 w-6 rounded-lg'
+                    : 'h-7 w-7'
+                  : 'h-9 w-9'
+              }`}
+            >
+              <Icon
+                className={
+                  compact
+                    ? optimizeLabelMobile
+                      ? 'h-3 w-3'
+                      : 'h-3.5 w-3.5'
+                    : 'h-4 w-4'
+                }
+              />
+            </div>
+            <label
+              htmlFor={id || name}
+              className={`min-w-0 text-pretty font-semibold tracking-[0.01em] text-slate-900 ${
+                compact
+                  ? optimizeLabelMobile
+                    ? 'text-[10px] leading-[0.82rem] sm:text-sm sm:leading-5'
+                    : 'text-[13px] leading-5 sm:text-sm'
+                  : 'text-sm leading-5'
+              }`}
+            >
+              {label}
+              {required ? <span className="ml-1 text-emerald-600">*</span> : null}
+            </label>
           </div>
-          <label
-            htmlFor={id || name}
-            className={`min-w-0 text-pretty font-semibold tracking-[0.01em] text-slate-900 ${
-              compact
-                ? optimizeLabelMobile
-                  ? 'text-[10px] leading-[0.82rem] sm:text-sm sm:leading-5'
-                  : 'text-[13px] leading-5 sm:text-sm'
-                : 'text-sm leading-5'
-            }`}
-          >
-            {label}
-            {required ? <span className="ml-1 text-emerald-600">*</span> : null}
-          </label>
+          <div className={hideTooltipOnMobile ? 'hidden sm:block' : ''}>
+            <Tooltip text={tooltip} />
+          </div>
         </div>
-        <Tooltip text={tooltip} />
+        <p className={`mt-1 text-slate-500 ${compact ? 'text-[11px] leading-4 sm:text-xs sm:leading-4.5' : 'text-xs leading-4.5'} ${hideDescriptionOnMobile ? 'hidden sm:block' : ''}`}>
+          {description}
+        </p>
+        <div className="relative">
+          <span className={`pointer-events-none absolute top-1/2 -translate-y-1/2 font-semibold text-slate-400 ${compact ? 'left-3 text-sm' : 'left-4 text-base'}`}>$</span>
+          <input
+            type="text"
+            id={id || name}
+            name={name}
+            placeholder={placeholder}
+            value={displayValue}
+            onChange={handleChange}
+            required={required}
+            min={0}
+            max={10000000}
+            className={`${compact ? 'mt-1' : 'mt-1.5'} w-full rounded-2xl border border-slate-200 bg-slate-50 font-semibold text-slate-900 shadow-inner shadow-slate-200/40 transition-all duration-200 placeholder:font-medium placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-4 focus:ring-slate-200 ${
+              compact ? 'h-9 pl-7 pr-3 text-sm sm:h-9 sm:pl-8 sm:text-[15px]' : 'h-11 pl-9 pr-4 text-base'
+            }`}
+            inputMode="numeric"
+            pattern="[0-9,]*"
+          />
+        </div>
+        {errorMessage && (
+          <p className="mt-2 text-sm font-medium text-rose-600">{errorMessage}</p>
+        )}
       </div>
-      <p className={`mt-1.5 text-slate-500 ${compact ? 'text-[11px] leading-4 sm:text-xs sm:leading-4.5' : 'text-xs leading-4.5'} ${hideDescriptionOnMobile ? 'hidden sm:block' : ''}`}>
-        {description}
-      </p>
-      <div className="relative">
-        <span className={`pointer-events-none absolute top-1/2 -translate-y-1/2 font-semibold text-slate-400 ${compact ? 'left-3 text-sm' : 'left-4 text-base'}`}>$</span>
-        <input
-          type="text"
-          id={id || name}
-          name={name}
-          placeholder={placeholder}
-          value={displayValue}
-          onChange={handleChange}
-          required={required}
-          min={0}
-          max={10000000}
-          className={`mt-1.5 w-full rounded-2xl border border-slate-200 bg-slate-50 font-semibold text-slate-900 shadow-inner shadow-slate-200/40 transition-all duration-200 placeholder:font-medium placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-4 focus:ring-slate-200 ${
-            compact ? 'h-10 pl-7 pr-3 text-sm sm:h-10 sm:pl-8 sm:text-[15px]' : 'h-11 pl-9 pr-4 text-base'
-          }`}
-          inputMode="numeric"
-          pattern="[0-9,]*"
-        />
-      </div>
-      {errorMessage && (
-        <p className="mt-2 text-sm font-medium text-rose-600">{errorMessage}</p>
-      )}
     </div>
   );
 };
@@ -661,7 +734,6 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
 
   const getDebtFieldMobileLayoutClassName = (fieldName: (typeof debtFieldMeta)[number]['name']) => {
     if (fieldName !== 'vehicleEquipment') return '';
-    if (compactMobileLayout) return 'col-span-2 sm:col-span-2';
     return 'sm:col-span-2';
   };
 
@@ -778,7 +850,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-800">
                 <Calculator className="h-4 w-4" />
-                High-Level DSCR Calculator
+                See My DSCR
               </div>
               <div className="max-w-3xl space-y-2">
                 <h1 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-4xl">
@@ -802,38 +874,31 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
             </div>
           )}
 
-          <form className={embedded ? 'space-y-3' : 'mt-2.5 space-y-3'} onSubmit={(e) => e.preventDefault()}>
-            <div className="grid gap-3 xl:grid-cols-[1.05fr_1.35fr] xl:items-start">
-              <section className="rounded-[24px] border border-slate-200 bg-white/90 p-3 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
-                <div className="flex flex-col gap-2 border-b border-slate-200 pb-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
+          <div className="mb-1.5 sm:hidden">
+            <p className="text-[11px] leading-4 text-slate-500">
+              <span className="font-medium text-slate-700">What is DSCR?</span> DSCR shows lenders whether your business cash flow can comfortably cover its debt payments. A stronger DSCR can make your loan request look safer and more fundable.
+            </p>
+          </div>
+
+          <form className={embedded ? 'space-y-1.5 sm:space-y-2' : 'mt-2 space-y-1.5 sm:space-y-2'} onSubmit={(e) => e.preventDefault()}>
+            <div className="grid gap-1.5 sm:gap-2 xl:grid-cols-[1.05fr_1.35fr] xl:items-start">
+              <section className="sm:rounded-[24px] sm:border sm:border-slate-200 sm:bg-white/90 sm:shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
+                <div className="hidden flex-row items-center justify-between gap-2 border-b border-slate-200 pb-1 sm:flex sm:pb-1.5">
+                  <div className="flex flex-row items-baseline gap-1.5 sm:block">
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Loan Request</p>
-                    <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-950 sm:text-xl">Main inputs</h2>
+                    <h2 className="text-base font-semibold tracking-[-0.03em] text-slate-950 sm:text-xl">Main inputs</h2>
                   </div>
-                  <div className={`rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-600 ${
-                    compactMobileLayout
-                      ? 'hidden sm:inline-flex sm:items-center sm:gap-2 sm:text-sm'
-                      : 'inline-flex items-center gap-2 text-xs sm:text-sm'
-                  }`}>
-                    <Clock3 className="h-4 w-4 text-slate-500" />
+                  <div className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-600 sm:text-xs`}>
+                    <Clock3 className="h-3.5 w-3.5 text-slate-500" />
                     Under 1 minute
                   </div>
                 </div>
 
-                <div className={`mt-2.5 grid gap-2 ${compactMobileLayout ? 'grid-cols-2' : ''} sm:gap-2.5 xl:grid-cols-2`}>
+                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:gap-2">
                   <InputField
-                    label={
-                      <>
-                        <span className="sm:hidden">
-                          Monthly Net
-                          <br />
-                          Income
-                        </span>
-                        <span className="hidden sm:inline">Monthly Net Income</span>
-                      </>
-                    }
+                    label="Net Income After Expenses"
                     name="monthlyNetIncome"
-                    placeholder="e.g. 10,000"
+                    placeholder="10,000"
                     tooltip="Use your business's average monthly profit after operating expenses, before any existing or new loan payments. If you only have an annual number, divide it by 12 for a quick estimate."
                     description="What your business keeps each month after expenses."
                     errorMessage={validationError?.field === 'monthlyNetIncome' ? validationError.message : undefined}
@@ -843,14 +908,16 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     icon={TrendingUp}
                     compact
                     hideDescriptionOnMobile
+                    hideTooltipOnMobile
+                    inlineOnMobile="stacked"
                     optimizeLabelMobile={compactMobileLayout}
                   />
                   <InputField
                     label="Loan Amount"
                     name="loanAmount"
-                    placeholder="e.g. 100,000"
+                    placeholder="100,000"
                     tooltip="How much funding are you looking for?"
-                    description={`Enter the amount you want to test. We’ll also estimate the loan amount your cash flow may support at ${DSCR_BENCHMARK.toFixed(2)}x DSCR, the number banks prefer to see at minimum.`}
+                    description={`Enter the amount you estimate you'll need. We’ll estimate the loan amount your cash flow may support at ${DSCR_BENCHMARK.toFixed(2)}x DSCR.`}
                     errorMessage={validationError?.field === 'dscr-calc-form-loan-amount' ? validationError.message : undefined}
                     value={parseInt(loanAmount.replace(/[$,]/g, '')) || 0}
                     onChange={handleLoanAmountChange}
@@ -859,37 +926,38 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     icon={BadgeDollarSign}
                     compact
                     hideDescriptionOnMobile
+                    hideTooltipOnMobile
+                    inlineOnMobile="stacked"
                     optimizeLabelMobile={compactMobileLayout}
                   />
                 </div>
 
-                <div className="mt-2.5 rounded-[20px] border border-slate-200 bg-slate-50/80 p-2.5 sm:p-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div className="mt-1.5 sm:rounded-[20px] sm:border sm:border-slate-200 bg-slate-50/80 p-2 sm:mt-2 sm:p-2.5">
+                  <div className="hidden flex-row items-center justify-between gap-2 sm:flex">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Loan Purpose</p>
-                      <h3 className="mt-1 text-base font-semibold tracking-[-0.03em] text-slate-950 sm:text-lg">What will this loan be used for?</h3>
+                      <h3 className="text-base font-semibold tracking-[-0.03em] text-slate-950 sm:text-lg">What will this loan be used for?</h3>
                     </div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 sm:text-sm">
-                      <SelectedPurposeIcon className="h-4 w-4" />
+                    <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-800 sm:text-xs">
+                      <SelectedPurposeIcon className="h-3.5 w-3.5" />
                       {selectedPurposeMeta.eyebrow}
                     </div>
                   </div>
-
                   <Select value={loanPurpose} onValueChange={handleLoanPurposeChange}>
                     <SelectTrigger
                       id="loanPurpose"
-                      className="mt-2 h-auto min-h-12 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left shadow-sm outline-none transition-all duration-200 focus:border-slate-900 focus:ring-4 focus:ring-slate-200 sm:min-h-14 sm:px-4 sm:py-3"
+                      className="h-auto min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm outline-none transition-all duration-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-200 sm:mt-1.5 sm:min-h-12 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:focus:ring-4"
                       data-ga-id="dscr-calc-form-loan-purpose"
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 sm:h-10 sm:w-10">
+                        <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 sm:flex sm:h-10 sm:w-10">
                           <SelectedPurposeIcon className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[13px] font-semibold leading-5 text-slate-950 sm:text-sm">
+                          <div className="text-sm font-semibold leading-5 text-slate-950 sm:text-sm">
                             {selectedPurposeTitle}
                           </div>
-                          <div className="mt-0.5 text-[11px] leading-4 text-slate-500 sm:text-xs">
+                          <div className="mt-0.5 text-xs leading-4 text-slate-500 sm:text-xs">
                             {loanPurpose ? 'Choose The Best Match For What You Need' : 'Pick the option that fits this request'}
                           </div>
                         </div>
@@ -927,33 +995,34 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   {validationError?.field === 'loanPurpose' && (
                     <p className="mt-2 text-sm font-medium text-rose-600">{validationError.message}</p>
                   )}
-                  <p className="mt-1.5 hidden text-sm leading-6 text-slate-600 sm:block">
+                  <p className="mt-1 hidden text-sm leading-6 text-slate-600 sm:block">
                     {selectedPurposeDescription}
                   </p>
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-white/90 p-3 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
-                <div className="flex flex-col gap-2 border-b border-slate-200 pb-2 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
+              <section className="sm:rounded-[24px] sm:border sm:border-slate-200 sm:bg-white/90 sm:shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
+                <div className="hidden flex-row items-center justify-between gap-2 border-b border-slate-200 pb-1 sm:flex sm:pb-1.5">
+                  <div className="flex flex-row items-baseline gap-1.5 sm:block">
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Existing Debt</p>
-                    <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-950 sm:text-xl">Required monthly payments</h2>
+                    <h2 className="text-base font-semibold tracking-[-0.03em] text-slate-950 sm:text-xl">Required monthly payments</h2>
                   </div>
-                  <div className={`inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 font-medium text-amber-900 ${
-                    compactMobileLayout
-                      ? 'whitespace-nowrap text-[9px] tracking-[-0.01em] sm:text-sm sm:tracking-normal'
-                      : 'text-xs sm:text-sm'
-                  }`}>
-                    <ShieldCheck className="h-4 w-4 text-amber-700" />
-                    We don't need balances, just monthly payments
+                  <div className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-900 sm:text-xs`}>
+                    <ShieldCheck className="h-3.5 w-3.5 text-amber-700" />
+                    Payments only, not balances
                   </div>
                 </div>
 
-                <div className={`mt-2.5 grid gap-2 ${compactMobileLayout ? 'grid-cols-2' : ''} sm:gap-2.5 sm:grid-cols-2`}>
+                <div className="mb-1 sm:hidden">
+                  <p className="text-xs font-semibold text-slate-700">Monthly Debt Payments</p>
+                  <p className="text-[11px] leading-4 text-slate-500">Enter minimum required monthly payments, not total balances.</p>
+                </div>
+
+                <div className={`mt-1.5 grid gap-1.5 grid-cols-1 sm:mt-2 sm:gap-2 sm:grid-cols-2`}>
                   {debtFieldMeta.map((field) => (
                     <div key={field.name} className={getDebtFieldMobileLayoutClassName(field.name)}>
                       <InputField
-                        label={getDebtFieldMobileLabel(field.name) ?? field.label}
+                        label={field.shortLabel ?? field.label}
                         name={field.name}
                         placeholder={field.placeholder}
                         tooltip={field.tooltip}
@@ -964,6 +1033,8 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         icon={field.icon}
                         compact
                         hideDescriptionOnMobile
+                        hideTooltipOnMobile
+                        inlineOnMobile
                         optimizeLabelMobile={compactMobileLayout}
                       />
                     </div>
@@ -972,7 +1043,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
               </section>
             </div>
 
-            <div className="mt-2.5 flex flex-col items-center">
+            <div className="mt-1.5 flex flex-col items-center sm:mt-2">
               <div className="w-full max-w-sm">
                 <Button
                   onClick={(e) => {
@@ -1003,31 +1074,32 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     });
                     handleCalculate();
                   }}
-                  className="group relative h-10 w-full overflow-hidden rounded-2xl border border-emerald-300/70 bg-[linear-gradient(135deg,#34d399_0%,#22c55e_42%,#0f766e_100%)] px-6 text-sm font-semibold text-white shadow-[0_22px_55px_-28px_rgba(16,185,129,0.72)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_-28px_rgba(13,148,136,0.68)] active:translate-y-0 active:scale-[0.985] sm:h-11 sm:text-base"
+                  className="group relative h-9 w-full overflow-hidden rounded-2xl border border-emerald-300/70 bg-[linear-gradient(135deg,#34d399_0%,#22c55e_42%,#0f766e_100%)] px-6 text-sm font-semibold text-white shadow-[0_22px_55px_-28px_rgba(16,185,129,0.72)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_-28px_rgba(13,148,136,0.68)] active:translate-y-0 active:scale-[0.985] sm:h-10 sm:text-base"
                   id="dscr-calc-btn-calculate"
                 >
                   <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.2)_22%,transparent_44%)] opacity-0 transition-all duration-500 group-hover:translate-x-full group-hover:opacity-100" />
                   <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/70" />
                   <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_55%)] opacity-80" />
                   <span className="relative flex items-center justify-center">
-                    <span className="tracking-[0.01em]">Calculate DSCR</span>
+                    <span className="tracking-[0.01em]">See My DSCR</span>
                     <ArrowRight className="ml-2 h-5 w-5 transition duration-300 group-hover:translate-x-1 group-active:translate-x-0.5" />
                   </span>
                 </Button>
-                <p className="mt-2 text-center text-xs text-slate-500">This does not affect your credit.</p>
+                <p className="mt-1.5 text-center text-[11px] text-slate-500">This does not affect your credit.</p>
               </div>
             </div>
 
             {showResults && dscr !== null && dscrStatus && (
-              <div ref={resultsRef} className="mt-6 space-y-5 scroll-mt-24">
-                <section className={`overflow-hidden rounded-[2rem] border ${dscrStatus.borderClassName} bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_28px_70px_-44px_rgba(15,23,42,0.38)]`}>
-                  <div className="border-b border-slate-200/80 px-4 py-4 sm:px-5">
+              <div ref={resultsRef} className="mt-3 space-y-3 scroll-mt-24 sm:mt-6 sm:space-y-5">
+                <section className={`overflow-hidden rounded-[1.4rem] border ${dscrStatus.borderClassName} bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-[0_28px_70px_-44px_rgba(15,23,42,0.38)] sm:rounded-[2rem]`}>
+                  <div className="border-b border-slate-200/80 px-3 py-3 sm:px-5 sm:py-4">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">DSCR Result</p>
-                        <h3 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">Here&apos;s How Your Request Looks</h3>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                          Based on a requested loan of {formatCurrency(principal)} for {selectedPurposeTitle}, your current cash flow produces:
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-xs sm:tracking-[0.2em]">DSCR Result</p>
+                        <h3 className="mt-1 text-xl font-black tracking-[-0.04em] text-slate-950 sm:mt-2 sm:text-2xl">Here&apos;s How Your Request Looks</h3>
+                        <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600 sm:mt-2 sm:text-sm sm:leading-6">
+                          <span className="sm:hidden">Request: {formatCurrency(principal)} for {selectedPurposeTitle}</span>
+                          <span className="hidden sm:inline">Based on a requested loan of {formatCurrency(principal)} for {selectedPurposeTitle}, your current cash flow produces:</span>
                         </p>
                       </div>
                       <span className={`hidden rounded-full border px-3 py-1 text-xs font-semibold sm:inline-flex ${dscrStatus.badgeClassName}`}>
@@ -1037,28 +1109,36 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   </div>
 
                   <div className="grid gap-0 xl:grid-cols-[0.9fr_1.1fr]">
-                    <div className={`border-b border-slate-200/80 p-4 sm:p-5 xl:border-b-0 xl:border-r ${dscrStatus.panelClassName}`}>
+                    <div className={`border-b border-slate-200/80 p-3 sm:p-5 xl:border-b-0 xl:border-r ${dscrStatus.panelClassName}`}>
                       <DscrGauge value={dscr} />
 
-                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-2">
-                        <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-3 sm:p-4">
+                      <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
+                        <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-2.5 sm:p-4">
                           <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">Monthly Income</p>
-                          <p className="mt-2 break-words text-xl font-black tracking-[-0.04em] text-emerald-700 sm:text-2xl">{formatCurrency(values.monthlyNetIncome)}</p>
+                          <p className="mt-1 break-words text-lg font-black tracking-[-0.04em] text-emerald-700 sm:mt-2 sm:text-2xl">{formatCurrency(values.monthlyNetIncome)}</p>
                         </div>
-                        <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-3 sm:p-4">
-                          <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">Monthly Debt Service</p>
-                          <p className="mt-2 break-words text-xl font-black tracking-[-0.04em] text-rose-700 sm:text-2xl">{formatCurrency(totalProjectedDebtService)}</p>
+                        <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-2.5 sm:p-4">
+                          <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">Total Debt Service</p>
+                          <p className="mt-1 break-words text-lg font-black tracking-[-0.04em] text-rose-700 sm:mt-2 sm:text-2xl">{formatCurrency(totalProjectedDebtService)}</p>
+                        </div>
+                        <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-2.5 sm:p-4">
+                          <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">Est. Loan Payment</p>
+                          <p className="mt-1 break-words text-lg font-black tracking-[-0.04em] text-slate-950 sm:mt-2 sm:text-2xl">{formatCurrency(estimatedPayment)}<span className="text-xs font-semibold tracking-normal text-slate-500">/mo</span></p>
+                        </div>
+                        <div className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-2.5 sm:p-4">
+                          <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">Requested Loan</p>
+                          <p className="mt-1 break-words text-lg font-black tracking-[-0.04em] text-slate-950 sm:mt-2 sm:text-2xl">{formatCurrency(principal)}</p>
                         </div>
                       </div>
 
-                      <div className="mt-3 rounded-2xl border border-white/80 bg-white/90 p-4">
-                        <div className="mt-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">What This Actually Means</p>
-                          <p className="mt-1 text-base font-semibold text-slate-950">{meaningHeadline}</p>
-                          <p className="mt-2 text-sm leading-6 text-slate-700">{dollarTranslation}</p>
-                          <p className="mt-2 text-sm leading-6 text-slate-600">{dscrStatus.summary}</p>
+                      <div className="mt-3 rounded-2xl border border-white/80 bg-white/90 p-3 sm:p-4">
+                        <div className="sm:mt-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">What this means</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-950 sm:text-base">{meaningHeadline}</p>
+                          <p className="mt-1.5 text-xs leading-5 text-slate-700 sm:mt-2 sm:text-sm sm:leading-6">{dollarTranslation}</p>
+                          <p className="mt-2 hidden text-sm leading-6 text-slate-600 sm:block">{dscrStatus.summary}</p>
                         </div>
-                        <div className="mt-3">
+                        <div className="mt-3 hidden sm:block">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">How A Lender Will Likely Read It</p>
                           <p className="mt-1 text-sm leading-6 text-slate-600">{dscrStatus.lenderRead}</p>
                         </div>
@@ -1076,13 +1156,108 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                             </Button>
                           </div>
                         )}
+                        <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-3 sm:hidden">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700">Best next move</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-950">If the rest of your file is clean, this request may be ready to package for lender review.</p>
+                          <Button
+                            type="button"
+                            onClick={() => handleExploreLoanPackaging('calculator_mobile_top_package', 'Package This Loan')}
+                            className="mt-2 h-10 w-full rounded-xl bg-slate-900 text-sm font-bold text-white transition-colors hover:bg-slate-800"
+                          >
+                            Package This Loan
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => handleExploreCashFlowAnalysis('calculator_mobile_top_analysis', 'Run Full Cash Flow Analysis')}
+                            className="mt-2 h-9 w-full rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            Run Full Cash Flow Analysis
+                          </Button>
+                        </div>
                         <p className="mt-3 text-xs leading-5 text-slate-500">
                           This is a high-level estimate based on the numbers entered here. A lender will still look deeper at tax returns, bank statements, trends, and the overall deal structure.
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-4 sm:p-5">
+                    <div className="p-3 sm:p-5">
+                      <div className="space-y-2 sm:hidden">
+                        <details className="rounded-2xl border border-slate-200 bg-slate-50">
+                          <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold text-slate-900 [&::-webkit-details-marker]:hidden">How a lender may read this</summary>
+                          <div className="border-t border-slate-200 px-3 py-2.5">
+                            <p className="text-xs leading-5 text-slate-600">{dscrStatus.lenderRead}</p>
+                          </div>
+                        </details>
+                        <details className="rounded-2xl border border-slate-200 bg-slate-50">
+                          <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold text-slate-900 [&::-webkit-details-marker]:hidden">How we calculated this</summary>
+                          <div className="border-t border-slate-200 px-3 py-2.5">
+                            <p className="text-xs font-semibold text-slate-700">Monthly Income / Monthly Debt Service = DSCR</p>
+                            <p className="mt-1 text-base font-bold tracking-[-0.03em] text-slate-950">
+                              {formatCurrency(values.monthlyNetIncome)} / {formatCurrency(totalProjectedDebtService)} = <span className={dscrStatus.valueClassName}>{dscr.toFixed(2)}</span>
+                            </p>
+                            <p className="mt-1.5 text-xs leading-5 text-slate-600">
+                              Lenders compare monthly net income to required monthly debt payments. Many want to see at least {DSCR_BENCHMARK.toFixed(2)}x.
+                            </p>
+                          </div>
+                        </details>
+                        <details className="rounded-2xl border border-slate-200 bg-white">
+                          <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold text-slate-900 [&::-webkit-details-marker]:hidden">Debt breakdown</summary>
+                          <div className="space-y-1.5 border-t border-slate-200 px-3 py-2.5">
+                            {debtFieldMeta.map((field) => (
+                              <div key={`mobile-debt-breakdown-${field.name}`} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                                <span className="text-xs font-medium text-slate-700">{field.shortLabel ?? field.label}</span>
+                                <span className="text-xs font-semibold text-slate-950">{formatCurrency(values[field.name])}</span>
+                              </div>
+                            ))}
+                            <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+                              <div>
+                                <span className="text-xs font-semibold text-emerald-950">Estimated Loan Payment</span>
+                                <p className="mt-0.5 text-[10px] leading-4 text-emerald-700">{estimatedPaymentSummary}</p>
+                              </div>
+                              <span className="text-xs font-semibold text-emerald-950">{formatCurrency(estimatedPayment)}</span>
+                            </div>
+                            <div className="flex items-center justify-between rounded-xl bg-slate-950 px-3 py-2">
+                              <span className="text-xs font-semibold text-white">Total Monthly Debt Service</span>
+                              <span className="text-xs font-semibold text-white">{formatCurrency(totalProjectedDebtService)}</span>
+                            </div>
+                          </div>
+                        </details>
+                        <details className="rounded-2xl border border-slate-200 bg-slate-50">
+                          <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold text-slate-900 [&::-webkit-details-marker]:hidden">Loan assumptions</summary>
+                          <div className="border-t border-slate-200 px-3 py-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-xs font-semibold text-slate-500">Assumptions used</p>
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingAssumptions((current) => !current)}
+                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700"
+                              >
+                                <PencilLine className="h-3 w-3" />
+                                {isEditingAssumptions ? 'Done' : 'Edit'}
+                              </button>
+                            </div>
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                              <div className="rounded-xl bg-white px-3 py-2">
+                                <p className="text-[10px] font-medium text-slate-500">Purpose</p>
+                                <p className="mt-0.5 text-xs font-semibold text-slate-950">{selectedPurposeTitle}</p>
+                              </div>
+                              <div className="rounded-xl bg-white px-3 py-2">
+                                <p className="text-[10px] font-medium text-slate-500">Requested</p>
+                                <p className="mt-0.5 text-xs font-semibold text-slate-950">{formatCurrency(principal)}</p>
+                              </div>
+                              <div className="rounded-xl bg-white px-3 py-2">
+                                <p className="text-[10px] font-medium text-slate-500">Term</p>
+                                <p className="mt-0.5 text-xs font-semibold text-slate-950">{isLineOfCreditPurpose ? 'LOC' : `${selectedTerm} Months`}</p>
+                              </div>
+                              <div className="rounded-xl bg-white px-3 py-2">
+                                <p className="text-[10px] font-medium text-slate-500">Rate</p>
+                                <p className="mt-0.5 text-xs font-semibold text-slate-950">{(selectedRate * 100).toFixed(2)}%</p>
+                              </div>
+                            </div>
+                          </div>
+                        </details>
+                      </div>
+                      <div className="hidden sm:block">
                       <div className="grid gap-3">
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">DSCR Formula</p>
@@ -1322,39 +1497,44 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                           )}
                         </div>
                       )}
+                      </div>
                     </div>
                   </div>
                 </section>
 
                 {dscr >= DSCR_BENCHMARK && maxLoanAmountAtBenchmark > 0 && (
-                  <section className="rounded-[2rem] border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.96)_0%,rgba(255,255,255,1)_52%,rgba(240,253,250,0.98)_100%)] p-4 shadow-[0_24px_60px_-42px_rgba(16,185,129,0.35)] sm:p-5">
-                    <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+                  <section className="rounded-[1.5rem] border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.96)_0%,rgba(255,255,255,1)_52%,rgba(240,253,250,0.98)_100%)] p-3 shadow-[0_24px_60px_-42px_rgba(16,185,129,0.35)] sm:rounded-[2rem] sm:p-5">
+                    <div className="grid gap-3 sm:gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
                       <div>
-                        <div className="inline-flex items-center rounded-full border border-emerald-200 bg-white/90 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        <div className="inline-flex items-center rounded-full border border-emerald-200 bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 sm:px-3 sm:text-xs">
                           Above Benchmark
                         </div>
-                        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Bonus Insight</p>
-                        <h3 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">You May Qualify For a Larger Loan</h3>
-                        <p className="mt-3 text-sm leading-6 text-slate-700">
-                          Based on your current numbers, your business is performing above the typical lender benchmark of {DSCR_BENCHMARK.toFixed(2)}x DSCR.
+                        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700 sm:mt-3 sm:text-xs sm:tracking-[0.2em]">Bonus Insight</p>
+                        <h3 className="mt-1 text-xl font-black tracking-[-0.04em] text-slate-950 sm:mt-2 sm:text-2xl">
+                          <span className="sm:hidden">You may qualify for more</span>
+                          <span className="hidden sm:inline">You May Qualify For a Larger Loan</span>
+                        </h3>
+                        <p className="mt-1.5 text-xs leading-5 text-slate-700 sm:mt-3 sm:text-sm sm:leading-6">
+                          <span className="sm:hidden">Your DSCR is above the common {DSCR_BENCHMARK.toFixed(2)}x benchmark, which may leave room for additional funding.</span>
+                          <span className="hidden sm:inline">Based on your current numbers, your business is performing above the typical lender benchmark of {DSCR_BENCHMARK.toFixed(2)}x DSCR.</span>
                         </p>
-                        <p className="mt-3 text-sm leading-6 text-slate-700">
+                        <p className="mt-3 hidden text-sm leading-6 text-slate-700 sm:block">
                           This means you may be able to support a larger loan while still staying within a comfortable approval range.
                         </p>
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-emerald-200 bg-white/95 p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Estimated Max Loan</p>
-                          <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-emerald-700">{formatCurrency(maxLoanAmountAtBenchmark)}</p>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                        <div className="rounded-2xl border border-emerald-200 bg-white/95 p-3 sm:p-4">
+                          <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">Estimated Max Loan</p>
+                          <p className="mt-1 text-lg font-black tracking-[-0.05em] text-emerald-700 sm:mt-2 sm:text-3xl">{formatCurrency(maxLoanAmountAtBenchmark)}</p>
                         </div>
-                        <div className="rounded-2xl border border-emerald-200 bg-white/95 p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Additional Funding Available</p>
-                          <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-emerald-700">{formatCurrency(additionalCapacity)}</p>
+                        <div className="rounded-2xl border border-emerald-200 bg-white/95 p-3 sm:p-4">
+                          <p className="text-[10px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-500 sm:text-[11px] sm:tracking-[0.16em]">Additional Funding Available</p>
+                          <p className="mt-1 text-lg font-black tracking-[-0.05em] text-emerald-700 sm:mt-2 sm:text-3xl">{formatCurrency(additionalCapacity)}</p>
                         </div>
-                        <div className="rounded-2xl border border-white/90 bg-white/85 px-4 py-3 sm:col-span-2">
-                          <p className="text-sm font-medium text-slate-600">Current request: <span className="font-semibold text-slate-950">{formatCurrency(principal)}</span></p>
-                          <p className="mt-2 text-sm leading-6 text-emerald-800">Want help structuring this for the best approval odds? We can guide you.</p>
+                        <div className="col-span-2 rounded-2xl border border-white/90 bg-white/85 px-3 py-2.5 sm:px-4 sm:py-3">
+                          <p className="text-xs font-medium text-slate-600 sm:text-sm">Current request: <span className="font-semibold text-slate-950">{formatCurrency(principal)}</span></p>
+                          <p className="mt-2 hidden text-sm leading-6 text-emerald-800 sm:block">Want help structuring this for the best approval odds? We can guide you.</p>
                         </div>
                       </div>
                     </div>
