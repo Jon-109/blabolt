@@ -112,7 +112,7 @@ const Testimonials = () => {
             </p>
             <h2 className="mt-2.5 text-[2rem] font-black leading-[1.08] text-slate-900 sm:mt-3 sm:text-4xl">What business owners say after working with us</h2>
             <p className="mt-2 text-[13px] leading-5.5 text-slate-600 sm:mt-3 sm:text-base sm:leading-6">
-              Same quotes, presented in a cleaner format that matches the credibility we want the rest of the page to carry.
+              Real feedback from business owners and professionals who value practical funding guidance, organization, and lender-readiness support.
             </p>
           </div>
 

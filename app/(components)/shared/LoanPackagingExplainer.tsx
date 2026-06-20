@@ -1126,12 +1126,11 @@ export default function LoanPackagingExplainer() {
             </div>
 
             <h2 className="mx-auto mt-4 max-w-[16ch] text-[1.72rem] font-black leading-[1.06] tracking-tight text-slate-900 sm:mt-5 sm:max-w-none sm:text-4xl lg:text-[3.2rem] lg:leading-[1.03]">
-              A clearer, more convincing way to present your business to lenders.
+              Build a cleaner loan package without starting from scratch.
             </h2>
 
             <p className="mx-auto mt-3 max-w-[34ch] text-[13px] leading-5 text-slate-600 sm:mt-4 sm:max-w-4xl sm:text-lg sm:leading-7">
-              Our loan packaging dashboard helps you organize the request, complete lender-ready documents, create a
-              strong cover letter, and send everything in a cleaner format that is easier for lenders to review.
+              Upload documents, complete missing templates, generate a cover letter, and package everything for lender review.
             </p>
           </div>
 

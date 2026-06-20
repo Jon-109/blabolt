@@ -1129,11 +1129,11 @@
 
 @keyframes lpe-frame-4 {
   0%,
-  68.2% {
+  84.2% {
     opacity: 0;
     transform: translateY(18px) scale(0.992);
   }
-  69.6%,
+  85.6%,
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1205,12 +1205,12 @@
 
 @keyframes lpe-stage-zoom-desktop-4 {
   0%,
-  69.4% {
+  84.4% {
     transform: translateX(0) scale(1);
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     z-index: 1;
   }
-  70.8%,
+  85.8%,
   100% {
     transform: translateX(-54px) scale(1.11);
     box-shadow: 0 52px 110px -48px rgba(245, 158, 11, 0.48);
@@ -1283,12 +1283,12 @@
 
 @keyframes lpe-stage-zoom-mobile-4 {
   0%,
-  69.4% {
+  84.4% {
     transform: translateX(0) scale(1);
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     z-index: 1;
   }
-  70.8%,
+  85.8%,
   100% {
     transform: translateX(0) scale(1.085);
     box-shadow: 0 40px 86px -46px rgba(245, 158, 11, 0.46);
@@ -1500,18 +1500,18 @@
 
 @keyframes lpe-step4-build {
   0%,
-  73.6% {
+  86% {
     transform: scale(1);
     box-shadow: none;
     background-color: #0f172a;
   }
-  75%,
-  76.6% {
+  87.2%,
+  88.8% {
     transform: scale(1.045);
     box-shadow: 0 18px 36px -18px rgba(15, 23, 42, 0.58);
     background-color: #111827;
   }
-  77.6%,
+  89.8%,
   100% {
     transform: scale(1);
     box-shadow: none;
@@ -1521,22 +1521,22 @@
 
 @keyframes lpe-step4-link {
   0%,
-  83.6% {
+  90.4% {
     transform: scale(1);
     background-color: #eff6ff;
     border-color: #93c5fd;
     color: #1d4ed8;
     box-shadow: none;
   }
-  85%,
-  87.6% {
+  91.6%,
+  94% {
     transform: scale(1.05);
     background-color: #dbeafe;
     border-color: #3b82f6;
     color: #1d4ed8;
     box-shadow: 0 18px 36px -18px rgba(59, 130, 246, 0.52);
   }
-  88.6%,
+  95%,
   100% {
     transform: scale(1);
     background-color: #eff6ff;
@@ -1548,11 +1548,11 @@
 
 @keyframes lpe-step4-package-note {
   0%,
-  79% {
+  89% {
     opacity: 0.72;
     transform: translateY(8px);
   }
-  80.8%,
+  90.4%,
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -1561,7 +1561,7 @@
 
 @keyframes lpe-step4-toast {
   0%,
-  81.2% {
+  91% {
     opacity: 0;
     max-height: 0;
     transform: translateY(10px) scale(0.985);
@@ -1570,7 +1570,7 @@
     border-width: 0;
     box-shadow: none;
   }
-  83%,
+  92.4%,
   100% {
     opacity: 1;
     max-height: 84px;
@@ -1584,11 +1584,11 @@
 
 @keyframes lpe-step4-link-card {
   0%,
-  84.6% {
+  93% {
     opacity: 0.72;
     transform: translateY(10px) scale(0.99);
   }
-  86.6%,
+  94.6%,
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1606,18 +1606,10 @@
     transform: translateY(-270px);
   }
   60.8%,
-  62.6% {
+  83.8% {
     transform: translateY(-760px);
   }
-  67%,
-  67.2% {
-    transform: translateY(-760px);
-  }
-  68.6%,
-  72.2% {
-    transform: translateY(-1285px);
-  }
-  73.4%,
+  85.2%,
   100% {
     transform: translateY(-1285px);
   }
@@ -1633,18 +1625,10 @@
     transform: translateY(-188px);
   }
   60.8%,
-  62.6% {
+  83.8% {
     transform: translateY(-620px);
   }
-  67%,
-  67.2% {
-    transform: translateY(-620px);
-  }
-  68.6%,
-  72.2% {
-    transform: translateY(-1145px);
-  }
-  73.4%,
+  85.2%,
   100% {
     transform: translateY(-1145px);
   }

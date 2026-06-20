@@ -82,11 +82,11 @@ const formatRatioDollarAmount = (value: number): string => {
 const getMeaningHeadline = (bandId: DscrBandDefinition['id']): string => {
   switch (bandId) {
     case 'needs-improvement':
-      return 'This payment looks too heavy right now.';
+      return 'Your current income does not appear to support this payment.';
     case 'very-tight':
-      return 'This payment is only barely covered.';
+      return 'This request is likely too tight to qualify based on your income and debt.';
     case 'borderline':
-      return 'This payment looks close, but still tight.';
+      return 'This request is close, but still below a comfortable lender range.';
     case 'solid-start':
       return 'This payment looks reasonably supportable.';
     case 'strong-position':
@@ -179,6 +179,7 @@ const Tooltip: React.FC<{ text: string }> = ({ text }) => (
     <button
       type="button"
       aria-label="More information"
+      tabIndex={-1}
       className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-all duration-200 hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 sm:h-8 sm:w-8"
     >
       <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -258,6 +259,7 @@ const InputField: React.FC<{
   hideTooltipOnMobile?: boolean;
   inlineOnMobile?: boolean | 'stacked';
   optimizeLabelMobile?: boolean;
+  tabIndex?: number;
 }> = ({
   label,
   name,
@@ -275,6 +277,7 @@ const InputField: React.FC<{
   hideTooltipOnMobile = false,
   inlineOnMobile = false,
   optimizeLabelMobile = false,
+  tabIndex,
 }) => {
   const [displayValue, setDisplayValue] = React.useState(value ? value.toLocaleString('en-US') : '');
 
@@ -329,6 +332,7 @@ const InputField: React.FC<{
                   className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-5 pr-2 text-sm font-semibold text-slate-900 transition-all placeholder:font-medium placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-200"
                   inputMode="numeric"
                   pattern="[0-9,]*"
+                  tabIndex={tabIndex}
                 />
               </div>
               {errorMessage && <p className="mt-1 text-xs font-medium text-rose-600">{errorMessage}</p>}
@@ -355,6 +359,7 @@ const InputField: React.FC<{
                     className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-5 pr-2 text-sm font-semibold text-slate-900 transition-all placeholder:font-medium placeholder:text-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-200"
                     inputMode="numeric"
                     pattern="[0-9,]*"
+                    tabIndex={tabIndex}
                   />
                 </div>
               </div>
@@ -423,6 +428,7 @@ const InputField: React.FC<{
             }`}
             inputMode="numeric"
             pattern="[0-9,]*"
+            tabIndex={tabIndex}
           />
         </div>
         {errorMessage && (
@@ -459,6 +465,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   const [showResults, setShowResults] = useState(false);
   const [validationError, setValidationError] = useState<{ field: string; message: string } | null>(null);
   const [isEditingAssumptions, setIsEditingAssumptions] = useState(false);
+  const [isEditingDebtBreakdown, setIsEditingDebtBreakdown] = useState(false);
   const resultsRef = React.useRef<HTMLDivElement | null>(null);
   const lastResultSignatureRef = React.useRef<string | null>(null);
 
@@ -597,6 +604,18 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
     updateNumericField(e.target.name as keyof DscrFormValues, parseFloat(e.target.value));
   };
 
+  const toggleDebtBreakdownEditing = () => {
+    setIsEditingDebtBreakdown((current) => !current);
+    trackCalculatorInteraction({
+      page_template: analyticsPageTemplate,
+      placement: analyticsPlacement,
+      interaction_name: isEditingDebtBreakdown ? 'debt_breakdown_closed' : 'debt_breakdown_opened',
+      loan_purpose: loanPurpose || undefined,
+      loan_amount: principal || undefined,
+      monthly_debt_service: totalProjectedDebtService || undefined,
+    });
+  };
+
   const handleLoanAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/[^\d]/g, '');
     const num = parseInt(raw) || 0;
@@ -724,13 +743,9 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   const amountAboveBenchmarkTarget = Math.max(principal - maxLoanAmountAtBenchmark, 0);
   const estimatedPaymentSummary = isLineOfCreditPurpose
     ? `Assumes the full line is drawn. Estimated as ${formatCurrency(financedPrincipal)} x ${(selectedRate * 100).toFixed(2)}% / 12.`
-    : `${selectedTerm} months at ${(selectedRate * 100).toFixed(2)}% ${selectedPaymentMode === 'interest_only' ? 'interest-only' : 'amortized'}`;
-
-  const getDebtFieldMobileLabel = (fieldName: (typeof debtFieldMeta)[number]['name']) => {
-    if (!compactMobileLayout) return undefined;
-    if (fieldName === 'realEstateDebt') return 'Real Estate';
-    return undefined;
-  };
+    : selectedPaymentMode === 'interest_only'
+      ? `Based on a ${selectedTerm}-month term at ${(selectedRate * 100).toFixed(2)}% interest-only`
+      : `Based on a ${selectedTerm}-month term at ${(selectedRate * 100).toFixed(2)}%`;
 
   const getDebtFieldMobileLayoutClassName = (fieldName: (typeof debtFieldMeta)[number]['name']) => {
     if (fieldName !== 'vehicleEquipment') return '';
@@ -850,7 +865,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-800">
                 <Calculator className="h-4 w-4" />
-                See My DSCR
+                Check My DSCR
               </div>
               <div className="max-w-3xl space-y-2">
                 <h1 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-4xl">
@@ -882,7 +897,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
 
           <form className={embedded ? 'space-y-1.5 sm:space-y-2' : 'mt-2 space-y-1.5 sm:space-y-2'} onSubmit={(e) => e.preventDefault()}>
             <div className="grid gap-1.5 sm:gap-2 xl:grid-cols-[1.05fr_1.35fr] xl:items-start">
-              <section className="sm:rounded-[24px] sm:border sm:border-slate-200 sm:bg-white/90 sm:shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
+              <section className="p-2 sm:rounded-[24px] sm:border sm:border-slate-200 sm:bg-white/90 sm:p-3 sm:shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
                 <div className="hidden flex-row items-center justify-between gap-2 border-b border-slate-200 pb-1 sm:flex sm:pb-1.5">
                   <div className="flex flex-row items-baseline gap-1.5 sm:block">
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Loan Request</p>
@@ -896,7 +911,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
 
                 <div className="mt-2 grid grid-cols-2 gap-1.5 sm:gap-2">
                   <InputField
-                    label="Net Income After Expenses"
+                    label="Monthly Profit After Expenses"
                     name="monthlyNetIncome"
                     placeholder="10,000"
                     tooltip="Use your business's average monthly profit after operating expenses, before any existing or new loan payments. If you only have an annual number, divide it by 12 for a quick estimate."
@@ -911,13 +926,14 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     hideTooltipOnMobile
                     inlineOnMobile="stacked"
                     optimizeLabelMobile={compactMobileLayout}
+                    tabIndex={1}
                   />
                   <InputField
-                    label="Loan Amount"
+                    label="Estimated Loan Amount"
                     name="loanAmount"
                     placeholder="100,000"
                     tooltip="How much funding are you looking for?"
-                    description={`Enter the amount you estimate you'll need. We’ll estimate the loan amount your cash flow may support at ${DSCR_BENCHMARK.toFixed(2)}x DSCR.`}
+                    description="How much funding you want to request"
                     errorMessage={validationError?.field === 'dscr-calc-form-loan-amount' ? validationError.message : undefined}
                     value={parseInt(loanAmount.replace(/[$,]/g, '')) || 0}
                     onChange={handleLoanAmountChange}
@@ -929,6 +945,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     hideTooltipOnMobile
                     inlineOnMobile="stacked"
                     optimizeLabelMobile={compactMobileLayout}
+                    tabIndex={2}
                   />
                 </div>
 
@@ -946,6 +963,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   <Select value={loanPurpose} onValueChange={handleLoanPurposeChange}>
                     <SelectTrigger
                       id="loanPurpose"
+                      tabIndex={3}
                       className="h-auto min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm outline-none transition-all duration-200 focus:border-slate-900 focus:ring-2 focus:ring-slate-200 sm:mt-1.5 sm:min-h-12 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:focus:ring-4"
                       data-ga-id="dscr-calc-form-loan-purpose"
                     >
@@ -958,7 +976,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                             {selectedPurposeTitle}
                           </div>
                           <div className="mt-0.5 text-xs leading-4 text-slate-500 sm:text-xs">
-                            {loanPurpose ? 'Choose The Best Match For What You Need' : 'Pick the option that fits this request'}
+                            {loanPurpose ? 'Used to estimate the likely payment structure' : 'Pick the option that best matches this request'}
                           </div>
                         </div>
                       </div>
@@ -1001,11 +1019,11 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                 </div>
               </section>
 
-              <section className="sm:rounded-[24px] sm:border sm:border-slate-200 sm:bg-white/90 sm:shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
+              <section className="p-2 sm:rounded-[24px] sm:border sm:border-slate-200 sm:bg-white/90 sm:p-3 sm:shadow-[0_24px_70px_-50px_rgba(15,23,42,0.7)] backdrop-blur xl:h-full">
                 <div className="hidden flex-row items-center justify-between gap-2 border-b border-slate-200 pb-1 sm:flex sm:pb-1.5">
                   <div className="flex flex-row items-baseline gap-1.5 sm:block">
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Existing Debt</p>
-                    <h2 className="text-base font-semibold tracking-[-0.03em] text-slate-950 sm:text-xl">Required monthly payments</h2>
+                    <h2 className="text-base font-semibold tracking-[-0.03em] text-slate-950 sm:text-xl">Current monthly debt payments</h2>
                   </div>
                   <div className={`hidden sm:inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-900 sm:text-xs`}>
                     <ShieldCheck className="h-3.5 w-3.5 text-amber-700" />
@@ -1019,7 +1037,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                 </div>
 
                 <div className={`mt-1.5 grid gap-1.5 grid-cols-1 sm:mt-2 sm:gap-2 sm:grid-cols-2`}>
-                  {debtFieldMeta.map((field) => (
+                  {debtFieldMeta.map((field, index) => (
                     <div key={field.name} className={getDebtFieldMobileLayoutClassName(field.name)}>
                       <InputField
                         label={field.shortLabel ?? field.label}
@@ -1036,6 +1054,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         hideTooltipOnMobile
                         inlineOnMobile
                         optimizeLabelMobile={compactMobileLayout}
+                        tabIndex={4 + index}
                       />
                     </div>
                   ))}
@@ -1046,6 +1065,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
             <div className="mt-1.5 flex flex-col items-center sm:mt-2">
               <div className="w-full max-w-sm">
                 <Button
+                  tabIndex={9}
                   onClick={(e) => {
                     if (!validateRequiredFields()) {
                       trackCalculatorInteraction({
@@ -1081,7 +1101,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                   <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/70" />
                   <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_55%)] opacity-80" />
                   <span className="relative flex items-center justify-center">
-                    <span className="tracking-[0.01em]">See My DSCR</span>
+                    <span className="tracking-[0.01em]">Check My DSCR</span>
                     <ArrowRight className="ml-2 h-5 w-5 transition duration-300 group-hover:translate-x-1 group-active:translate-x-0.5" />
                   </span>
                 </Button>
@@ -1133,13 +1153,13 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
 
                       <div className="mt-3 rounded-2xl border border-white/80 bg-white/90 p-3 sm:p-4">
                         <div className="sm:mt-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">What this means</p>
+                          <p className="text-sm font-bold uppercase tracking-[0.16em] text-slate-950">What this means</p>
                           <p className="mt-1 text-sm font-semibold text-slate-950 sm:text-base">{meaningHeadline}</p>
                           <p className="mt-1.5 text-xs leading-5 text-slate-700 sm:mt-2 sm:text-sm sm:leading-6">{dollarTranslation}</p>
                           <p className="mt-2 hidden text-sm leading-6 text-slate-600 sm:block">{dscrStatus.summary}</p>
                         </div>
                         <div className="mt-3 hidden sm:block">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">How A Lender Will Likely Read It</p>
+                          <p className="text-sm font-bold uppercase tracking-[0.16em] text-slate-950">How This May Look To A Lender</p>
                           <p className="mt-1 text-sm leading-6 text-slate-600">{dscrStatus.lenderRead}</p>
                         </div>
                         {shouldShowIncomeAdjustmentCallout && (
@@ -1203,12 +1223,41 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                         <details className="rounded-2xl border border-slate-200 bg-white">
                           <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold text-slate-900 [&::-webkit-details-marker]:hidden">Debt breakdown</summary>
                           <div className="space-y-1.5 border-t border-slate-200 px-3 py-2.5">
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                              <p className="text-xs font-semibold text-slate-500">Monthly payments used</p>
+                              <button
+                                type="button"
+                                onClick={toggleDebtBreakdownEditing}
+                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700"
+                              >
+                                <PencilLine className="h-3 w-3" />
+                                {isEditingDebtBreakdown ? 'Done' : 'Edit'}
+                              </button>
+                            </div>
                             {debtFieldMeta.map((field) => (
-                              <div key={`mobile-debt-breakdown-${field.name}`} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                              <div key={`mobile-debt-breakdown-${field.name}`} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
                                 <span className="text-xs font-medium text-slate-700">{field.shortLabel ?? field.label}</span>
-                                <span className="text-xs font-semibold text-slate-950">{formatCurrency(values[field.name])}</span>
+                                {isEditingDebtBreakdown ? (
+                                  <div className="relative w-32 shrink-0">
+                                    <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">$</span>
+                                    <input
+                                      type="text"
+                                      value={values[field.name] ? values[field.name].toLocaleString('en-US') : ''}
+                                      onChange={(e) => updateNumericField(field.name, parseCurrencyInput(e.target.value))}
+                                      className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-5 pr-2 text-right text-xs font-semibold text-slate-950 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                                      inputMode="numeric"
+                                      pattern="[0-9,]*"
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="text-xs font-semibold text-slate-950">{formatCurrency(values[field.name])}</span>
+                                )}
                               </div>
                             ))}
+                            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
+                              <span className="text-xs font-semibold text-slate-950">Current Monthly Debt</span>
+                              <span className="text-xs font-semibold text-slate-950">{formatCurrency(totalMonthlyDebtPayments)}</span>
+                            </div>
                             <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
                               <div>
                                 <span className="text-xs font-semibold text-emerald-950">Estimated Loan Payment</span>
@@ -1273,18 +1322,46 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
 
                       <div className="mt-3 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
                         <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Monthly Debt Service Breakdown</p>
-                            <p className="mt-1 text-sm text-slate-600">These are the monthly payment amounts used in your DSCR.</p>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Monthly Debt Service Breakdown</p>
+                              <p className="mt-1 text-sm text-slate-600">These are the monthly payment amounts used in your DSCR.</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={toggleDebtBreakdownEditing}
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950"
+                            >
+                              <PencilLine className="h-3.5 w-3.5" />
+                              {isEditingDebtBreakdown ? 'Done' : 'Edit'}
+                            </button>
                           </div>
 
                           <div className="mt-3 space-y-2">
                             {debtFieldMeta.map((field) => (
-                              <div key={`debt-breakdown-${field.name}`} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                              <div key={`debt-breakdown-${field.name}`} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
                                 <span className="text-sm font-medium text-slate-700">{field.label}</span>
-                                <span className="text-sm font-semibold text-slate-950">{formatCurrency(values[field.name])}</span>
+                                {isEditingDebtBreakdown ? (
+                                  <div className="relative w-40 shrink-0">
+                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">$</span>
+                                    <input
+                                      type="text"
+                                      value={values[field.name] ? values[field.name].toLocaleString('en-US') : ''}
+                                      onChange={(e) => updateNumericField(field.name, parseCurrencyInput(e.target.value))}
+                                      className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 text-right text-sm font-semibold text-slate-950 focus:border-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                                      inputMode="numeric"
+                                      pattern="[0-9,]*"
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="text-sm font-semibold text-slate-950">{formatCurrency(values[field.name])}</span>
+                                )}
                               </div>
                             ))}
+                            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                              <span className="text-sm font-semibold text-slate-950">Current Monthly Debt</span>
+                              <span className="text-sm font-semibold text-slate-950">{formatCurrency(totalMonthlyDebtPayments)}</span>
+                            </div>
                             <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                               <div>
                                 <span className="text-sm font-semibold text-emerald-950">Estimated Loan Payment</span>
@@ -1542,59 +1619,39 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                 )}
 
                 {nextStepConfig?.primaryCtaKind === 'analysis' && (
-                  <section className="rounded-[2rem] border border-slate-200 bg-slate-950 p-4 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.8)] sm:p-5">
-                    <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+                  <section className="rounded-[1.5rem] border border-slate-200 bg-slate-950 p-4 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.8)] sm:rounded-[2rem] sm:p-5">
+                    <div className="grid gap-4 lg:grid-cols-[1fr_0.74fr] lg:items-center">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-semibold text-emerald-300">Best Next Move</span>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-200">Bank-Level Analysis</span>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-200">EBITDA Review</span>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-200">DSCR Recheck</span>
+                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-200">Full Cash Flow Review</span>
                         </div>
-                        <h3 className="mt-3 text-2xl font-black tracking-[-0.04em] text-white">{nextStepConfig.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-slate-200">
+                        <h3 className="mt-3 text-xl font-black tracking-[-0.04em] text-white sm:text-2xl">{nextStepConfig.title}</h3>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-200">
                           {nextStepConfig.description}
                         </p>
 
-                        <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">See What A Lender Will Actually Focus On</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">We move beyond the quick estimate and review the repayment story the way a lender is more likely to pressure-test it.</p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                          <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                            <p className="text-sm font-semibold text-white">1. Review the numbers</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-300">Confirm income, debt, and payment assumptions.</p>
                           </div>
-                          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">Catch Add-Backs Or Structure Issues Early</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">If the request needs to be resized, restructured, or supported with valid income adjustments, it is better to learn that now.</p>
+                          <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                            <p className="text-sm font-semibold text-white">2. Adjust the request</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-300">Test a smaller loan, lower payment, or better terms.</p>
                           </div>
-                          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">Know Whether You&apos;re Truly Ready</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">Leave with a clearer answer on whether to move forward, lower the request, or improve the structure before packaging or applying.</p>
-                          </div>
-                          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="rounded-full bg-emerald-300/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-200">Bonus</span>
-                              <p className="text-sm font-semibold text-white">Business Debt Summary PDF Included</p>
-                            </div>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-200">Get a clean lender-ready debt summary PDF so your current obligations are easy to review and explain.</p>
+                          <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-3">
+                            <p className="text-sm font-semibold text-white">3. Decide before applying</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-200">Know whether to move forward, resize, or wait.</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Why Start Here</p>
-                        <div className="mt-3 space-y-2.5">
-                          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">This Keeps You From Guessing</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">Instead of wondering whether this result is close enough, you get a clearer lender-style read on whether the request actually holds up.</p>
-                          </div>
-                          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">It Can Save You From Packaging Too Early</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">If something needs to change first, it is better to find that out here than after spending time and money preparing the file.</p>
-                          </div>
-                          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">If You Still Want To See The Loan-Service Path</p>
-                            <p className="mt-1.5 text-sm leading-6 text-slate-300">Loan packaging organizes the file and brokering can help carry a strong request into lender conversations, but this analysis is usually the smarter first move at your current range.</p>
-                          </div>
-                        </div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Recommended Next Step</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-200">
+                          Start with a deeper review before spending time packaging or applying.
+                        </p>
                         <Button
                           className="mt-4 h-11 w-full rounded-2xl bg-white text-base font-bold text-slate-950 transition-colors hover:bg-slate-100"
                           size="lg"
@@ -1604,139 +1661,82 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                           Start Comprehensive Analysis
                         </Button>
                         <Button
-                          className="mt-2.5 h-11 w-full rounded-2xl border border-white/15 bg-white/5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                          className="mt-2.5 h-10 w-full rounded-2xl border border-white/15 bg-white/5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
                           size="lg"
                           onClick={() => handleExploreLoanPackaging('calculator_analysis_secondary_loan_services')}
                           id="dscr-calc-cta-loan-services-secondary"
                         >
-                          Explore Loan Packaging Or Brokering
+                          Explore Loan Services
                         </Button>
-                        <p className="mt-2.5 text-center text-xs leading-5 text-slate-400">
-                          Best for borrowers who need a clearer lender-style answer before deciding whether to package, broker, resize, or wait.
-                        </p>
                       </div>
                     </div>
                   </section>
                 )}
 
                 {nextStepConfig?.primaryCtaKind === 'packaging' && (
-                  <section className="relative overflow-hidden rounded-[2rem] border border-sky-200/80 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_38%,#dbeafe_100%)] shadow-[0_28px_70px_-42px_rgba(37,99,235,0.28)]">
-                    <div className="absolute -right-10 top-0 h-40 w-40 rounded-full bg-cyan-300/25 blur-3xl" />
-                    <div className="absolute left-0 top-10 h-32 w-32 rounded-full bg-sky-300/20 blur-3xl" />
-                    <div className="relative grid gap-0 xl:grid-cols-[0.78fr_1.22fr]">
-                      <div className="border-b border-sky-200/80 bg-white/80 p-4 backdrop-blur-sm sm:p-5 xl:border-b-0 xl:border-r">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Best Next Move</p>
-                        <h3 className="mt-2 text-[1.25rem] font-black tracking-[-0.04em] text-slate-950 sm:text-[1.5rem] xl:whitespace-nowrap">Strong Position To Move Forward</h3>
-                        <p className="mt-2 text-sm leading-6 text-slate-700">
-                          If you meet the common lender criteria below, you are usually ready to move forward with a loan package.
+                  <section className="relative overflow-hidden rounded-[1.5rem] border border-sky-200/80 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_48%,#dbeafe_100%)] p-4 shadow-[0_28px_70px_-42px_rgba(37,99,235,0.28)] sm:rounded-[2rem] sm:p-5">
+                    <div className="pointer-events-none absolute -right-10 top-0 h-40 w-40 rounded-full bg-cyan-300/25 blur-3xl" />
+                    <div className="relative grid gap-4 lg:grid-cols-[1fr_0.78fr] lg:items-center">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800">Best Next Move</span>
+                          <span className="rounded-full border border-sky-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Loan Packaging</span>
+                        </div>
+                        <h3 className="mt-3 text-xl font-black tracking-[-0.04em] text-slate-950 sm:text-2xl">Strong Position To Move Forward</h3>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
+                          Your DSCR suggests this request may be ready for lender preparation. The next step is making the numbers, documents, and story easy for a lender to review.
                         </p>
 
-                        <div className="mt-4 grid gap-3">
-                          <div className="rounded-[1.6rem] border border-sky-200 bg-[linear-gradient(135deg,rgba(14,165,233,0.1)_0%,rgba(255,255,255,0.98)_100%)] px-4 py-4 shadow-[0_18px_45px_-34px_rgba(14,165,233,0.45)]">
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              <div className="rounded-2xl border border-sky-100 bg-white/95 px-4 py-3">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Time In Business</p>
-                                <p className="mt-1 text-base font-black text-slate-950">{nextStepConfig.businessAge}</p>
-                                <p className="mt-1.5 text-xs leading-5 text-slate-600">Preferred by many lenders for stability.</p>
-                              </div>
-                              <div className="rounded-2xl border border-sky-100 bg-white/95 px-4 py-3">
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Credit Range</p>
-                                <p className="mt-1 text-base font-black text-slate-950">{nextStepConfig.creditRange}</p>
-                                <p className="mt-1.5 text-xs leading-5 text-slate-600">Usually enough to open solid lender options.</p>
-                              </div>
-                            </div>
-                            <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-                              <p className="text-sm font-semibold text-emerald-900">If you meet these and your DSCR stays above {DSCR_BENCHMARK.toFixed(2)}, you&apos;re typically ready to move forward with a loan package.</p>
-                            </div>
-                            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
-                              If you&apos;re below either one, you may still have paths through SBA options, a smaller request, a longer term, or stronger cash flow support.
-                            </div>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                          <div className="rounded-2xl border border-sky-100 bg-white/90 px-3 py-3">
+                            <p className="text-sm font-semibold text-slate-950">Confirm fit</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-600">Check credit, documents, and business history.</p>
+                          </div>
+                          <div className="rounded-2xl border border-sky-100 bg-white/90 px-3 py-3">
+                            <p className="text-sm font-semibold text-slate-950">Prepare the request</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-600">Make the loan amount, payment, and documents easy for a lender to review.</p>
+                          </div>
+                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3">
+                            <p className="text-sm font-semibold text-emerald-950">Approach lenders</p>
+                            <p className="mt-1 text-xs leading-5 text-emerald-800">Use packaging or brokered help to move forward.</p>
                           </div>
                         </div>
 
-                        <p className="mt-3 text-[11px] leading-5 text-slate-500">
-                          Rough guidance only. Lenders also review documents, liquidity, collateral, industry, and deal structure.
+                        <p className="mt-3 text-xs leading-5 text-slate-500">
+                          Lenders still review credit, documents, liquidity, collateral, industry, and deal structure.
                         </p>
                       </div>
 
-                      <div className="p-4 sm:p-5">
-                        <div className="rounded-[1.8rem] border border-sky-300/60 bg-[linear-gradient(145deg,rgba(15,23,42,0.98)_0%,rgba(15,118,110,0.95)_0.1%,rgba(30,41,59,0.96)_28%,rgba(30,64,175,0.94)_100%)] p-4 text-white shadow-[0_32px_80px_-44px_rgba(30,64,175,0.65)]">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200/90">Loan Services Path</p>
-                              <h4 className="mt-1.5 text-[1.45rem] font-black tracking-[-0.04em] text-white">Turn This Into A Lender-Ready Deal</h4>
-                            </div>
-                            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-100">
-                              Smartest Next Move
-                            </span>
+                      <div className="rounded-[1.5rem] border border-slate-900/10 bg-slate-950 p-4 text-white shadow-[0_32px_80px_-44px_rgba(30,64,175,0.65)]">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200/90">Choose Your Path</p>
+                        <div className="mt-3 grid gap-2">
+                          <div className="rounded-2xl border border-cyan-300/25 bg-white/10 px-3 py-3">
+                            <p className="text-sm font-semibold text-white">Brokered Help</p>
+                            <p className="mt-1 text-xs leading-5 text-sky-50/90">Best if you want help packaging and placing the request with lenders.</p>
                           </div>
-
-                          <p className="mt-3 text-sm leading-6 text-sky-50/92">
-                            Your DSCR suggests this request is strong enough to take seriously. The next step is choosing how you want to move it forward.
-                          </p>
-
-                          <div className="mt-4 grid gap-3 md:grid-cols-[1.12fr_0.88fr]">
-                            <div className="group rounded-[1.6rem] border border-cyan-300/35 bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.08)_100%)] p-4 shadow-[0_22px_55px_-36px_rgba(34,211,238,0.55)] backdrop-blur-sm">
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-100">Recommended Path</p>
-                                  <p className="mt-1 text-lg font-black tracking-[-0.03em] text-white">Brokered Help</p>
-                                </div>
-                                <span className="rounded-full bg-cyan-300/18 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100">Recommended</span>
-                              </div>
-                              <p className="mt-2 text-sm leading-6 text-sky-50/90">Best if you want expert help presenting, packaging, and placing the deal with lenders.</p>
-                              <div className="mt-3 grid gap-2">
-                                <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm leading-5 text-sky-50/90">We structure the deal so it reads better to lenders.</div>
-                                <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm leading-5 text-sky-50/90">We package the file and help place it with lender contacts.</div>
-                              </div>
-                            </div>
-
-                            <div className="rounded-[1.6rem] border border-white/14 bg-white/8 p-4 backdrop-blur-sm">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200">Alternative</p>
-                              <p className="mt-1 text-lg font-black tracking-[-0.03em] text-white">Packaging Only</p>
-                              <p className="mt-2 text-sm leading-6 text-slate-100/90">Best if you already have lender relationships and just need a cleaner file.</p>
-                              <div className="mt-3 grid gap-2">
-                                <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm leading-5 text-slate-100/90">We organize the documents, numbers, and request story.</div>
-                                <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-2.5 text-sm leading-5 text-slate-100/90">You handle the outreach yourself.</div>
-                              </div>
-                            </div>
+                          <div className="rounded-2xl border border-white/12 bg-white/8 px-3 py-3">
+                            <p className="text-sm font-semibold text-white">Packaging Only</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-100/90">Best if you already have lender contacts and need a cleaner file.</p>
                           </div>
+                        </div>
 
-                          <div className="mt-3 rounded-[1.4rem] border border-sky-300/30 bg-[linear-gradient(135deg,rgba(125,211,252,0.14)_0%,rgba(255,255,255,0.07)_100%)] px-4 py-3">
-                            <p className="text-sm font-semibold text-white">Why This Step Matters</p>
-                            <p className="mt-1.5 text-sm leading-6 text-sky-50/90">
-                              Most deals do not stall because of the raw numbers alone. They stall because the request is not packaged and positioned clearly enough for a lender to say yes.
-                            </p>
-                          </div>
-
-                          <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
-                            <Button
-                              className="h-11 flex-1 rounded-2xl bg-[linear-gradient(135deg,#67e8f9_0%,#38bdf8_45%,#2563eb_100%)] text-sm font-bold text-slate-950 shadow-[0_20px_50px_-32px_rgba(56,189,248,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-105"
-                              size="lg"
-                              onClick={() => handleStartLoanBrokering('calculator_packaging_brokering_primary')}
-                              id="dscr-calc-cta-start-brokering"
-                            >
-                              Move Forward With Expert Help
-                            </Button>
-                            <Button
-                              className="h-11 flex-1 rounded-2xl border border-white/15 bg-white/10 text-sm font-semibold text-white transition-colors hover:bg-white/14"
-                              size="lg"
-                              onClick={() => handleExploreLoanPackaging('calculator_packaging_only_secondary', 'Just Get My File Lender-Ready')}
-                              id="dscr-calc-cta-packaging-only"
-                            >
-                              Just Get My File Lender-Ready
-                            </Button>
-                          </div>
-                          {shouldShowCashFlowAnalysisUpsell && (
-                            <Button
-                              className="mt-2.5 h-10 w-full rounded-2xl border border-cyan-300/28 bg-cyan-300/10 text-sm font-semibold text-cyan-50 transition-colors hover:bg-cyan-300/15"
-                              size="lg"
-                              onClick={() => handleExploreCashFlowAnalysis('calculator_packaging_secondary_analysis')}
-                              id="dscr-calc-cta-secondary-analysis"
-                            >
-                              Validate With Full Analysis First
-                            </Button>
-                          )}
+                        <div className="mt-4 flex flex-col gap-2">
+                          <Button
+                            className="h-11 rounded-2xl bg-[linear-gradient(135deg,#bbf7d0_0%,#34d399_45%,#059669_100%)] text-sm font-bold text-emerald-950 shadow-[0_20px_50px_-32px_rgba(16,185,129,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-105"
+                            size="lg"
+                            onClick={() => handleStartLoanBrokering('calculator_packaging_brokering_primary')}
+                            id="dscr-calc-cta-start-brokering"
+                          >
+                            Move Forward With Expert Help
+                          </Button>
+                          <Button
+                            className="h-10 rounded-2xl border border-white/15 bg-white/10 text-sm font-semibold text-white transition-colors hover:bg-white/14"
+                            size="lg"
+                            onClick={() => handleExploreLoanPackaging('calculator_packaging_only_secondary', 'Just Get My File Lender-Ready')}
+                            id="dscr-calc-cta-packaging-only"
+                          >
+                            Just Get My File Lender-Ready
+                          </Button>
                         </div>
                       </div>
                     </div>

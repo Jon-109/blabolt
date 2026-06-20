@@ -6,16 +6,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Sora } from 'next/font/google';
 import {
   ArrowRight,
-  BadgeDollarSign,
   BarChart3,
-  Building2,
   Calculator,
   CheckCircle2,
-  Clock3,
-  ClipboardCheck,
   Handshake,
   Info,
-  Search,
   ShieldCheck,
   TrendingUp,
   Workflow,
@@ -50,55 +45,55 @@ const serviceCards = [
     badge: 'FREE START',
     stage: 'Start here',
     title: 'Quick DSCR Check',
-    description: 'DSCR stands for Debt Service Coverage Ratio, and it is one of the main numbers lenders use to decide whether your business cash flow can safely handle a loan payment.',
+    description: 'A free 60-second check to see if your cash flow may support the loan payment.',
     bullets: [
-      'Understand the number lenders look at to judge repayment ability',
-      'See whether your cash flow looks strong, borderline, or risky before you go further',
-      'Use a fast first-pass check to decide if the deal may be worth packaging and shopping',
+      'See your estimated DSCR',
+      'No credit pull',
+      'No documents needed',
     ],
     ctaLabel: 'Start Free Check',
     ctaHref: '#dscr-calculator',
     icon: BarChart3,
   },
   {
-    badge: 'FULL ANALYSIS',
+    badge: 'FULL REVIEW',
     stage: 'Go deeper',
-    title: 'Comprehensive Cash Flow Review',
-    description: 'A deeper financial review for owners who want a clearer picture of how lenders may evaluate cash flow, debt, and repayment capacity.',
+    title: 'Cash Flow Review',
+    description: 'A deeper look at income, debt, and repayment strength before you move forward.',
     bullets: [
-      'Review historical and year-to-date performance',
-      'Analyze debt obligations and repayment capacity in more detail',
-      'Get clearer lender-facing insights before moving forward',
+      'Review cash flow more closely',
+      'Understand weak spots',
+      'Get a clearer next step',
     ],
-    ctaLabel: 'Explore Full Analysis',
+    ctaLabel: 'Explore Review',
     ctaHref: '/cash-flow-analysis',
     icon: TrendingUp,
   },
   {
-    badge: 'DONE-WITH-YOU',
+    badge: 'PACKAGE',
     stage: 'Get organized',
-    title: 'Loan Packaging Dashboard + Templates',
-    description: 'Our guided packaging system helps you organize documents, complete lender-ready templates, and generate a professional cover letter for your loan request.',
+    title: 'Loan Packaging',
+    description: 'Organize your documents, complete templates, and build a cleaner lender-ready file.',
     bullets: [
-      'Guided checklist, uploads, and shared business profile data',
-      'Five lender-ready templates with PDF generation',
-      'AI-assisted cover letter generation, package exports, and secure lender links',
+      'Upload required documents',
+      'Complete guided templates',
+      'Generate a cover letter/package',
     ],
-    ctaLabel: 'Explore Loan Packaging',
+    ctaLabel: 'Explore Packaging',
     ctaHref: '/loan-services',
     icon: Workflow,
   },
   {
     badge: 'BROKERING',
-    stage: 'Reach the finish line',
+    stage: 'Get lender help',
     title: 'Loan Brokering',
-    description: 'This is everything in Loan Packaging Dashboard + Templates, plus we help find a lender willing to take on your deal and keep it moving toward a real closing.',
+    description: 'Get help taking your package to lenders and moving the deal toward closing.',
     bullets: [
-      'Includes the full dashboard, guided templates, cover letter, exports, and lender-ready package',
-      'We help place your deal with lenders that fit the request instead of leaving you to cold-apply',
-      'We stay in it through lender conversations, underwriting follow-up, and closing steps',
+      'No upfront packaging fee',
+      'Lender matching support',
+      'Fee only if the loan closes',
     ],
-    ctaLabel: 'Explore Loan Brokering',
+    ctaLabel: 'Explore Brokering',
     ctaHref: '/loan-services',
     icon: Handshake,
   },
@@ -119,53 +114,36 @@ type ProcessStep = {
 const processSteps: ProcessStep[] = [
   {
     step: '01',
-    summaryLabel: 'Need',
-    title: 'Find a business need worth financing',
-    description: 'A loan can help you buy equipment, hire staff, expand, take on bigger jobs, or create more revenue if the opportunity is there.',
-    pain: 'If you do not know what the money will help you do, it is hard to know whether borrowing makes sense.',
-    icon: Search,
-  },
-  {
-    step: '02',
-    summaryLabel: 'Qualify',
-    title: 'Know if you can afford a loan right now',
-    description: 'Before applying, check whether your current cash flow can realistically handle another monthly payment.',
-    pain: 'This helps you avoid applying too early or taking on a payment the business cannot support yet.',
+    summaryLabel: 'Check',
+    title: 'See if the payment works',
+    description: 'Start with a quick DSCR check so you know whether the requested loan payment looks realistic.',
+    pain: 'This helps you avoid applying too early or chasing a loan the business cannot support yet.',
     icon: Calculator,
     featured: true,
   },
   {
-    step: '03',
+    step: '02',
     summaryLabel: 'Package',
-    title: 'Build the complete loan package and cover letter',
-    description: 'This can mean a lot of documents: tax returns, financials, bank statements, debt schedules, ownership info, and a cover letter explaining the request.',
-    pain: 'This is where missing files, messy folders, and mismatched numbers slow people down.',
+    title: 'Organize the lender file',
+    description: 'Pull the documents, numbers, templates, and loan story into one cleaner package.',
+    pain: 'This is where missing files, messy folders, and inconsistent numbers usually slow borrowers down.',
     icon: Workflow,
   },
   {
-    step: '04',
-    summaryLabel: 'Apply',
-    title: 'Find banks and apply strategically',
-    description: 'That could be your current business bank if you already have a relationship, or another lender that is a better fit for the deal.',
-    pain: 'Not every bank wants every type of loan, so random outreach usually wastes time.',
-    icon: Building2,
+    step: '03',
+    summaryLabel: 'Move',
+    title: 'Approach lenders with confidence',
+    description: 'Use the package to explain the request clearly and support lender follow-up more professionally.',
+    pain: 'Random applications waste time when the file is not ready or the lender is not a fit.',
+    icon: Handshake,
   },
-  {
-    step: '05',
-    summaryLabel: 'Review',
-    title: 'Work through underwriting',
-    description: 'After you apply, lenders review the file and ask follow-up questions, updated documents, and explanations behind the numbers.',
-    pain: 'Even good deals can stall here when replies are late, incomplete, or unorganized.',
-    icon: ClipboardCheck,
-  },
-  {
-    step: '06',
-    summaryLabel: 'Fund',
-    title: 'Close and get the funds',
-    description: 'If approved, the last step is clearing final conditions, signing documents, and getting the money released.',
-    pain: 'Approval is not the finish line. There is usually still paperwork before funds hit the account.',
-    icon: BadgeDollarSign,
-  },
+];
+
+const audienceFitItems = [
+  'You want funding but are not sure what you may qualify for',
+  'You have revenue but do not know how lenders will read the cash flow',
+  'Your documents are scattered, missing, or not lender-ready yet',
+  'You want guidance before spending time on applications or lender outreach',
 ];
 
 function userPrefersReducedMotion() {
@@ -357,34 +335,27 @@ function HomeContent() {
             <h1
               className={`${headingFont.className} mt-4 max-w-[20ch] text-[1.7rem] font-extrabold leading-[1.02] text-white line-clamp-3 sm:mt-5 sm:max-w-[18ch] sm:text-[2.7rem] sm:line-clamp-none lg:max-w-[22ch] lg:text-[3rem]`}
             >
-              Get your business approved for funding, without the guesswork.
+              Find out if your business is ready for funding.
             </h1>
 
-            <p className="mt-3 max-w-none text-[10.5px] leading-[0.95rem] text-slate-200 sm:mt-4 sm:max-w-5xl sm:text-lg sm:leading-8 lg:max-w-[64rem] xl:max-w-[70rem]">
-              We help small business owners check repayment strength with a free DSCR calculator, organize their
-              finances, build stronger loan packages, and move toward funding with clear, step-by-step guidance.
+            <p className="mt-3 max-w-none text-[13px] leading-5 text-slate-200 sm:mt-4 sm:max-w-5xl sm:text-lg sm:leading-8 lg:max-w-[64rem] xl:max-w-[70rem]">
+              Use the free DSCR check to see if your cash flow can support a loan. If the numbers make sense, organize
+              your documents and build a stronger lender-ready package.
             </p>
 
             <div className="mt-6 flex w-full max-w-3xl flex-col gap-2.5 sm:mt-8 sm:w-auto sm:flex-row sm:justify-center sm:gap-3">
               <Link
-                href="/loan-services"
-                onClick={() => trackHomeCta('hero', 'home_hero_start_loan_process', 'Start Your Loan Process', '/loan-services')}
-                className="home-magnetic group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_20px_45px_-28px_rgba(255,255,255,0.85)] transition hover:-translate-y-0.5 hover:bg-slate-100 sm:w-auto sm:px-7 sm:py-3.5 sm:text-base"
-                id="home-hero-cta-loan-process"
-                data-magnetic
-              >
-                Start Your Loan Process
-                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-              </Link>
-              <Link
                 href="#dscr-calculator"
                 onClick={() => trackHomeCta('hero', 'home_hero_free_dscr', 'Check If You Qualify', '#dscr-calculator')}
-                className="home-magnetic inline-flex w-full flex-col items-center justify-center rounded-2xl border border-white bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/[0.16] sm:w-auto sm:px-7 sm:py-3"
+                className="home-magnetic group inline-flex w-full flex-col items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_20px_45px_-28px_rgba(255,255,255,0.85)] transition hover:-translate-y-0.5 hover:bg-slate-100 sm:w-auto sm:px-7 sm:py-3.5"
                 id="home-hero-cta-check-qualify"
                 data-magnetic
               >
-                <span className="text-sm font-semibold sm:text-base">Check If You Qualify</span>
-                <span className="mt-0.5 text-[11px] font-medium text-cyan-200 sm:text-xs">Free • Takes 60 seconds</span>
+                <span className="flex items-center gap-2 text-sm font-bold sm:text-base">
+                  Check If You Qualify
+                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                </span>
+                <span className="mt-0.5 text-[11px] font-semibold text-cyan-700 sm:text-xs">Free • Takes 60 seconds</span>
               </Link>
             </div>
 
@@ -432,13 +403,13 @@ function HomeContent() {
         <div className="mx-auto max-w-7xl px-3 sm:px-6 home-reveal">
           <div>
             <div className="max-w-6xl xl:mx-auto xl:text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">What We Offer</p>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-700 sm:text-base">What We Offer</p>
               <h2 className="mt-1.5 text-[1.95rem] font-black leading-[1.08] text-slate-900 sm:text-4xl xl:text-[2.55rem] xl:leading-none xl:whitespace-nowrap">
-                From quick loan-readiness checks to full funding support
+                Choose the path that fits where you are today
               </h2>
               <p className="mt-2 max-w-4xl text-sm leading-5.5 text-slate-600 sm:text-lg xl:mx-auto xl:max-w-5xl xl:text-[15px] xl:leading-5.5">
-                Start with a fast high-level check, move into deeper financial analysis, organize your documents in one
-                place, and get hands-on help pursuing the right lenders when you&apos;re ready.
+                Not sure where to start? Most owners should begin with the free DSCR check, then move deeper only if the
+                numbers and timing make sense.
               </p>
             </div>
 
@@ -463,9 +434,9 @@ function HomeContent() {
 
                   <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-cyan-700 transition duration-300 group-hover:tracking-[0.18em] group-hover:text-cyan-800 sm:mt-3 sm:text-[11px] sm:tracking-[0.16em]">{service.stage}</p>
                   <h3 className="mt-2 max-w-md text-[13px] font-extrabold leading-4.5 text-slate-900 transition duration-300 group-hover:text-cyan-950 sm:mt-3 sm:text-xl xl:text-[1.02rem] xl:leading-5">{service.title}</h3>
-                  <p className="mt-1.5 text-[11px] leading-4 text-slate-600 transition duration-300 group-hover:text-slate-700 sm:mt-2 sm:text-sm sm:leading-6 xl:text-[13px] xl:leading-5">{service.description}</p>
+                  <p className="mt-1.5 text-[12px] leading-4.5 text-slate-600 transition duration-300 group-hover:text-slate-700 sm:mt-2 sm:text-sm sm:leading-6 xl:text-[13px] xl:leading-5">{service.description}</p>
 
-                  <ul className="mt-2 flex-1 space-y-1 text-[11px] leading-4 text-slate-700 sm:mt-3 sm:space-y-1.5 sm:text-sm sm:leading-6 xl:text-[13px] xl:leading-5">
+                  <ul className="mt-2 flex-1 space-y-1 text-[12px] leading-4.5 text-slate-700 sm:mt-3 sm:space-y-1.5 sm:text-sm sm:leading-6 xl:text-[13px] xl:leading-5">
                     {service.bullets.map((point) => (
                       <li key={point} className="flex items-start gap-1.5">
                         <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 transition duration-300 group-hover:translate-x-0.5 group-hover:text-cyan-700 sm:h-4 sm:w-4" />
@@ -527,7 +498,7 @@ function HomeContent() {
                   </div>
                 </div>
                 <p className="mx-auto mt-1 hidden max-w-5xl text-base leading-6 text-slate-600 sm:mt-2 sm:block">
-                  Start here to see the debt service coverage ratio lenders care about most. A weak DSCR can slow down or kill a business loan request early, while a strong one can tell you the deal is worth digging into further.
+                  Start here to see whether your cash flow may support the loan payment. You’ll get a quick first-pass view of how the request may look to a lender.
                 </p>
                 <p className="mx-auto mt-1 text-xs leading-4 text-slate-500 sm:hidden">
                   See what loan you may qualify for in 30 seconds.
@@ -535,6 +506,9 @@ function HomeContent() {
                 <div className="mt-2 flex flex-wrap justify-center gap-1.5 sm:mt-3 sm:gap-2">
                   <div className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-lg sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">
                     100% Free • No Credit Impact • No Docs Needed
+                  </div>
+                  <div className="rounded-xl border border-cyan-200 bg-white/80 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">
+                    Quick estimate • Not a loan approval
                   </div>
                 </div>
               </div>
@@ -547,19 +521,43 @@ function HomeContent() {
         </div>
       </section>
 
+      <section className="bg-white py-8 sm:py-12" data-reveal data-analytics-section="audience_fit" data-analytics-label="Audience Fit">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 home-reveal">
+          <div className="grid gap-5 rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f0fdfa_45%,#eff6ff_100%)] p-4 shadow-[0_26px_70px_-48px_rgba(15,23,42,0.36)] sm:p-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">Who This Helps</p>
+              <h2 className="mt-2 text-[1.8rem] font-black leading-[1.08] text-slate-900 sm:text-4xl">Built for owners who need a clearer answer before they apply.</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
+                If business funding feels confusing, this gives you a practical starting point: check the numbers, organize the file, and move forward only when the request makes sense.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
+              {audienceFitItems.map((item) => (
+                <div key={item} className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm sm:p-4">
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                    <p className="text-sm font-semibold leading-5 text-slate-800 sm:text-[15px] sm:leading-6">{item}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-slate-950 py-8 text-white sm:py-12" data-reveal data-analytics-section="loan_process" data-analytics-label="Loan Process">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 home-reveal">
           <div className="max-w-3xl">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Typical Loan Process</p>
-            <h2 className="mt-2 text-[1.95rem] font-black leading-[1.08] sm:text-4xl">What usually has to happen before a small business gets funded</h2>
-            <p className="mt-2.5 text-[13px] leading-5.5 text-slate-300 sm:mt-3 sm:text-base sm:leading-6">
-              Most owners picture one application. In reality, there are several steps and a lot of follow-up.
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Simple Loan Path</p>
+            <h2 className="mt-2 text-[1.95rem] font-black leading-[1.08] sm:text-4xl">From “Can I qualify?” to “Ready for lenders.”</h2>
+            <p className="mt-2.5 text-sm leading-6 text-slate-300 sm:mt-3 sm:text-base sm:leading-6">
+              Most owners do not need more confusion. They need a clear next step.
             </p>
           </div>
 
           <div className="mt-5 rounded-[2rem] border border-white/10 bg-white/[0.04] px-1.5 py-3 shadow-[0_24px_50px_-34px_rgba(8,47,73,0.85)] backdrop-blur-sm sm:px-4 sm:py-4">
-            <div className="relative grid grid-cols-6 gap-1 sm:gap-2">
-              <div className="pointer-events-none absolute left-[8.333%] right-[8.333%] top-8 h-px bg-gradient-to-r from-cyan-300/25 via-cyan-200/70 to-cyan-300/25 sm:top-10" />
+            <div className="relative grid grid-cols-3 gap-1 sm:gap-2">
+              <div className="pointer-events-none absolute left-[16.666%] right-[16.666%] top-8 h-px bg-gradient-to-r from-cyan-300/25 via-cyan-200/70 to-cyan-300/25 sm:top-10" />
 
               {processSteps.map((item) => {
                 const Icon = item.icon;
@@ -587,7 +585,7 @@ function HomeContent() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-2 md:gap-2.5 xl:grid-cols-3">
+          <div className="mt-4 grid gap-2 md:grid-cols-3 md:gap-2.5">
             {processSteps.map((item) => {
               const Icon = item.icon;
 
@@ -614,11 +612,11 @@ function HomeContent() {
                   </div>
 
                   <h3 className="mt-2.5 text-[13px] font-bold leading-4.5 text-white sm:mt-4 sm:text-lg sm:leading-5">{item.title}</h3>
-                  <p className="mt-1.5 text-[11px] leading-4 text-slate-200 sm:mt-2 sm:text-sm sm:leading-6">{item.description}</p>
+                  <p className="mt-1.5 text-[12px] leading-5 text-slate-200 sm:mt-2 sm:text-sm sm:leading-6">{item.description}</p>
 
                   <div className="mt-2.5 rounded-xl border border-amber-200/10 bg-amber-300/[0.07] px-2.5 py-2 sm:mt-3 sm:rounded-2xl sm:px-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-200">Tedious part</p>
-                    <p className="mt-1 text-[11px] leading-4 text-slate-200 sm:mt-1.5 sm:text-sm sm:leading-6">{item.pain}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-200">Why it matters</p>
+                    <p className="mt-1 text-[12px] leading-5 text-slate-200 sm:mt-1.5 sm:text-sm sm:leading-6">{item.pain}</p>
                   </div>
 
                   {item.ctaHref && item.ctaLabel ? (
@@ -674,12 +672,11 @@ function HomeContent() {
                 </h2>
 
                 <p className="mt-2.5 max-w-2xl text-[13px] leading-5.5 text-slate-200 sm:mt-3 sm:text-base sm:leading-7">
-                  Start with a fast DSCR check if you want a first signal, or move straight into the guided loan
-                  process when you are ready to organize documents, tighten the story, and approach lenders more
-                  strategically.
+                  Not sure if the loan makes sense yet? Start with the free DSCR check. Ready to move forward? Build the
+                  package lenders need and approach the next step with more confidence.
                 </p>
 
-                <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-4 sm:flex sm:flex-wrap sm:gap-2.5">
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-4 sm:gap-2.5">
                   <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-2.5 py-2.5 sm:px-3.5 sm:py-3">
                     <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-cyan-200 sm:text-[11px] sm:tracking-[0.16em]">Start Here</p>
                     <p className="mt-1 text-[11px] font-semibold leading-4 text-white sm:mt-1.5 sm:text-sm">Get a quick qualification read</p>
@@ -706,44 +703,43 @@ function HomeContent() {
                   </div>
                 </div>
 
-                <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
+                <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-2.5">
                   <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 sm:px-3.5 sm:py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Option 1</p>
                     <p className="mt-1 text-[13px] font-semibold leading-5 text-white sm:text-sm">Use the free DSCR calculator for a fast first-pass answer.</p>
+                    <Link
+                      href="#dscr-calculator"
+                      onClick={() => trackHomeCta('bottom_cta', 'home_bottom_free_dscr', 'Start Free DSCR Check', '#dscr-calculator')}
+                      className="home-magnetic group mt-2 inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white px-3 py-2.5 text-xs font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-100 sm:text-sm"
+                      id="home-bottom-cta-free-dscr"
+                      data-magnetic
+                    >
+                      Start Free DSCR Check
+                      <ArrowRight className="h-4 w-4 shrink-0 transition group-hover:translate-x-1" />
+                    </Link>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 sm:px-3.5 sm:py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Option 2</p>
                     <p className="mt-1 text-[13px] font-semibold leading-5 text-white sm:text-sm">Start the loan process and build a cleaner, stronger package.</p>
+                    <Link
+                      href="/loan-services"
+                      onClick={() => trackHomeCta('bottom_cta', 'home_bottom_start_loan_process', 'Start Loan Process', '/loan-services')}
+                      className="home-magnetic group mt-2 inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/80 bg-white/[0.06] px-3 py-2.5 text-xs font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28),0_18px_40px_-28px_rgba(255,255,255,0.35)] transition hover:-translate-y-0.5 hover:bg-white/[0.12] sm:text-sm"
+                      id="home-bottom-cta-contact"
+                      data-magnetic
+                    >
+                      Start Loan Process
+                      <ArrowRight className="h-4 w-4 shrink-0 transition group-hover:translate-x-1" />
+                    </Link>
                   </div>
                 </div>
 
-                <p className="mt-2.5 text-[11px] leading-4.5 text-slate-300 sm:mt-3 sm:text-xs sm:leading-5">
-                  No guesswork. No messy handoff. Just a clearer path from qualification to lender review.
-                </p>
-
-                <div className="mt-3 grid gap-2.5 sm:mt-4 sm:grid-cols-2 sm:gap-3">
-                  <Link
-                    href="#dscr-calculator"
-                    onClick={() => trackHomeCta('bottom_cta', 'home_bottom_free_dscr', 'Start Free DSCR Check', '#dscr-calculator')}
-                    className="home-magnetic group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-100 sm:px-6 sm:py-3.5 sm:text-base"
-                    id="home-bottom-cta-free-dscr"
-                    data-magnetic
-                  >
-                    Start Free DSCR Check
-                    <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
-                  </Link>
-                  <Link
-                    href="/loan-services"
-                    onClick={() => trackHomeCta('bottom_cta', 'home_bottom_start_loan_process', 'Start Loan Process', '/loan-services')}
-                    className="home-magnetic inline-flex items-center justify-center rounded-2xl border border-white/80 bg-white/[0.06] px-5 py-3 text-sm font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28),0_18px_40px_-28px_rgba(255,255,255,0.35)] transition hover:-translate-y-0.5 hover:bg-white/[0.12] sm:px-6 sm:py-3.5 sm:text-base"
-                    id="home-bottom-cta-contact"
-                    data-magnetic
-                  >
-                    Start Loan Process
-                  </Link>
-                </div>
               </div>
             </div>
+
+            <p className="mx-auto mt-4 max-w-full whitespace-nowrap text-center text-[13px] font-semibold leading-6 text-slate-100 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
+              No guesswork. No messy handoff. Just a clearer path from qualification to lender review.
+            </p>
           </div>
         </div>
       </section>

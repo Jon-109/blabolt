@@ -197,14 +197,14 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       borderClassName: 'border-rose-200',
       panelClassName: 'bg-rose-50/70',
       summary:
-        'This payment looks too heavy for the cash flow entered here. The business is not showing enough monthly income to support the full debt load with any real margin.',
+        'This payment does not appear supportable based on the cash flow entered here. The business is not showing enough monthly income to cover the full debt load and still leave a safe cushion.',
       lenderRead:
-        'Most lenders would read this as a decline-or-restructure situation unless the request gets smaller, the payment gets lower, or a fuller review shows stronger usable cash flow through valid add-backs or structure changes.',
+        'Most lenders would likely see this as a request that needs to be reduced, restructured, or reviewed more deeply before it is ready. A lower payment, smaller loan amount, stronger documented income, or different loan structure may be needed.',
     },
     nextStep: {
-      title: 'Strengthen The File Before You Apply',
+      title: 'Strengthen Your Financial Position Before You Apply',
       description:
-        'This request likely needs a smaller size, stronger structure, or deeper review before it looks financeable to most lenders.',
+        'This request likely needs a smaller loan size, a lower monthly payment, or better loan terms such as a longer repayment period or lower interest rate before it looks financeable to most lenders.',
       businessAge: '2+ Years Preferred',
       businessAgeNote: 'Time in business helps, but cash flow is still the main issue at this range.',
       creditRange: 'Often 700+',
@@ -254,9 +254,9 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       borderClassName: 'border-orange-200',
       panelClassName: 'bg-orange-50/70',
       summary:
-        'This payment is technically covered on paper, but only barely. One softer month, unexpected expense, or lender adjustment could wipe out the cushion.',
+        'Even though the payment is technically covered, the cushion is too thin for most lenders. A small drop in income or increase in expenses could make the request unsupported.',
       lenderRead:
-        'Most lenders would still call this tight because there is almost no room for error. This is often a range where a deeper analysis matters before you package or apply.',
+        'Most lenders would likely see this as not ready yet. The request may need a lower payment, smaller loan amount, stronger documented income, or better terms before it looks financeable.',
     },
     nextStep: {
       title: 'Get The Structure Tighter First',
@@ -310,24 +310,24 @@ export const DSCR_BANDS: readonly DscrBandDefinition[] = [
       borderClassName: 'border-amber-200',
       panelClassName: 'bg-amber-50/70',
       summary:
-        'This request looks close to workable, but it is still tighter than most lenders prefer. The business is covering the payment, just not with a very comfortable cushion yet.',
+        'This request may be workable, but the cushion is still thinner than many lenders prefer. The business appears to cover the payment, but there is not much extra room after debt.',
       lenderRead:
-        'A lender may see potential here, but often wants a smaller request, lower payment, or stronger overall file before feeling comfortable moving forward. This is one of the most important ranges for a lender-style review.',
+        'A lender may see potential here, but may still want a lower payment, smaller loan amount, stronger documented income, or better loan terms before feeling comfortable moving forward.',
     },
     nextStep: {
-      title: 'You May Be Close, But Not Quite Ready',
+      title: 'You May Be Close, But The Structure Needs Work',
       description:
-        'There may be a workable deal here, but many lenders would still want a smaller request, stronger support, or better overall structure.',
+        'There may be a workable deal here, but many lenders would still want a lower payment, smaller loan amount, stronger documented income, or better loan terms before moving forward.',
       businessAge: '2+ Years Is Common',
       businessAgeNote: 'More operating history can make a borderline request easier to explain.',
       creditRange: 'Often 660-700+',
       creditNote: 'This is the zone where credit quality and a clean package start mattering more.',
       serviceEyebrow: 'Recommended First Step',
-      serviceTitle: 'Dial In The File Before Packaging',
+      serviceTitle: 'Review The Request Before Packaging',
       serviceDescription:
-        'A bank-level review can help you decide whether the request should be resized or repackaged before moving forward.',
+        'A deeper review can help you decide whether the loan amount, payment, or terms should be adjusted before moving forward.',
       serviceSupportLine:
-        'Best for borrowers who may be financeable, but need better structure before lender outreach.',
+        'Best when the request may be financeable, but the payment or terms may need improvement before lender outreach.',
       primaryCtaLabel: 'Get My Bank-Level Analysis',
       primaryCtaKind: 'analysis',
     },
