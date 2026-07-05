@@ -345,6 +345,7 @@ export async function GET(req: NextRequest) {
         hasTemplateBundleGrant: Boolean(accountRow?.access_templates),
         hasPackagingGrant: Boolean(accountRow?.access_packaging),
         hasComprehensiveGrant: Boolean(accountRow?.access_comprehensive),
+        hasCashFlowAnalysis: Boolean(latestCashFlow),
       };
     });
 
@@ -397,6 +398,7 @@ export async function GET(req: NextRequest) {
         progressPct,
         lastUpdate: latestIsoDate(row.updated_at, row.created_at),
         hasAccount: false,
+        hasCashFlowAnalysis: false,
         hasTemplateAccess: access.hasTemplateAccess,
         hasPackagingAccess: access.hasLoanPackaging,
         hasComprehensiveAccess: access.hasComprehensiveAccess,

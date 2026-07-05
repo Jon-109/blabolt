@@ -45,6 +45,7 @@ type ClientRow = {
   hasTemplateBundleGrant: boolean;
   hasPackagingGrant: boolean;
   hasComprehensiveGrant: boolean;
+  hasCashFlowAnalysis: boolean;
 };
 
 type SharedProfile = {
@@ -185,6 +186,14 @@ type ClientDetail = {
       year2025: FinancialYear;
       year2026YTD: FinancialYear;
     };
+    debts: Array<{
+      category: string;
+      description: string;
+      monthlyPayment: string;
+      originalLoanAmount: string;
+      outstandingBalance: string;
+      notes?: string;
+    }>;
   };
 };
 
@@ -205,6 +214,14 @@ type ClientDetailDraft = {
   sharedProfile: SharedProfile;
   loanRequest: PackagingLoanRequest | null;
   cashFlowAnalysis: CashFlowAnalysisDetail | null;
+  cashFlowDebts: Array<{
+    category: string;
+    description: string;
+    monthlyPayment: string;
+    originalLoanAmount: string;
+    outstandingBalance: string;
+    notes?: string;
+  }>;
 };
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -245,6 +262,7 @@ function cloneDraft(detail: ClientDetail): ClientDetailDraft {
     sharedProfile: JSON.parse(JSON.stringify(detail.sharedProfile)),
     loanRequest: detail.packaging ? JSON.parse(JSON.stringify(detail.packaging.loanRequest)) : null,
     cashFlowAnalysis: detail.cashFlowAnalysis ? JSON.parse(JSON.stringify(detail.cashFlowAnalysis)) : null,
+    cashFlowDebts: detail.cashFlowAnalysis?.debts ?? [],
   };
 }
 
@@ -479,6 +497,7 @@ export default function AdminDashboardClient() {
               downPayment293: draft.cashFlowAnalysis.loanInfo.downPayment293,
               proposedLoan: draft.cashFlowAnalysis.loanInfo.proposedLoan,
               financials: draft.cashFlowAnalysis.financials,
+              debts: draft.cashFlowDebts,
             }
           : undefined,
       };
@@ -646,10 +665,43 @@ export default function AdminDashboardClient() {
                                 />
                               ) : null}
                               {showComprehensiveAction ? (
-                                <ActionButton
-                                  label={client.hasComprehensiveAccess ? 'Remove Comprehensive Access' : 'Give Comprehensive Access'}
-                                  onClick={() => void runClientAction(client.id, client.hasComprehensiveAccess ? 'revoke_comprehensive' : 'grant_comprehensive')}
-                                />
+                                <>
+                                  <ActionButton
+                                    label={client.hasComprehensiveAccess ? 'Remove Comprehensive Access' : 'Give Comprehensive Access'}
+                                    onClick={() => void runClientAction(client.id, client.hasComprehensiveAccess ? 'revoke_comprehensive' : 'grant_comprehensive')}
+                                  />
+                                  {client.hasComprehensiveAccess && !client.hasCashFlowAnalysis ? (
+                                    <ActionButton
+                                      label={savingTarget?.startsWith('create_cashflow:') ? 'Creating...' : 'Create Cash Flow Analysis'}
+                                      onClick={async () => {
+                                        if (savingTarget?.startsWith('create_cashflow:')) return;
+                                        const createKey = `create_cashflow:${client.id}`;
+                                        setSavingTarget(createKey);
+                                        setErrorMessage(null);
+                                        try {
+                                          const authHeaders = await getAuthHeaders();
+                                          const res = await fetch('/api/admin/clients/create-cash-flow-analysis', {
+                                            method: 'POST',
+                                            headers: { ...authHeaders, 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ clientId: client.id }),
+                                          });
+                                          const json = await res.json().catch(() => ({}));
+                                          if (!res.ok) {
+                                            throw new Error(json.error || 'Failed to create cash flow analysis');
+                                          }
+                                          await loadEverything();
+                                          if (expandedClientId === client.id) {
+                                            await loadClientDetail(client.id, true);
+                                          }
+                                        } catch (error) {
+                                          setErrorMessage(error instanceof Error ? error.message : 'Failed to create cash flow analysis');
+                                        } finally {
+                                          setSavingTarget(null);
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+                                </>
                               ) : null}
 
                               {showTemplateActions ? (
@@ -1385,6 +1437,153 @@ function ClientDetailPanel({
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-4">
+            <SectionTitle title="Business Debts" subtitle="Current business obligations by category." />
+            {isEditing ? (
+              <div className="mt-3 space-y-2">
+                {(draft.cashFlowDebts ?? []).map((debt, index) => (
+                  <div key={index} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="grid gap-2 md:grid-cols-6">
+                      <div>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase">Category</p>
+                        <select
+                          value={debt.category}
+                          onChange={(event) => {
+                            const updated = [...(draft.cashFlowDebts ?? [])];
+                            updated[index] = { ...debt, category: event.target.value };
+                            onDraftChange({ ...draft, cashFlowDebts: updated });
+                          }}
+                          className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                        >
+                          <option value="REAL_ESTATE">Real Estate</option>
+                          <option value="VEHICLE_EQUIPMENT">Vehicle/Equipment</option>
+                          <option value="CREDIT_CARD">Credit Card</option>
+                          <option value="LINE_OF_CREDIT">Line of Credit</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase">Description</p>
+                        <input
+                          value={debt.description}
+                          onChange={(event) => {
+                            const updated = [...(draft.cashFlowDebts ?? [])];
+                            updated[index] = { ...debt, description: event.target.value };
+                            onDraftChange({ ...draft, cashFlowDebts: updated });
+                          }}
+                          className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase">Balance</p>
+                        <input
+                          value={debt.outstandingBalance}
+                          onChange={(event) => {
+                            const updated = [...(draft.cashFlowDebts ?? [])];
+                            updated[index] = { ...debt, outstandingBalance: event.target.value };
+                            onDraftChange({ ...draft, cashFlowDebts: updated });
+                          }}
+                          className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase">Payment</p>
+                        <input
+                          value={debt.monthlyPayment}
+                          onChange={(event) => {
+                            const updated = [...(draft.cashFlowDebts ?? [])];
+                            updated[index] = { ...debt, monthlyPayment: event.target.value };
+                            onDraftChange({ ...draft, cashFlowDebts: updated });
+                          }}
+                          className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase">Original</p>
+                        <input
+                          value={debt.originalLoanAmount}
+                          onChange={(event) => {
+                            const updated = [...(draft.cashFlowDebts ?? [])];
+                            updated[index] = { ...debt, originalLoanAmount: event.target.value };
+                            onDraftChange({ ...draft, cashFlowDebts: updated });
+                          }}
+                          className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...(draft.cashFlowDebts ?? [])];
+                            updated.splice(index, 1);
+                            onDraftChange({ ...draft, cashFlowDebts: updated });
+                          }}
+                          className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = [...(draft.cashFlowDebts ?? [])];
+                    updated.push({
+                      category: 'OTHER',
+                      description: '',
+                      monthlyPayment: '',
+                      originalLoanAmount: '',
+                      outstandingBalance: '',
+                    });
+                    onDraftChange({ ...draft, cashFlowDebts: updated });
+                  }}
+                  className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700"
+                >
+                  + Add Debt Entry
+                </button>
+              </div>
+            ) : (
+              <>
+                {detail.cashFlowAnalysis.debts && detail.cashFlowAnalysis.debts.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    {detail.cashFlowAnalysis.debts.map((debt, index) => (
+                      <div key={index} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                        <div className="grid gap-2 md:grid-cols-5">
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase">Category</p>
+                            <p className="text-sm font-medium text-slate-900">{debt.category}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase">Description</p>
+                            <p className="text-sm text-slate-700">{debt.description || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase">Balance</p>
+                            <p className="text-sm text-slate-700">{debt.outstandingBalance || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase">Payment</p>
+                            <p className="text-sm text-slate-700">{debt.monthlyPayment || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase">Original</p>
+                            <p className="text-sm text-slate-700">{debt.originalLoanAmount || '-'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-sm text-slate-500">No business debts recorded.</p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </section>
       ) : null}

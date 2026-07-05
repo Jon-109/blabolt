@@ -144,6 +144,14 @@ const detailPatchSchema = z.object({
       year2025: financialYearSchema,
       year2026YTD: financialYearSchema,
     }).optional(),
+    debts: z.array(z.object({
+      category: z.string(),
+      description: z.string().nullable().optional(),
+      monthlyPayment: z.string().nullable().optional(),
+      originalLoanAmount: z.string().nullable().optional(),
+      outstandingBalance: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+    })).optional(),
   }).optional(),
 });
 
@@ -180,6 +188,37 @@ function extractDebtEntries(value: unknown): AnyRow[] {
   }
 
   return [];
+}
+
+function getPendingCashFlowPayload(account: AnyRow | null): AnyRow {
+  const payload = account?.pending_cash_flow_analysis;
+  return payload && typeof payload === 'object' && !Array.isArray(payload) ? payload as AnyRow : {};
+}
+
+function buildEmptyPendingCashFlowPayload(account: AnyRow | null, sharedProfile: SharedProfileSnapshot): AnyRow {
+  const personalName = coerceString(sharedProfile.personalName ?? account?.full_name);
+  const nameParts = personalName ? personalName.split(/\s+/) : [];
+
+  return {
+    status: 'inprogress',
+    loanInfo: {
+      firstName: nameParts[0] ?? null,
+      lastName: nameParts.length > 1 ? nameParts.slice(1).join(' ') : null,
+      businessName: coerceString(sharedProfile.businessName ?? sharedProfile.businessLegalName),
+      loanPurpose: coerceString(sharedProfile.loanPurpose),
+      desiredAmount: parseFiniteNumber(sharedProfile.loanAmount),
+      estimatedPayment: null,
+      annualizedLoan: null,
+      term: null,
+      interestRate: null,
+      downPayment: null,
+      downPayment293: null,
+      proposedLoan: null,
+    },
+    financials: createEmptyFinancialPayload(),
+    debts: [],
+    dscr: { values: { '2024': null, '2025': null, '2026YTD': null }, currentValue: null, currentYear: null },
+  };
 }
 
 function mergeSharedProfiles(
@@ -435,6 +474,11 @@ async function buildClientDetailPayload(
   const financials = latestCashFlowAnalysis
     ? normalizeFinancialsPayload(latestCashFlowAnalysis.financials)
     : createEmptyFinancialPayload();
+  const pendingCashFlowPayload = getPendingCashFlowPayload(account);
+  const shouldShowPendingCashFlow = !latestCashFlowAnalysis && access.hasComprehensiveAccess && Boolean(account?.id);
+  const pendingCashFlow = shouldShowPendingCashFlow
+    ? { ...buildEmptyPendingCashFlowPayload(account, sharedProfile), ...pendingCashFlowPayload }
+    : null;
 
   return {
     client: {
@@ -527,8 +571,32 @@ async function buildClientDetailPayload(
             proposedLoan: parseFiniteNumber(latestCashFlowAnalysis.proposed_loan),
           },
           financials,
+          debts: extractDebtEntries(latestCashFlowAnalysis.debts),
         }
-      : null,
+      : pendingCashFlow
+        ? {
+            id: String(account?.id ?? clientId),
+            status: pendingCashFlow.status === 'submitted' ? 'submitted' : 'inprogress',
+            updatedAt: String(account?.updated_at ?? ''),
+            dscr: normalizeDscrSnapshot((pendingCashFlow.dscr as AnyRow | undefined) ?? null),
+            loanInfo: {
+              firstName: coerceString((pendingCashFlow.loanInfo as AnyRow | undefined)?.firstName),
+              lastName: coerceString((pendingCashFlow.loanInfo as AnyRow | undefined)?.lastName),
+              businessName: coerceString((pendingCashFlow.loanInfo as AnyRow | undefined)?.businessName),
+              loanPurpose: coerceString((pendingCashFlow.loanInfo as AnyRow | undefined)?.loanPurpose),
+              desiredAmount: parseFiniteNumber((pendingCashFlow.loanInfo as AnyRow | undefined)?.desiredAmount),
+              estimatedPayment: parseFiniteNumber((pendingCashFlow.loanInfo as AnyRow | undefined)?.estimatedPayment),
+              annualizedLoan: parseFiniteNumber((pendingCashFlow.loanInfo as AnyRow | undefined)?.annualizedLoan),
+              term: coerceString((pendingCashFlow.loanInfo as AnyRow | undefined)?.term),
+              interestRate: parseFiniteNumber((pendingCashFlow.loanInfo as AnyRow | undefined)?.interestRate),
+              downPayment: parseFiniteNumber((pendingCashFlow.loanInfo as AnyRow | undefined)?.downPayment),
+              downPayment293: coerceString((pendingCashFlow.loanInfo as AnyRow | undefined)?.downPayment293),
+              proposedLoan: parseFiniteNumber((pendingCashFlow.loanInfo as AnyRow | undefined)?.proposedLoan),
+            },
+            financials: normalizeFinancialsPayload(pendingCashFlow.financials),
+            debts: extractDebtEntries(pendingCashFlow.debts),
+          }
+        : null,
   };
 }
 
@@ -663,6 +731,69 @@ export async function PATCH(
     }
   }
 
+  if (parsed.data.cashFlowAnalysis && !userId && identity.account?.id) {
+    const financialsPayload = parsed.data.cashFlowAnalysis.financials
+      ? normalizeFinancialsPayload({
+          year2024: {
+            input: parsed.data.cashFlowAnalysis.financials.year2024.input,
+            skip: parsed.data.cashFlowAnalysis.financials.year2024.skip,
+          },
+          year2025: {
+            input: parsed.data.cashFlowAnalysis.financials.year2025.input,
+            skip: parsed.data.cashFlowAnalysis.financials.year2025.skip,
+          },
+          year2026YTD: {
+            input: parsed.data.cashFlowAnalysis.financials.year2026YTD.input,
+            skip: parsed.data.cashFlowAnalysis.financials.year2026YTD.skip,
+            ytdMonth: parsed.data.cashFlowAnalysis.financials.year2026YTD.ytdMonth ?? '',
+          },
+        })
+      : createEmptyFinancialPayload();
+    const annualizedLoan = parsed.data.cashFlowAnalysis.annualizedLoan ?? 0;
+    const debtEntries = extractDebtEntries(parsed.data.cashFlowAnalysis.debts);
+    const debtMetrics = buildDebtMetrics(
+      debtEntries as never[],
+      annualizedLoan,
+      financialsPayload.year2026YTD?.ytdMonth,
+    );
+    const dscr = roundDscrMap(
+      calculateDscrResults(
+        financialsPayload,
+        debtMetrics.annualDebtServices,
+        debtMetrics.annualizedLoanPayments,
+      ),
+    );
+    const pendingCashFlowAnalysis = {
+      status: parsed.data.cashFlowAnalysis.status ?? 'inprogress',
+      loanInfo: {
+        firstName: parsed.data.cashFlowAnalysis.firstName ?? null,
+        lastName: parsed.data.cashFlowAnalysis.lastName ?? null,
+        businessName: parsed.data.cashFlowAnalysis.businessName ?? null,
+        loanPurpose: parsed.data.cashFlowAnalysis.loanPurpose ?? null,
+        desiredAmount: parsed.data.cashFlowAnalysis.desiredAmount ?? null,
+        estimatedPayment: parsed.data.cashFlowAnalysis.estimatedPayment ?? null,
+        annualizedLoan: parsed.data.cashFlowAnalysis.annualizedLoan ?? null,
+        term: parsed.data.cashFlowAnalysis.term ?? null,
+        interestRate: parsed.data.cashFlowAnalysis.interestRate ?? null,
+        downPayment: parsed.data.cashFlowAnalysis.downPayment ?? null,
+        downPayment293: parsed.data.cashFlowAnalysis.downPayment293 ?? null,
+        proposedLoan: parsed.data.cashFlowAnalysis.proposedLoan ?? null,
+      },
+      financials: financialsPayload,
+      debts: parsed.data.cashFlowAnalysis.debts ?? [],
+      dscr,
+    };
+
+    const { error } = await admin
+      .from('client_accounts')
+      .update({ pending_cash_flow_analysis: pendingCashFlowAnalysis, updated_at: nowIso })
+      .eq('id', String(identity.account.id));
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  }
+
   if (parsed.data.cashFlowAnalysis && userId) {
     const currentAnalysisResult = await admin
       .from('cash_flow_analyses')
@@ -739,6 +870,9 @@ export async function PATCH(
     }
     if ('proposedLoan' in parsed.data.cashFlowAnalysis) {
       cashFlowUpdates.proposed_loan = parsed.data.cashFlowAnalysis.proposedLoan ?? null;
+    }
+    if ('debts' in parsed.data.cashFlowAnalysis) {
+      cashFlowUpdates.debts = parsed.data.cashFlowAnalysis.debts ?? [];
     }
 
     const { error } = await admin
