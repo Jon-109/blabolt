@@ -48,6 +48,12 @@ async function generatePdfBuffer(printUrl: string): Promise<Buffer> {
   const browserlessUrl = `https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`;
   const requestBody = {
     url: printUrl,
+    emulateMediaType: 'screen',
+    waitForSelector: {
+      selector: '[data-pdf-render-root]',
+      timeout: 10_000,
+    },
+    waitForTimeout: 750,
     options: {
       format: 'A4',
       printBackground: true,

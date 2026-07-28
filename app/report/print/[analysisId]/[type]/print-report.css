@@ -11,6 +11,17 @@ html, body {
   color: #000;
 }
 
+body > header,
+body > footer,
+body > div > header,
+body > div > footer {
+  display: none !important;
+}
+
+main {
+  padding-top: 0 !important;
+}
+
 .page-break {
   display: block;
   height: 0;

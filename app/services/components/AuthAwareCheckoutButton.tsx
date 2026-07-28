@@ -6,11 +6,23 @@ import { useRouter } from 'next/navigation';
 import { Button, type ButtonProps } from '@/app/(components)/ui/button';
 import type { StripeCheckoutProductType } from '@/lib/stripe/catalog';
 import { getCheckoutPath } from '@/lib/stripe/checkout-paths';
+import { trackBeginCheckout } from '@/lib/analytics';
 import { supabase } from '@/supabase/helpers/client';
 
 type AuthAwareCheckoutButtonProps = Omit<ButtonProps, 'asChild'> & {
   pendingLabel?: React.ReactNode;
   productType: StripeCheckoutProductType;
+};
+
+const checkoutEventMeta: Record<StripeCheckoutProductType, { itemName: string; value: number }> = {
+  balance_sheet: { itemName: 'Balance Sheet Template', value: 19.99 },
+  income_statement: { itemName: 'Profit and Loss Statement Template', value: 19.99 },
+  business_debt_summary: { itemName: 'Business Debt Summary Template', value: 19.99 },
+  personal_financial_statement: { itemName: 'Personal Financial Statement Template', value: 19.99 },
+  personal_debt_summary: { itemName: 'Personal Debt Summary Template', value: 19.99 },
+  templates_bundle: { itemName: 'Loan Document Templates Bundle', value: 49.99 },
+  loan_packaging: { itemName: 'Loan Packaging', value: 499 },
+  cash_flow_analysis: { itemName: 'Cash Flow Analysis', value: 49.99 },
 };
 
 export default function AuthAwareCheckoutButton({
@@ -31,6 +43,13 @@ export default function AuthAwareCheckoutButton({
     }
 
     const checkoutPath = getCheckoutPath(productType);
+    const eventMeta = checkoutEventMeta[productType];
+    trackBeginCheckout({
+      item_id: productType,
+      item_name: eventMeta.itemName,
+      value: eventMeta.value,
+      currency: 'USD',
+    });
     setIsStarting(true);
 
     try {

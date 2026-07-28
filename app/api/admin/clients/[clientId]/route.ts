@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { TEMPLATE_TYPES } from '@/lib/stripe/catalog';
 import { type User } from '@supabase/supabase-js';
 import {
   buildDebtMetrics,
@@ -16,6 +17,7 @@ import {
   deriveServicePills,
   filterApplicableRequirements,
   formatRequirementDisplayName,
+  getGrantedTemplateTypes,
   normalizeDscrSnapshot,
   parseFiniteNumber,
 } from '@/lib/admin/client-dashboard';
@@ -69,6 +71,8 @@ const fullFinancialInputSchema = z.object({
   revenue: z.string(),
   cogs: z.string(),
   operatingExpenses: z.string(),
+  otherIncome: z.string(),
+  interestIncome: z.string(),
   nonRecurringIncome: z.string(),
   nonRecurringExpenses: z.string(),
   depreciation: z.string(),
@@ -86,6 +90,7 @@ const financialYearSchema = z.object({
 const detailPatchSchema = z.object({
   account: z.object({
     fullName: z.string().trim().max(180).nullable().optional(),
+    businessName: z.string().trim().max(180).nullable().optional(),
     email: z.preprocess(
       (value) => {
         if (value === undefined) return undefined;
@@ -96,12 +101,25 @@ const detailPatchSchema = z.object({
       },
       z.string().email().nullable().optional(),
     ),
+    phone: nullableTextSchema,
+    companyRole: nullableTextSchema,
+    leadSource: nullableTextSchema,
+    dealStage: z.enum(['new_lead','analysis_purchased','analysis_complete','package_started','package_complete','lender_feeler_ready','lender_feeler_sent','lender_interested','connected_to_lender','funded','closed_lost','nurture']).optional(),
+    priority: z.enum(['low','normal','high','urgent']).optional(),
+    selectedPath: z.enum(['undecided','self_serve_package','lender_matching','templates_only','analysis_only']).nullable().optional(),
+    lastContactedAt: z.string().datetime().nullable().optional(),
+    targetCloseDate: z.string().nullable().optional(),
+    estimatedBrokerFee: nullableNumberSchema.optional(),
+    lenderStatus: z.enum(['not_started','needs_package','ready_for_feeler','feeler_sent','interested','declined','connected','funded']).optional(),
+    portalMessage: nullableTextSchema,
+    clientPortalEnabled: z.boolean().optional(),
     notes: nullableTextSchema,
     nextStep: nullableTextSchema,
     serviceLevel: z.enum(['none', 'comprehensive', 'templates', 'packaging', 'brokering']).optional(),
     accessTemplates: z.boolean().optional(),
     accessPackaging: z.boolean().optional(),
     accessComprehensive: z.boolean().optional(),
+    grantedTemplateTypes: z.array(z.enum(TEMPLATE_TYPES as [string, ...string[]])).optional(),
   }).optional(),
   sharedProfile: z.object({
     personalName: nullableTextSchema,
@@ -497,6 +515,7 @@ async function buildClientDetailPayload(
       hasTemplateAccess: access.hasTemplateAccess,
       hasPackagingAccess: access.hasLoanPackaging,
       hasComprehensiveAccess: access.hasComprehensiveAccess,
+      grantedTemplateTypes: getGrantedTemplateTypes(account),
       lastUpdate: latestIsoDate(
         account?.updated_at,
         latestLoanRequest?.updated_at,
@@ -508,12 +527,26 @@ async function buildClientDetailPayload(
     },
     account: {
       fullName: coerceString(account?.full_name),
+      businessName: coerceString(account?.business_name),
+      phone: coerceString(account?.phone),
+      companyRole: coerceString(account?.company_role),
+      leadSource: coerceString(account?.lead_source),
+      dealStage: String(account?.deal_stage ?? 'new_lead'),
+      priority: String(account?.priority ?? 'normal'),
+      selectedPath: coerceString(account?.selected_path),
+      lastContactedAt: coerceString(account?.last_contacted_at),
+      targetCloseDate: coerceString(account?.target_close_date),
+      estimatedBrokerFee: parseFiniteNumber(account?.estimated_broker_fee),
+      lenderStatus: String(account?.lender_status ?? 'not_started'),
+      portalMessage: coerceString(account?.portal_message),
+      clientPortalEnabled: account?.client_portal_enabled !== false,
       notes: coerceString(account?.notes),
       nextStep: coerceString(account?.next_step),
       serviceLevel: String(account?.service_level ?? 'none'),
       accessTemplates: Boolean(account?.access_templates),
       accessPackaging: Boolean(account?.access_packaging),
       accessComprehensive: Boolean(account?.access_comprehensive),
+      grantedTemplateTypes: getGrantedTemplateTypes(account),
       email,
     },
     sharedProfile,
@@ -652,6 +685,7 @@ export async function PATCH(
     };
 
     if ('fullName' in parsed.data.account) accountUpdates.full_name = parsed.data.account.fullName ?? null;
+    if ('businessName' in parsed.data.account) accountUpdates.business_name = parsed.data.account.businessName ?? null;
     if ('email' in parsed.data.account) {
       if (identity.user) {
         const nextEmail = (parsed.data.account.email ?? '').trim().toLowerCase();
@@ -664,12 +698,25 @@ export async function PATCH(
         accountUpdates.email = parsed.data.account.email ?? null;
       }
     }
+    if ('phone' in parsed.data.account) accountUpdates.phone = parsed.data.account.phone ?? null;
+    if ('companyRole' in parsed.data.account) accountUpdates.company_role = parsed.data.account.companyRole ?? null;
+    if ('leadSource' in parsed.data.account) accountUpdates.lead_source = parsed.data.account.leadSource ?? null;
+    if ('dealStage' in parsed.data.account) accountUpdates.deal_stage = parsed.data.account.dealStage;
+    if ('priority' in parsed.data.account) accountUpdates.priority = parsed.data.account.priority;
+    if ('selectedPath' in parsed.data.account) accountUpdates.selected_path = parsed.data.account.selectedPath ?? null;
+    if ('lastContactedAt' in parsed.data.account) accountUpdates.last_contacted_at = parsed.data.account.lastContactedAt ?? null;
+    if ('targetCloseDate' in parsed.data.account) accountUpdates.target_close_date = parsed.data.account.targetCloseDate ?? null;
+    if ('estimatedBrokerFee' in parsed.data.account) accountUpdates.estimated_broker_fee = parsed.data.account.estimatedBrokerFee ?? null;
+    if ('lenderStatus' in parsed.data.account) accountUpdates.lender_status = parsed.data.account.lenderStatus;
+    if ('portalMessage' in parsed.data.account) accountUpdates.portal_message = parsed.data.account.portalMessage ?? null;
+    if ('clientPortalEnabled' in parsed.data.account) accountUpdates.client_portal_enabled = parsed.data.account.clientPortalEnabled;
     if ('notes' in parsed.data.account) accountUpdates.notes = parsed.data.account.notes ?? null;
     if ('nextStep' in parsed.data.account) accountUpdates.next_step = parsed.data.account.nextStep ?? null;
     if ('serviceLevel' in parsed.data.account) accountUpdates.service_level = parsed.data.account.serviceLevel;
     if ('accessTemplates' in parsed.data.account) accountUpdates.access_templates = parsed.data.account.accessTemplates;
     if ('accessPackaging' in parsed.data.account) accountUpdates.access_packaging = parsed.data.account.accessPackaging;
     if ('accessComprehensive' in parsed.data.account) accountUpdates.access_comprehensive = parsed.data.account.accessComprehensive;
+    if ('grantedTemplateTypes' in parsed.data.account) accountUpdates.granted_template_types = parsed.data.account.grantedTemplateTypes ?? [];
 
     const { error } = await admin
       .from('client_accounts')

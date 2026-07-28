@@ -26,6 +26,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import DscrQuickCalculator from '@/app/(components)/cash-flow/DscrQuickCalculator';
 import ContactFormModal from '@/app/(components)/shared/ContactFormModal';
+import LeadInterestForm from '@/app/(components)/shared/LeadInterestForm';
 import Testimonials from '@/app/(components)/shared/Testimonials';
 import { trackCtaClick, trackSectionView } from '@/lib/analytics';
 
@@ -814,6 +815,14 @@ function CashFlowAnalysisInner() {
         </div>
       </section>
 
+      <section className="bg-[linear-gradient(180deg,#ffffff_0%,#eff6ff_100%)] py-8 sm:py-12" data-cashflow-reveal data-analytics-section="lead_interest_form" data-analytics-label="Lead Interest Form">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="home-reveal mx-auto max-w-5xl">
+            <LeadInterestForm source="cash-flow-analysis-embedded" />
+          </div>
+        </div>
+      </section>
+
       <section className="relative overflow-hidden bg-slate-950 py-8 text-white sm:py-12" data-cashflow-reveal data-analytics-section="next_move" data-analytics-label="Next Move">
         <div className="pointer-events-none absolute inset-0 opacity-55 [background-image:radial-gradient(circle_at_16%_20%,rgba(6,182,212,0.18),transparent_24%),radial-gradient(circle_at_82%_16%,rgba(251,191,36,0.14),transparent_22%),radial-gradient(circle_at_72%_84%,rgba(16,185,129,0.14),transparent_28%)]" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -924,6 +933,7 @@ function CashFlowAnalysisInner() {
       <ContactFormModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
+        source="cash-flow-analysis-modal"
       />
     </div>
   );

@@ -6,6 +6,7 @@ import {
   type AnyRow,
   buildPackagingProgress,
   computeTemplateProgress,
+  createEmptyFinancialPayload,
   deriveAccessFlags,
   derivePrimaryServiceLabel,
   deriveServicePills,
@@ -44,12 +45,18 @@ const optionalEmailSchema = z.preprocess(
 
 const createClientSchema = z.object({
   fullName: optionalNameSchema,
+  businessName: optionalNameSchema,
   email: optionalEmailSchema,
+  accessComprehensive: z.boolean().optional(),
+  accessPackaging: z.boolean().optional(),
+  accessTemplates: z.boolean().optional(),
+  grantedTemplateTypes: z.array(templateTypeSchema).optional(),
+  serviceLevel: z.enum(['none', 'comprehensive', 'templates', 'packaging', 'brokering']).optional(),
 }).superRefine((value, ctx) => {
-  if (!value.fullName && !value.email) {
+  if (!value.fullName && !value.businessName && !value.email) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: 'Either a client name or email is required.',
+      message: 'Either a client name, business name, or email is required.',
       path: ['fullName'],
     });
   }
@@ -64,6 +71,8 @@ const actionSchema = z.object({
     'revoke_template',
     'grant_packaging',
     'revoke_packaging',
+    'grant_brokering',
+    'revoke_brokering',
     'grant_comprehensive',
     'revoke_comprehensive',
   ]),
@@ -169,7 +178,7 @@ export async function GET(req: NextRequest) {
       .limit(20000),
     admin
       .from('cash_flow_analyses')
-      .select('id,user_id,status,dscr,updated_at')
+      .select('id,user_id,status,dscr,business_name,updated_at')
       .order('updated_at', { ascending: false })
       .limit(5000),
     admin
@@ -322,6 +331,12 @@ export async function GET(req: NextRequest) {
 
       return {
         id: userId,
+        businessName: String(
+          accountRow?.business_name ??
+          latestLoanRequest?.business_name ??
+          latestCashFlow?.business_name ??
+          ''
+        ),
         fullName: String(accountRow?.full_name ?? user.user_metadata?.full_name ?? user.user_metadata?.name ?? ''),
         email,
         service: derivePrimaryServiceLabel(services),
@@ -331,6 +346,13 @@ export async function GET(req: NextRequest) {
         dscrYear: dscr.currentYear,
         nextStep,
         progressPct,
+        dealStage: String(accountRow?.deal_stage ?? 'new_lead'),
+        priority: String(accountRow?.priority ?? 'normal'),
+        selectedPath: typeof accountRow?.selected_path === 'string' ? accountRow.selected_path : null,
+        lenderStatus: String(accountRow?.lender_status ?? 'not_started'),
+        estimatedBrokerFee: typeof accountRow?.estimated_broker_fee === 'number' ? accountRow.estimated_broker_fee : accountRow?.estimated_broker_fee ? Number(accountRow.estimated_broker_fee) : null,
+        targetCloseDate: typeof accountRow?.target_close_date === 'string' ? accountRow.target_close_date : null,
+        lastContactedAt: typeof accountRow?.last_contacted_at === 'string' ? accountRow.last_contacted_at : null,
         lastUpdate: latestIsoDate(
           accountRow?.updated_at,
           latestLoanRequest?.updated_at,
@@ -344,6 +366,7 @@ export async function GET(req: NextRequest) {
         hasComprehensiveAccess: access.hasComprehensiveAccess,
         hasTemplateBundleGrant: Boolean(accountRow?.access_templates),
         hasPackagingGrant: Boolean(accountRow?.access_packaging),
+        hasBrokeringGrant: String(accountRow?.service_level ?? '') === 'brokering',
         hasComprehensiveGrant: Boolean(accountRow?.access_comprehensive),
         hasCashFlowAnalysis: Boolean(latestCashFlow),
       };
@@ -375,7 +398,7 @@ export async function GET(req: NextRequest) {
       const services = deriveServicePills({ accountRow: row, latestLoanRequest, purchaseTypes });
 
       let nextStep = 'Invite client to sign in';
-      let progressPct = 0;
+      const progressPct = 0;
 
       if (access.hasLoanPackaging) nextStep = 'Loan Details';
       else if (access.hasTemplateAccess) nextStep = 'Start Personal Debt Summary';
@@ -387,6 +410,7 @@ export async function GET(req: NextRequest) {
 
       return {
         id: String(row.id),
+        businessName: String(row.business_name ?? ''),
         fullName: String(row.full_name ?? ''),
         email: String(row.email ?? '').toLowerCase(),
         service: derivePrimaryServiceLabel(services),
@@ -396,6 +420,13 @@ export async function GET(req: NextRequest) {
         dscrYear: null,
         nextStep,
         progressPct,
+        dealStage: String(row.deal_stage ?? 'new_lead'),
+        priority: String(row.priority ?? 'normal'),
+        selectedPath: typeof row.selected_path === 'string' ? row.selected_path : null,
+        lenderStatus: String(row.lender_status ?? 'not_started'),
+        estimatedBrokerFee: typeof row.estimated_broker_fee === 'number' ? row.estimated_broker_fee : row.estimated_broker_fee ? Number(row.estimated_broker_fee) : null,
+        targetCloseDate: typeof row.target_close_date === 'string' ? row.target_close_date : null,
+        lastContactedAt: typeof row.last_contacted_at === 'string' ? row.last_contacted_at : null,
         lastUpdate: latestIsoDate(row.updated_at, row.created_at),
         hasAccount: false,
         hasCashFlowAnalysis: false,
@@ -404,6 +435,7 @@ export async function GET(req: NextRequest) {
         hasComprehensiveAccess: access.hasComprehensiveAccess,
         hasTemplateBundleGrant: Boolean(row.access_templates),
         hasPackagingGrant: Boolean(row.access_packaging),
+        hasBrokeringGrant: String(row.service_level ?? '') === 'brokering',
         hasComprehensiveGrant: Boolean(row.access_comprehensive),
       };
     });
@@ -425,23 +457,38 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = getSupabaseAdmin();
-  const { fullName, email } = parsed.data;
+  const { fullName, businessName, email, accessComprehensive, accessPackaging, accessTemplates, grantedTemplateTypes, serviceLevel } = parsed.data;
+  let authUserId: string | null = null;
+  if (email) {
+    const inviteResult = await admin.auth.admin.inviteUserByEmail(email, {
+      data: {
+        full_name: fullName ?? undefined,
+        business_name: businessName ?? undefined,
+      },
+    });
+    authUserId = inviteResult.data.user?.id ?? null;
+  }
+
+  const resolvedServiceLevel = serviceLevel ?? (accessPackaging ? 'packaging' : accessComprehensive ? 'comprehensive' : accessTemplates ? 'templates' : 'none');
+  const accountPayload = {
+    user_id: authUserId,
+    email: email ?? null,
+    full_name: fullName ?? null,
+    business_name: businessName ?? null,
+    access_comprehensive: Boolean(accessComprehensive),
+    access_packaging: Boolean(accessPackaging),
+    access_templates: Boolean(accessTemplates),
+    granted_template_types: grantedTemplateTypes ?? [],
+    service_level: resolvedServiceLevel,
+  };
 
   const mutation = email
     ? admin
         .from('client_accounts')
-        .upsert(
-          {
-            email,
-            full_name: fullName ?? null,
-          },
-          { onConflict: 'email' },
-        )
+        .upsert(accountPayload, { onConflict: 'email' })
     : admin
         .from('client_accounts')
-        .insert({
-          full_name: fullName ?? null,
-        });
+        .insert(accountPayload);
 
   const { data, error } = await mutation
     .select('*')
@@ -449,6 +496,33 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const effectiveUserId = authUserId ?? (typeof data.user_id === 'string' ? data.user_id : null);
+  if (effectiveUserId && (accessComprehensive || resolvedServiceLevel === 'comprehensive' || resolvedServiceLevel === 'packaging' || resolvedServiceLevel === 'brokering')) {
+    const existingDraft = await admin
+      .from('cash_flow_analyses')
+      .select('id')
+      .eq('user_id', effectiveUserId)
+      .eq('status', 'inprogress')
+      .limit(1)
+      .maybeSingle();
+
+    if (!existingDraft.data?.id) {
+      const nameParts = (fullName ?? '').split(/\s+/).filter(Boolean);
+      await admin
+        .from('cash_flow_analyses')
+        .insert({
+          user_id: effectiveUserId,
+          status: 'inprogress',
+          first_name: nameParts[0] ?? null,
+          last_name: nameParts.length > 1 ? nameParts.slice(1).join(' ') : null,
+          business_name: businessName ?? '',
+          financials: createEmptyFinancialPayload(),
+          dscr: { '2024': null, '2025': null, '2026YTD': null },
+          debts: [],
+        });
+    }
   }
 
   return NextResponse.json({ client: data });
@@ -484,8 +558,18 @@ export async function PATCH(req: NextRequest) {
   if (action === 'revoke_templates') updates.access_templates = false;
   if (action === 'grant_packaging') updates.access_packaging = true;
   if (action === 'revoke_packaging') updates.access_packaging = false;
+  if (action === 'grant_brokering') {
+    updates.access_packaging = true;
+    updates.service_level = 'brokering';
+  }
+  if (action === 'revoke_brokering') {
+    updates.access_packaging = false;
+    updates.service_level = 'none';
+  }
   if (action === 'grant_comprehensive') updates.access_comprehensive = true;
   if (action === 'revoke_comprehensive') updates.access_comprehensive = false;
+  if (action === 'grant_comprehensive') updates.service_level = 'comprehensive';
+  if (action === 'revoke_comprehensive' && String(accountRow.service_level ?? '') === 'comprehensive') updates.service_level = 'none';
   if (action === 'grant_template' && templateType) {
     updates.granted_template_types = Array.from(new Set([...grantedTemplateTypes, templateType]));
   }

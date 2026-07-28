@@ -13,7 +13,8 @@ export type CashFlowYearKey = '2024' | '2025' | '2026YTD';
 export type ClientServiceKey =
   | 'loan_packaging'
   | 'loan_brokering'
-  | 'comprehensive_cash_flow_analysis';
+  | 'comprehensive_cash_flow_analysis'
+  | 'templates';
 
 export type ClientServicePill = {
   key: ClientServiceKey;
@@ -54,6 +55,8 @@ export const CASH_FLOW_FIELD_LABELS: Record<keyof FullFinancialData, string> = {
   revenue: 'Revenue',
   cogs: 'COGS',
   operatingExpenses: 'Operating Expenses',
+  otherIncome: 'Other Income',
+  interestIncome: 'Interest Income',
   nonRecurringIncome: 'Non-Recurring Income',
   nonRecurringExpenses: 'Non-Recurring Expenses',
   depreciation: 'Depreciation',
@@ -66,6 +69,8 @@ export const EMPTY_FINANCIAL_INPUT: FullFinancialData = {
   revenue: '',
   cogs: '',
   operatingExpenses: '',
+  otherIncome: '',
+  interestIncome: '',
   nonRecurringIncome: '',
   nonRecurringExpenses: '',
   depreciation: '',
@@ -321,15 +326,25 @@ export function deriveServicePills(args: {
   const pills: ClientServicePill[] = [];
 
   if (explicitLoanBrokering) {
-    pills.push({ key: 'loan_brokering', label: 'Loan Brokering' });
+    pills.push({ key: 'loan_brokering', label: 'Brokering' });
   }
 
   if (explicitLoanPackaging) {
-    pills.push({ key: 'loan_packaging', label: 'Loan Packaging' });
+    pills.push({ key: 'loan_packaging', label: 'Packaging' });
   }
 
   if (explicitComprehensive) {
-    pills.push({ key: 'comprehensive_cash_flow_analysis', label: 'Comprehensive Cash Flow Analysis' });
+    pills.push({ key: 'comprehensive_cash_flow_analysis', label: 'Comprehensive' });
+  }
+
+  if (
+    purchaseTypes.has('templates_bundle') ||
+    Array.from(purchaseTypes).some((type) => isTemplateType(type)) ||
+    grantedTemplateTypes.length > 0 ||
+    serviceLevel === 'templates' ||
+    Boolean(args.accountRow?.access_templates)
+  ) {
+    pills.push({ key: 'templates', label: 'Templates' });
   }
 
   return pills;
@@ -388,10 +403,13 @@ function emptyFinancialSummary() {
     netIncome: 0,
     ebitda: 0,
     grossProfit: 0,
+    operatingIncome: 0,
     interest: 0,
     taxes: 0,
     cogs: 0,
     operatingExpenses: 0,
+    otherIncome: 0,
+    interestIncome: 0,
     depreciation: 0,
     amortization: 0,
     nonRecurringIncome: 0,

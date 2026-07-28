@@ -67,19 +67,41 @@ export default async function PrintPage({ params, searchParams }: {
   // Cast form_data to the appropriate type based on template_type
   const data = submission.form_data as SubmissionDataMap[keyof SubmissionDataMap];
 
-  // Render component by template type
+  let content;
   switch (submission.template_type) {
     case 'balance_sheet':
-      return <BalanceSheet data={data as SubmissionDataMap['balance_sheet']} />;
+      content = <BalanceSheet data={data as SubmissionDataMap['balance_sheet']} />;
+      break;
     case 'income_statement':
-      return <IncomeStatement data={data as SubmissionDataMap['income_statement']} />;
+      content = <IncomeStatement data={data as SubmissionDataMap['income_statement']} />;
+      break;
     case 'personal_financial_statement':
-      return <PersonalFinancialStatement data={data as SubmissionDataMap['personal_financial_statement']} />;
+      content = <PersonalFinancialStatement data={data as SubmissionDataMap['personal_financial_statement']} />;
+      break;
     case 'personal_debt_summary':
-      return <PersonalDebtSummary data={data as SubmissionDataMap['personal_debt_summary']} />;
+      content = <PersonalDebtSummary data={data as SubmissionDataMap['personal_debt_summary']} />;
+      break;
     case 'business_debt_summary':
-      return <BusinessDebtSummary data={data as SubmissionDataMap['business_debt_summary']} />;
+      content = <BusinessDebtSummary data={data as SubmissionDataMap['business_debt_summary']} />;
+      break;
     default:
       return notFound();
   }
+
+  return (
+    <div data-pdf-render-root>
+      <style>{`
+        body > header,
+        body > footer,
+        body > div > header,
+        body > div > footer {
+          display: none !important;
+        }
+        main {
+          padding-top: 0 !important;
+        }
+      `}</style>
+      {content}
+    </div>
+  );
 }

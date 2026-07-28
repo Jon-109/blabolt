@@ -20,7 +20,7 @@ import type { LucideIcon } from 'lucide-react';
 import { supabase } from '@/supabase/helpers/client';
 import DscrQuickCalculator from '@/app/(components)/cash-flow/DscrQuickCalculator';
 import Testimonials from '@/app/(components)/shared/Testimonials';
-import LoanPackagingExplainer from '@/app/(components)/shared/LoanPackagingExplainer';
+import LeadInterestForm from '@/app/(components)/shared/LeadInterestForm';
 import { trackCtaClick, trackSectionView } from '@/lib/analytics';
 
 const headingFont = Sora({
@@ -395,6 +395,63 @@ function HomeContent() {
       </section>
 
       <section
+        id="dscr-calculator"
+        className="scroll-mt-24 bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_50%,#f8fafc_100%)] py-5 sm:py-8"
+        data-reveal
+        data-analytics-section="free_dscr_calculator"
+        data-analytics-label="Free DSCR Calculator"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 home-reveal">
+          <div className="relative overflow-hidden rounded-[2rem] border border-cyan-100 bg-white shadow-[0_32px_90px_-46px_rgba(14,116,144,0.35)]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+            <div className="pointer-events-none absolute -left-12 top-8 h-40 w-40 rounded-full bg-cyan-200/45 blur-3xl" />
+            <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-amber-100/60 blur-3xl" />
+
+            <div className="relative border-b border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] px-2 py-2 sm:px-6 sm:py-5">
+              <div className="mx-auto max-w-6xl text-center">
+                <p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-cyan-700 sm:block">Start Here</p>
+                <div className="mt-1.5 flex justify-center gap-0 sm:gap-2">
+                  <h2 className="max-w-full text-[1.4rem] font-black leading-tight tracking-[-0.04em] text-slate-900 sm:max-w-4xl sm:text-[2rem] lg:text-[2.2rem]">
+                    See if your business can support the loan payment
+                  </h2>
+                  <div className="group relative mt-1 hidden shrink-0 sm:block">
+                    <button
+                      type="button"
+                      aria-label="What is DSCR?"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-200 bg-white/90 text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-200"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                    <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm leading-6 text-slate-100 opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 translate-y-1">
+                      DSCR compares your cash flow to your debt payments. It is one of the first ratios lenders use to decide whether a deal looks repayable.
+                    </div>
+                  </div>
+                </div>
+                <p className="mx-auto mt-1 hidden max-w-5xl text-base leading-6 text-slate-600 sm:mt-2 sm:block">
+                  This quick check estimates your DSCR, a ratio lenders use to compare cash flow against debt payments. It is a first-pass view, not a full approval or detailed underwriting review.
+                </p>
+                <p className="mx-auto mt-1 text-xs leading-4 text-slate-500 sm:hidden">
+                  Get a quick first-pass view of whether your cash flow may support the payment.
+                </p>
+                <div className="mt-2 flex flex-wrap justify-center gap-1.5 sm:mt-3 sm:gap-2">
+                  <div className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-lg sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">
+                    100% Free • No Credit Impact • No Docs Needed
+                  </div>
+                  <div className="rounded-xl border border-cyan-200 bg-white/80 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">
+                    Quick estimate • Detailed review available next
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative px-1.5 py-1.5 sm:px-5 sm:py-4">
+              <DscrQuickCalculator embedded compactMobileLayout analyticsPageTemplate="home" analyticsPlacement="home_embedded_calculator" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
         className="bg-slate-50 py-4 sm:py-6 xl:py-5"
         data-reveal
         data-analytics-section="what_we_offer"
@@ -459,63 +516,6 @@ function HomeContent() {
                 </article>
               );
             })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section
-        id="dscr-calculator"
-        className="scroll-mt-24 bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_50%,#f8fafc_100%)] py-5 sm:py-8"
-        data-reveal
-        data-analytics-section="free_dscr_calculator"
-        data-analytics-label="Free DSCR Calculator"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 home-reveal">
-          <div className="relative overflow-hidden rounded-[2rem] border border-cyan-100 bg-white shadow-[0_32px_90px_-46px_rgba(14,116,144,0.35)]">
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
-            <div className="pointer-events-none absolute -left-12 top-8 h-40 w-40 rounded-full bg-cyan-200/45 blur-3xl" />
-            <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-amber-100/60 blur-3xl" />
-
-            <div className="relative border-b border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] px-2 py-2 sm:px-6 sm:py-5">
-              <div className="mx-auto max-w-6xl text-center">
-                <p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-cyan-700 sm:block">Free Tool</p>
-                <div className="mt-1.5 flex justify-center gap-0 sm:gap-2">
-                  <h2 className="max-w-full whitespace-nowrap text-[1.4rem] font-black leading-tight tracking-[-0.04em] text-slate-900 sm:max-w-4xl sm:text-[2rem] lg:text-[2.2rem]">
-                    Free High-Level DSCR Calculator
-                  </h2>
-                  <div className="group relative mt-1 hidden shrink-0 sm:block">
-                    <button
-                      type="button"
-                      aria-label="What is DSCR?"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-200 bg-white/90 text-cyan-700 shadow-sm transition hover:border-cyan-300 hover:text-cyan-900 focus:outline-none focus:ring-2 focus:ring-cyan-200"
-                    >
-                      <Info className="h-4 w-4" />
-                    </button>
-                    <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 w-64 -translate-x-1/2 rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-sm leading-6 text-slate-100 opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100 translate-y-1">
-                      DSCR compares your cash flow to your debt payments. It is one of the first ratios lenders use to decide whether a deal looks repayable.
-                    </div>
-                  </div>
-                </div>
-                <p className="mx-auto mt-1 hidden max-w-5xl text-base leading-6 text-slate-600 sm:mt-2 sm:block">
-                  Start here to see whether your cash flow may support the loan payment. You’ll get a quick first-pass view of how the request may look to a lender.
-                </p>
-                <p className="mx-auto mt-1 text-xs leading-4 text-slate-500 sm:hidden">
-                  See what loan you may qualify for in 30 seconds.
-                </p>
-                <div className="mt-2 flex flex-wrap justify-center gap-1.5 sm:mt-3 sm:gap-2">
-                  <div className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-lg sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">
-                    100% Free • No Credit Impact • No Docs Needed
-                  </div>
-                  <div className="rounded-xl border border-cyan-200 bg-white/80 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">
-                    Quick estimate • Not a loan approval
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative px-1.5 py-1.5 sm:px-5 sm:py-4">
-              <DscrQuickCalculator embedded compactMobileLayout analyticsPageTemplate="home" analyticsPlacement="home_embedded_calculator" />
             </div>
           </div>
         </div>
@@ -636,10 +636,6 @@ function HomeContent() {
         </div>
       </section>
 
-      <div data-reveal data-analytics-section="loan_packaging_explainer" data-analytics-label="Loan Packaging Explainer">
-        <LoanPackagingExplainer />
-      </div>
-
       <section data-reveal data-analytics-section="testimonials" data-analytics-label="Testimonials">
         <div className="home-reveal">
           <Testimonials />
@@ -740,6 +736,14 @@ function HomeContent() {
             <p className="mx-auto mt-4 max-w-full whitespace-nowrap text-center text-[13px] font-semibold leading-6 text-slate-100 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
               No guesswork. No messy handoff. Just a clearer path from qualification to lender review.
             </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[linear-gradient(180deg,#f8fafc_0%,#e0f2fe_100%)] py-9 sm:py-12" data-reveal data-analytics-section="lead_interest_form" data-analytics-label="Lead Interest Form">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="home-reveal mx-auto max-w-5xl">
+            <LeadInterestForm source="homepage-embedded" />
           </div>
         </div>
       </section>

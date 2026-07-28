@@ -27,6 +27,8 @@ const FINANCIAL_FIELDS: Array<keyof FullFinancialData> = [
   'revenue',
   'cogs',
   'operatingExpenses',
+  'otherIncome',
+  'interestIncome',
   'nonRecurringIncome',
   'nonRecurringExpenses',
   'depreciation',
@@ -155,6 +157,8 @@ export function normalizeFullFinancialInput(raw: Partial<FullFinancialData> | un
     revenue: toStringValue(raw?.revenue),
     cogs: toStringValue(raw?.cogs),
     operatingExpenses: toStringValue(raw?.operatingExpenses),
+    otherIncome: toStringValue(raw?.otherIncome),
+    interestIncome: toStringValue(raw?.interestIncome),
     nonRecurringIncome: toStringValue(raw?.nonRecurringIncome),
     nonRecurringExpenses: toStringValue(raw?.nonRecurringExpenses),
     depreciation: toStringValue(raw?.depreciation),
@@ -164,12 +168,63 @@ export function normalizeFullFinancialInput(raw: Partial<FullFinancialData> | un
   };
 }
 
+// Stage 1: Calculate Operating Income (GAAP-compliant)
+export function calculateOperatingIncome(
+  raw: Partial<FullFinancialData> | Partial<NumericFinancialData> | undefined | null,
+): number {
+  const revenue = parseCurrencyLike(raw?.revenue);
+  const cogs = parseCurrencyLike(raw?.cogs);
+  const operatingExpenses = parseCurrencyLike(raw?.operatingExpenses);
+  
+  return revenue - cogs - operatingExpenses;
+}
+
+// Stage 1: Calculate Net Income (GAAP-compliant)
+export function calculateNetIncome(
+  raw: Partial<FullFinancialData> | Partial<NumericFinancialData> | undefined | null,
+): number {
+  const operatingIncome = calculateOperatingIncome(raw);
+  const otherIncome = parseCurrencyLike(raw?.otherIncome);
+  const interestIncome = parseCurrencyLike(raw?.interestIncome);
+  const interestExpense = parseCurrencyLike(raw?.interest);
+  const taxes = parseCurrencyLike(raw?.taxes);
+  
+  return operatingIncome + otherIncome + interestIncome - interestExpense - taxes;
+}
+
+// Stage 2: Calculate EBITDA from Net Income
+export function calculateEBITDA(
+  raw: Partial<FullFinancialData> | Partial<NumericFinancialData> | undefined | null,
+): number {
+  const netIncome = calculateNetIncome(raw);
+  const interestExpense = parseCurrencyLike(raw?.interest);
+  const taxes = parseCurrencyLike(raw?.taxes);
+  const depreciation = parseCurrencyLike(raw?.depreciation);
+  const amortization = parseCurrencyLike(raw?.amortization);
+  
+  return netIncome + interestExpense + taxes + depreciation + amortization;
+}
+
+// Stage 3: Calculate Adjusted EBITDA (lender analysis)
+export function calculateAdjustedEBITDA(
+  raw: Partial<FullFinancialData> | Partial<NumericFinancialData> | undefined | null,
+): number {
+  const ebitda = calculateEBITDA(raw);
+  const nonRecurringExpenses = parseCurrencyLike(raw?.nonRecurringExpenses);
+  const nonRecurringIncome = parseCurrencyLike(raw?.nonRecurringIncome);
+  
+  return ebitda + nonRecurringExpenses - nonRecurringIncome;
+}
+
+// Legacy function for backward compatibility - now uses the new pure functions
 export function calculateFinancialSummary(
   raw: Partial<FullFinancialData> | Partial<NumericFinancialData> | undefined | null,
 ): NumericFinancialData {
   const revenue = parseCurrencyLike(raw?.revenue);
   const cogs = parseCurrencyLike(raw?.cogs);
   const operatingExpenses = parseCurrencyLike(raw?.operatingExpenses);
+  const otherIncome = parseCurrencyLike(raw?.otherIncome);
+  const interestIncome = parseCurrencyLike(raw?.interestIncome);
   const nonRecurringIncome = parseCurrencyLike(raw?.nonRecurringIncome);
   const nonRecurringExpenses = parseCurrencyLike(raw?.nonRecurringExpenses);
   const depreciation = parseCurrencyLike(raw?.depreciation);
@@ -178,22 +233,17 @@ export function calculateFinancialSummary(
   const taxes = parseCurrencyLike(raw?.taxes);
 
   const grossProfit = revenue - cogs;
-  const netIncome =
-    grossProfit
-    - operatingExpenses
-    - depreciation
-    - amortization
-    - interest
-    - taxes
-    + nonRecurringIncome
-    - nonRecurringExpenses;
-  const ebitda = netIncome + depreciation + amortization + interest + taxes;
-  const adjustedEbitda = ebitda - nonRecurringIncome + nonRecurringExpenses;
+  const operatingIncome = calculateOperatingIncome(raw);
+  const netIncome = calculateNetIncome(raw);
+  const ebitda = calculateEBITDA(raw);
+  const adjustedEbitda = calculateAdjustedEBITDA(raw);
 
   return {
     revenue,
     cogs,
     operatingExpenses,
+    otherIncome,
+    interestIncome,
     nonRecurringIncome,
     nonRecurringExpenses,
     depreciation,
@@ -204,6 +254,7 @@ export function calculateFinancialSummary(
     netIncome,
     ebitda,
     grossProfit,
+    operatingIncome,
     adjustedEbitda,
   };
 }

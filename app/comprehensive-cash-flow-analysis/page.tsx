@@ -51,6 +51,8 @@ const createEmptyFullFinancialData = (): FullFinancialData => ({
   revenue: '',
   cogs: '',
   operatingExpenses: '',
+  otherIncome: '',
+  interestIncome: '',
   nonRecurringIncome: '',
   nonRecurringExpenses: '',
   depreciation: '',
@@ -64,6 +66,8 @@ const createEmptyNumericFinancialData = (): NumericFinancialData => ({
   revenue: 0,
   cogs: 0,
   operatingExpenses: 0,
+  otherIncome: 0,
+  interestIncome: 0,
   nonRecurringIncome: 0,
   nonRecurringExpenses: 0,
   depreciation: 0,
@@ -74,6 +78,7 @@ const createEmptyNumericFinancialData = (): NumericFinancialData => ({
   netIncome: 0,
   ebitda: 0,
   grossProfit: 0,
+  operatingIncome: 0,
   adjustedEbitda: 0,
 });
 
@@ -136,6 +141,7 @@ const hasMeaningfulValue = (value: unknown) => {
 
 type AccessPayload = {
   canAccessComprehensive?: boolean;
+  isAdmin?: boolean;
 } | null;
 
 type FetchAccessResult = {
@@ -150,6 +156,33 @@ type StoredDebtEntries = {
 type PdfGenerationResponse = {
   error?: string;
   pdfUrl?: string | null;
+};
+
+type AdminClientDetailPayload = {
+  client: {
+    email: string;
+    hasComprehensiveAccess: boolean;
+  };
+  cashFlowAnalysis: {
+    id: string;
+    status: 'inprogress' | 'submitted';
+    loanInfo: {
+      firstName: string | null;
+      lastName: string | null;
+      businessName: string | null;
+      loanPurpose: string | null;
+      desiredAmount: number | null;
+      estimatedPayment: number | null;
+      annualizedLoan: number | null;
+      term: string | null;
+      interestRate: number | null;
+      downPayment: number | null;
+      downPayment293: string | null;
+      proposedLoan: number | null;
+    };
+    financials: FinancialsPayload;
+    debts: Debt[];
+  } | null;
 };
 
 const DEBT_CATEGORIES: DebtCategory[] = [
@@ -215,11 +248,14 @@ export default function Page() {
   const searchParams = useSearchParams();
   const comprehensivePagePath = '/comprehensive-cash-flow-analysis';
   const requestedAnalysisId = searchParams.get('analysisId');
+  const adminClientId = searchParams.get('adminClientId');
   const pendingCheckoutSessionId = searchParams.get('session_id');
   const isEditingExistingAnalysis = searchParams.get('edit') === '1' && Boolean(requestedAnalysisId);
-  const comprehensiveRedirectPath = isEditingExistingAnalysis && requestedAnalysisId
-    ? `${comprehensivePagePath}?analysisId=${encodeURIComponent(requestedAnalysisId)}&edit=1`
-    : comprehensivePagePath;
+  const comprehensiveRedirectPath = adminClientId
+    ? `${comprehensivePagePath}?adminClientId=${encodeURIComponent(adminClientId)}`
+    : isEditingExistingAnalysis && requestedAnalysisId
+      ? `${comprehensivePagePath}?analysisId=${encodeURIComponent(requestedAnalysisId)}&edit=1`
+      : comprehensivePagePath;
 
   // --- Protect route: redirect to login if not authenticated ---
   // --- Also redirect to report-preview if user already has a submitted analysis ---
@@ -281,7 +317,13 @@ export default function Page() {
       }
 
       const accessPayload = accessResult.payload;
-      if (!accessPayload?.canAccessComprehensive) {
+      if (adminClientId && !accessPayload?.isAdmin) {
+        setCurrentStep(1);
+        router.replace('/cash-flow-analysis');
+        return;
+      }
+
+      if (!adminClientId && !accessPayload?.canAccessComprehensive) {
         setCurrentStep(1);
         router.replace('/cash-flow-analysis');
         return;
@@ -293,7 +335,7 @@ export default function Page() {
         window.history.replaceState({}, '', nextUrl.toString());
       }
 
-      if (!isEditingExistingAnalysis) {
+      if (!adminClientId && !isEditingExistingAnalysis) {
         const { data: submittedAnalyses, error: analysesError } = await supabase
           .from('cash_flow_analyses')
           .select('id')
@@ -311,7 +353,7 @@ export default function Page() {
       }
     }
     checkAuthAndPurchase();
-  }, [comprehensiveRedirectPath, isEditingExistingAnalysis, pendingCheckoutSessionId, router]);
+  }, [adminClientId, comprehensiveRedirectPath, isEditingExistingAnalysis, pendingCheckoutSessionId, router]);
 
   // --- Listen for auth state changes: redirect to login on SIGNED_OUT, reset to step 1 on SIGNED_IN ---
   useEffect(() => {
@@ -389,6 +431,7 @@ export default function Page() {
   const [pdfUrls, setPdfUrls] = useState<string | null>(null);
 
   const [isReviewConfirmed, setIsReviewConfirmed] = useState(false);
+  const [reviewConfirmationAttempted, setReviewConfirmationAttempted] = useState(false);
   
   // --- Add hydrated flag to block saves until restore is complete --- 
   const [hydrated, setHydrated] = useState(false); 
@@ -421,6 +464,64 @@ export default function Page() {
       } else if (user) {
         console.log('[DEBUG] fetchUserAndDraft: User found:', { id: user.id, email: user.email });
         setUserEmail(user.email || null);
+
+        if (adminClientId) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const response = await fetch(`/api/admin/clients/${encodeURIComponent(adminClientId)}`, {
+            cache: 'no-store',
+            headers: sessionData.session?.access_token
+              ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+              : undefined,
+          });
+
+          if (!response.ok) {
+            console.error('[DEBUG] Failed loading admin client comprehensive draft:', await response.text());
+            router.replace('/admin');
+            return;
+          }
+
+          const detail = (await response.json()) as AdminClientDetailPayload;
+          const adminDraft = detail.cashFlowAnalysis;
+          if (!adminDraft) {
+            const defaultLoanInfo = getDefaultLoanInfo();
+            setUserEmail(detail.client.email || null);
+            setLoanInfo(defaultLoanInfo);
+            lastSavedLoanInfoSignatureRef.current = getLoanInfoDraftSignature(defaultLoanInfo);
+            setFinancials(getDefaultFinancials());
+            setDebts([]);
+            setDraftId(null);
+            setLoadedAnalysisStatus(null);
+            setHydrated(true);
+            return;
+          }
+
+          const adminLoanInfo = {
+            ...getDefaultLoanInfo(),
+            id: adminDraft.id,
+            businessName: adminDraft.loanInfo.businessName || '',
+            firstName: adminDraft.loanInfo.firstName || '',
+            lastName: adminDraft.loanInfo.lastName || '',
+            loanPurpose: adminDraft.loanInfo.loanPurpose || '',
+            desiredAmount: adminDraft.loanInfo.desiredAmount != null ? String(adminDraft.loanInfo.desiredAmount) : '',
+            estimatedPayment: adminDraft.loanInfo.estimatedPayment != null ? String(adminDraft.loanInfo.estimatedPayment) : '',
+            downPayment: adminDraft.loanInfo.downPayment != null ? String(adminDraft.loanInfo.downPayment) : '',
+            downPayment293: adminDraft.loanInfo.downPayment293 || '',
+            proposedLoan: adminDraft.loanInfo.proposedLoan != null ? String(adminDraft.loanInfo.proposedLoan) : '',
+            term: adminDraft.loanInfo.term || '',
+            interestRate: adminDraft.loanInfo.interestRate != null ? String(adminDraft.loanInfo.interestRate) : '',
+            annualizedLoan: adminDraft.loanInfo.annualizedLoan != null ? String(adminDraft.loanInfo.annualizedLoan) : '',
+          };
+
+          setDraftId(adminDraft.id);
+          setLoadedAnalysisStatus(adminDraft.status || 'inprogress');
+          setLoanInfo(adminLoanInfo);
+          lastSavedLoanInfoSignatureRef.current = getLoanInfoDraftSignature(adminLoanInfo);
+          setFinancials(normalizeFinancialsPayload(adminDraft.financials));
+          setDebts(adminDraft.debts ?? []);
+          setHydrated(true);
+          return;
+        }
+
         const sharedProfile = await getTemplateSharedProfile(user.id);
         const sharedBusinessName =
           sharedProfile.businessName || sharedProfile.businessLegalName || '';
@@ -578,7 +679,7 @@ export default function Page() {
     };
 
     fetchUserAndDraft();
-  }, [requestedAnalysisId, router]); // Reload if a specific analysis is requested.
+  }, [adminClientId, requestedAnalysisId, router]); // Reload if a specific analysis is requested.
 
   useEffect(() => {
     return () => {
@@ -665,6 +766,51 @@ export default function Page() {
       status: loadedAnalysisStatus === 'submitted' ? 'submitted' : 'inprogress',
       dscr,
     };
+    if (adminClientId) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await fetch(`/api/admin/clients/${encodeURIComponent(adminClientId)}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionData.session?.access_token ? { Authorization: `Bearer ${sessionData.session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          sharedProfile: {
+            businessName: loanInfo.businessName?.trim() || null,
+            businessLegalName: loanInfo.businessName?.trim() || null,
+            personalName: [loanInfo.firstName, loanInfo.lastName].filter(Boolean).join(' ') || null,
+            loanPurpose: loanInfo.loanPurpose || null,
+          },
+          cashFlowAnalysis: {
+            id: draftId,
+            status: loadedAnalysisStatus === 'submitted' ? 'submitted' : 'inprogress',
+            firstName: loanInfo.firstName || null,
+            lastName: loanInfo.lastName || null,
+            businessName: loanInfo.businessName?.trim() || null,
+            loanPurpose: loanInfo.loanPurpose || null,
+            desiredAmount: toNumberOrNull(loanInfo.desiredAmount),
+            estimatedPayment: toNumberOrNull(loanInfo.estimatedPayment),
+            downPayment: toNumberOrNull(loanInfo.downPayment),
+            downPayment293: loanInfo.downPayment293 || null,
+            proposedLoan: toNumberOrNull(loanInfo.proposedLoan),
+            term: formatTermForStorage(loanInfo.term),
+            interestRate: toNumberOrNull(loanInfo.interestRate),
+            annualizedLoan: toNumberOrNull(loanInfo.annualizedLoan),
+            financials: normalizedFinancials,
+            debts: debtsRef.current || [],
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('[DEBUG] Admin target draft save error:', await response.text());
+        return draftId;
+      }
+
+      lastSavedLoanInfoSignatureRef.current = getLoanInfoDraftSignature(loanInfo);
+      return draftId;
+    }
+
     let currentDraftId = draftId;
     let saveSucceeded = false;
     try {
@@ -740,7 +886,7 @@ export default function Page() {
       }
     }
     return currentDraftId;
-  }, [buildAnalysisStatePayload, draftId, hydrated, loadedAnalysisStatus, loanInfo]);
+  }, [adminClientId, buildAnalysisStatePayload, draftId, hydrated, loadedAnalysisStatus, loanInfo]);
 
   useEffect(() => {
     if (!hydrated || currentStep !== 1) return;
@@ -935,6 +1081,28 @@ export default function Page() {
       return {};
     }
   }, [router, saveDraft, submitStatus]);
+
+  const handleSubmitClick = useCallback(async () => {
+    if (!isReviewConfirmed) {
+      setReviewConfirmationAttempted(true);
+      setTimeout(() => {
+        const element = document.getElementById('review-confirmation');
+        const section = document.getElementById('review-confirmation-section');
+        const target = element ?? section;
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (element) {
+            element.focus({ preventScroll: true });
+          }
+        }
+      }, 50);
+      return;
+    }
+
+    setReviewConfirmationAttempted(false);
+    await handleSubmit();
+  }, [handleSubmit, isReviewConfirmed]);
+
   // Defensive fallback for currentStepComponent
   let currentStepComponent;
   switch (currentStep) {
@@ -997,7 +1165,13 @@ export default function Page() {
           onSaveDraft={async () => {
             await saveDraft();
           }}
-          onConfirmChange={setIsReviewConfirmed}
+          onConfirmChange={(confirmed) => {
+            setIsReviewConfirmed(confirmed);
+            if (confirmed) {
+              setReviewConfirmationAttempted(false);
+            }
+          }}
+          confirmationAttempted={reviewConfirmationAttempted}
         />
       );
       break;
@@ -1093,22 +1267,21 @@ export default function Page() {
           metricLabel="Key Metrics"
           metricValue=""
           metricContent={
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 p-3">
                 <p className="text-[11px] uppercase tracking-[0.08em] text-slate-400">2025 EBITDA</p>
-                <p className="mt-2 text-2xl font-bold text-white">{formatHeroCurrency(latestEbitda)}</p>
+                <p className="mt-2 truncate text-xl font-bold text-white sm:text-2xl">{formatHeroCurrency(latestEbitda)}</p>
               </div>
-              <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
-                <p className="whitespace-nowrap text-[10px] uppercase tracking-[0.08em] text-slate-400 sm:text-[11px]">
+              <div className="min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 p-3">
+                <p className="text-[9px] uppercase tracking-[0.06em] text-slate-400 sm:text-[10px]">
                   Monthly Debt Service
                 </p>
-                <p className="mt-2 text-2xl font-bold text-white">{formatHeroCurrency(monthlyDebtService)}</p>
+                <p className="mt-2 truncate text-xl font-bold text-white sm:text-2xl">{formatHeroCurrency(monthlyDebtService)}</p>
               </div>
             </div>
           }
-          statusLabel="Draft saves automatically while you work"
-          statusTone="saved"
-          hideStatusOnMobile
+          showEyebrow={false}
+          metricClassName="max-w-sm"
           hideMetricOnMobile
           fullWidthBelowHero={
             <TemplateHeroProgressBar
@@ -1173,8 +1346,8 @@ export default function Page() {
                 </button>
 
                 <button
-                  onClick={currentStep === steps.length ? handleSubmit : handleNext}
-                  disabled={!hydrated || submitStatus === 'submitting' || (currentStep === steps.length && !isReviewConfirmed)}
+                  onClick={currentStep === steps.length ? handleSubmitClick : handleNext}
+                  disabled={!hydrated || submitStatus === 'submitting'}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitStatus === 'submitting' && currentStep === steps.length ? (

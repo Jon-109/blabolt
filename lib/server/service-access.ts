@@ -79,7 +79,7 @@ export async function resolveServiceAccessForUser(user: Pick<User, 'id' | 'email
       .limit(25),
     admin
       .from('client_accounts')
-      .select('service_level,access_comprehensive,access_templates,access_packaging,granted_template_types')
+      .select('id,user_id,service_level,access_comprehensive,access_templates,access_packaging,granted_template_types,pending_cash_flow_analysis')
       .or(`user_id.eq.${user.id},email.eq.${normalizedEmail}`)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -119,6 +119,50 @@ export async function resolveServiceAccessForUser(user: Pick<User, 'id' | 'email
   const hasComprehensiveOnlyPurchase = purchaseTypes.has('cash_flow_analysis');
   const hasTemplatesBundlePurchase = purchaseTypes.has('templates_bundle');
   const clientAccount = clientAccountResult.data;
+  if (clientAccount?.id && !clientAccount.user_id) {
+    await admin
+      .from('client_accounts')
+      .update({ user_id: user.id, updated_at: new Date().toISOString() })
+      .eq('id', clientAccount.id);
+  }
+
+  const pendingCashFlow = clientAccount?.pending_cash_flow_analysis;
+  if (pendingCashFlow && typeof pendingCashFlow === 'object' && !Array.isArray(pendingCashFlow)) {
+    const existingDraft = await admin
+      .from('cash_flow_analyses')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'inprogress')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!existingDraft.data?.id) {
+      const payload = pendingCashFlow as Record<string, unknown>;
+      const loanInfo = payload.loanInfo && typeof payload.loanInfo === 'object' ? payload.loanInfo as Record<string, unknown> : {};
+      await admin
+        .from('cash_flow_analyses')
+        .insert({
+          user_id: user.id,
+          status: payload.status === 'submitted' ? 'submitted' : 'inprogress',
+          first_name: loanInfo.firstName ?? null,
+          last_name: loanInfo.lastName ?? null,
+          business_name: loanInfo.businessName ?? '',
+          loan_purpose: loanInfo.loanPurpose ?? null,
+          desired_amount: loanInfo.desiredAmount ?? null,
+          estimated_payment: loanInfo.estimatedPayment ?? null,
+          annualized_loan: loanInfo.annualizedLoan ?? null,
+          term: loanInfo.term ?? null,
+          interest_rate: loanInfo.interestRate ?? null,
+          down_payment: loanInfo.downPayment ?? null,
+          down_payment293: loanInfo.downPayment293 ?? null,
+          proposed_loan: loanInfo.proposedLoan ?? null,
+          financials: payload.financials ?? null,
+          debts: payload.debts ?? [],
+          dscr: payload.dscr ?? null,
+        });
+    }
+  }
   const accountServiceLevel = String(clientAccount?.service_level ?? 'none');
   const accountComprehensive = Boolean(clientAccount?.access_comprehensive);
   const accountTemplates = Boolean(clientAccount?.access_templates);

@@ -20,6 +20,8 @@ interface TemplatePageShellProps {
   statusTone?: StatusTone;
   hideStatusOnMobile?: boolean;
   hideMetricOnMobile?: boolean;
+  showEyebrow?: boolean;
+  metricClassName?: string;
   compactHero?: boolean;
   fullWidthBelowHero?: ReactNode;
   children: ReactNode;
@@ -44,6 +46,8 @@ export default function TemplatePageShell({
   statusTone = 'neutral',
   hideStatusOnMobile = false,
   hideMetricOnMobile = false,
+  showEyebrow = true,
+  metricClassName = 'max-w-xs',
   compactHero = false,
   fullWidthBelowHero,
   children,
@@ -67,9 +71,11 @@ export default function TemplatePageShell({
         <div className={`relative mx-auto max-w-7xl px-4 sm:px-6 ${compactHero ? 'py-6 sm:py-7' : 'py-8 sm:py-10'}`}>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="max-w-3xl space-y-2.5">
-              <p className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]">
-                Guided Template
-              </p>
+              {showEyebrow ? (
+                <p className="inline-flex items-center rounded-full border border-blue-300/40 bg-blue-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]">
+                  Guided Template
+                </p>
+              ) : null}
               <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.08rem,5.4vw,1.45rem)] font-semibold tracking-tight sm:text-4xl">
                 {title}
               </h1>
@@ -85,7 +91,7 @@ export default function TemplatePageShell({
               ) : null}
             </div>
 
-            <div className={`${hideMetricOnMobile ? 'hidden md:block ' : ''}w-full max-w-xs rounded-2xl border border-slate-700 bg-slate-900/60 p-4`}>
+            <div className={`${hideMetricOnMobile ? 'hidden md:block ' : ''}w-full ${metricClassName} rounded-2xl border border-slate-700 bg-slate-900/60 p-4`}>
               {metricContent ? (
                 metricContent
               ) : (

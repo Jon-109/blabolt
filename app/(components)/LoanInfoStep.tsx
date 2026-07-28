@@ -421,7 +421,10 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ isFormVal
         const errorId = firstErrorId;
         setTimeout(() => {
           const element = document.getElementById(errorId);
-          element?.focus();
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.focus({ preventScroll: true });
+          }
         }, 50);
       }
     }
@@ -460,13 +463,10 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ isFormVal
   const SelectedPurposeIcon = selectedPurposeMeta?.icon ?? Calculator;
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[1.5rem] border border-slate-200 bg-white/95 p-5 shadow-[0_16px_35px_-24px_rgba(15,23,42,0.3)]">
+    <div className="space-y-4">
+      <section className="rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_16px_35px_-24px_rgba(15,23,42,0.3)] sm:p-5">
         <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Step 1</div>
         <h2 className="mt-1 text-2xl font-bold text-slate-900">Business &amp; Loan Information</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Start with the borrower, business name, and loan request. If you know exact lender terms, use them. If you do not, that is okay. Use your best current estimate and we will still build the analysis around it.
-        </p>
       </section>
 
       <FormSection
@@ -490,39 +490,41 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ isFormVal
           />
         </FormField>
 
-        <FormField
-          label="First Name"
-          htmlFor="loanInfo-firstName"
-          required
-          help="Primary contact for this financing request."
-          error={fieldError('firstName')}
-        >
-          <Input
-            type="text"
-            maxLength={30}
-            value={formData.firstName}
-            onChange={handleTextInputChange('firstName')}
-          />
-        </FormField>
+        <div className="sm:col-span-2 grid gap-4 sm:max-w-2xl sm:grid-cols-2">
+          <FormField
+            label="First Name"
+            htmlFor="loanInfo-firstName"
+            required
+            help="Primary contact for this financing request."
+            error={fieldError('firstName')}
+          >
+            <Input
+              type="text"
+              maxLength={30}
+              value={formData.firstName}
+              onChange={handleTextInputChange('firstName')}
+            />
+          </FormField>
 
-        <FormField
-          label="Last Name"
-          htmlFor="loanInfo-lastName"
-          required
-          error={fieldError('lastName')}
-        >
-          <Input
-            type="text"
-            maxLength={30}
-            value={formData.lastName}
-            onChange={handleTextInputChange('lastName')}
-          />
-        </FormField>
+          <FormField
+            label="Last Name"
+            htmlFor="loanInfo-lastName"
+            required
+            error={fieldError('lastName')}
+          >
+            <Input
+              type="text"
+              maxLength={30}
+              value={formData.lastName}
+              onChange={handleTextInputChange('lastName')}
+            />
+          </FormField>
+        </div>
       </FormSection>
 
       <FormSection
         title="Loan Request"
-        description="Choose the loan purpose and enter the amount you want to request. We use this to calculate the loan assumptions used throughout the analysis."
+        description="Pick the closest loan purpose and enter your best estimate for the amount you may request. You can change these later if the lender quote, project budget, or deal terms change."
         className="!rounded-[1.5rem] !border-slate-200 !shadow-[0_16px_35px_-24px_rgba(15,23,42,0.3)]"
       >
         <FormField
@@ -595,8 +597,9 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ isFormVal
           label="Desired Loan Amount"
           htmlFor="loanInfo-desiredAmount"
           required
-          help="Enter the total amount you want to request from the lender, before any down payment. You can usually pull this from a purchase contract, project budget, vendor quote, or your financing target."
+          help="Enter the total amount you may request before any down payment. A current best guess is fine."
           error={fieldError('desiredAmount')}
+          className="sm:max-w-sm"
         >
           <Input
             type="text"
@@ -611,10 +614,13 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ isFormVal
 
         {selectedPurpose ? (
           <div className="sm:col-span-2 rounded-[1.35rem] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.35)]">
-            <div className="flex flex-col gap-2 border-b border-slate-200 pb-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
+            <div className="flex flex-col gap-2 border-b border-slate-200 pb-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="max-w-3xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Loan Assumptions</p>
-                <h3 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-950">Starting structure for {selectedPurpose.title}</h3>
+                <h3 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-slate-950">Typical starting terms for {selectedPurpose.title}</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  These defaults are meant to give you a practical starting point for this type of loan. If you have lender terms, use them. If not, leave these estimates in place and refine them later.
+                </p>
               </div>
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800">
                 <SelectedPurposeIcon className="h-4 w-4" />
@@ -628,7 +634,7 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ isFormVal
                 {isInterestOnlyPurpose ? (
                   <>
                     <p className="mt-3 text-sm font-semibold text-slate-950">0%</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">LOC estimates assume the full amount is drawn.</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">Lines of credit usually do not need money down.</p>
                   </>
                 ) : (
                   <div className="relative mt-2">
@@ -650,7 +656,7 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ isFormVal
                 {isInterestOnlyPurpose ? (
                   <>
                     <p className="mt-3 text-sm font-semibold text-slate-950">$0</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">No reduction is applied before the LOC payment estimate.</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">The full requested limit is used for this estimate.</p>
                   </>
                 ) : (
                   <div className="relative mt-2">
@@ -667,14 +673,9 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ isFormVal
                 )}
               </div>
 
-              <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:w-[15.5rem]">
-                <p className="text-[11px] font-medium leading-4 text-slate-500">{isInterestOnlyPurpose ? 'Payment Basis' : 'Term'}</p>
-                {isInterestOnlyPurpose ? (
-                  <>
-                    <p className="mt-3 text-sm font-semibold text-slate-950">Amount x rate / 12</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">Term does not drive the LOC monthly payment.</p>
-                  </>
-                ) : (
+              {!isInterestOnlyPurpose ? (
+                <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:w-[15.5rem]">
+                  <p className="text-[11px] font-medium leading-4 text-slate-500">Term</p>
                   <Select value={formData.term} onValueChange={handleTermChange}>
                     <SelectTrigger className="mt-2 h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left text-sm font-semibold text-slate-950 focus:border-slate-900 focus:ring-4 focus:ring-slate-200">
                       <div className="min-w-0 flex-1">
@@ -702,30 +703,39 @@ const LoanInfoStep = forwardRef<LoanInfoStepRef, LoanInfoStepProps>(({ isFormVal
                       ))}
                     </SelectContent>
                   </Select>
-                )}
-              </div>
+                </div>
+              ) : null}
 
-              <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:w-[9.5rem]">
-                <p className="text-[11px] font-medium leading-4 text-slate-500">Interest Rate</p>
-                <div className="relative mt-2">
+              <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:w-[9.75rem]">
+                <p className="whitespace-nowrap text-[11px] font-medium leading-4 text-slate-500">Interest Rate</p>
+                <div className="relative mt-2 w-20">
                   <Input
                     type="text"
                     inputMode="decimal"
                     value={formData.interestRate}
                     onChange={handleInterestRateChange}
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50 pr-9 text-right text-sm font-semibold text-slate-950 focus:border-slate-900 focus:bg-white focus-visible:ring-4 focus-visible:ring-slate-200"
+                    className="h-8 rounded-xl border-slate-200 bg-slate-50 py-1 pr-7 text-right text-sm font-semibold text-slate-950 focus:border-slate-900 focus:bg-white focus-visible:ring-4 focus-visible:ring-slate-200"
                     placeholder="7.5"
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">%</span>
+                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">%</span>
                 </div>
+                <p className="mt-2 text-xs leading-5 text-slate-500">Typical rate for this loan.</p>
               </div>
+
+              {parseCurrencyNumber(formData.desiredAmount) > 0 ? (
+                <div className="min-w-0 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 shadow-sm sm:w-[12rem]">
+                  <p className="text-[11px] font-medium leading-4 text-emerald-700">Estimated Monthly Payment</p>
+                  <p className="mt-3 text-lg font-semibold text-emerald-950">{formData.estimatedPayment || '—'}</p>
+                  <p className="mt-1 text-xs leading-5 text-emerald-700">Updates when the amount or rate changes.</p>
+                </div>
+              ) : null}
             </div>
 
-            <p className="mt-4 text-sm leading-6 text-slate-600">
+            <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm leading-6 text-blue-950">
               {isInterestOnlyPurpose
-                ? 'For line-of-credit style requests, the estimate assumes the full requested amount is outstanding and calculates payment as amount x rate / 12.'
-                : 'These are typical starting terms for this loan purpose. If your lender quoted something different, or you want to test a different structure, edit any of the assumptions above and we&apos;ll update the analysis around them.'}
-            </p>
+                ? 'Line of credit estimates are interest-only here. That means the monthly payment is estimated from the requested limit and rate, not from a normal payoff schedule.'
+                : 'Think of these as starter terms, not final terms. Down payment lowers the amount borrowed, term controls how long the loan is paid back, and interest rate affects the monthly payment. You can edit any value if you know better numbers.'}
+            </div>
           </div>
         ) : null}
       </FormSection>

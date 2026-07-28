@@ -64,12 +64,27 @@ const descriptionPlaceholders: Record<DebtCategory, string> = {
   OTHER: 'E.g., SBA EIDL Loan',
 };
 
-const categoryQuestions: Record<DebtCategory, string> = {
-  REAL_ESTATE: 'How many business real estate loans should be included in this report?',
-  VEHICLE_EQUIPMENT: 'How many vehicle or equipment loans does the business currently pay?',
-  CREDIT_CARD: 'How many open business credit cards should be included?',
-  LINE_OF_CREDIT: 'How many active business lines of credit should be included?',
-  OTHER: 'How many other business debt accounts should be included?',
+const categoryGuidance: Record<DebtCategory, { intro: string; examples: string }> = {
+  REAL_ESTATE: {
+    intro: 'Add business real estate loans or mortgages secured by property used for the business.',
+    examples: 'Examples: office building mortgage, warehouse loan, commercial property note.',
+  },
+  VEHICLE_EQUIPMENT: {
+    intro: 'Add loans or leases for business vehicles, machinery, or equipment.',
+    examples: 'Examples: work truck loan, equipment financing, trailer loan, machinery lease.',
+  },
+  CREDIT_CARD: {
+    intro: 'Add business credit cards that carry a balance or require monthly payments.',
+    examples: 'Examples: Chase Ink, Amex Business, Capital One Spark.',
+  },
+  LINE_OF_CREDIT: {
+    intro: 'Add active business lines of credit, whether fully drawn or only partially used.',
+    examples: 'Examples: bank operating line, SBA line of credit, short-term revolving credit.',
+  },
+  OTHER: {
+    intro: 'Add any other business debt that does not fit the categories above.',
+    examples: 'Examples: SBA EIDL, seller note, tax payment plan, merchant cash advance.',
+  },
 };
 
 const categoryFieldLabels: Record<DebtCategory, { description: string; original: string; balance: string; payment: string }> = {
@@ -104,8 +119,6 @@ const categoryFieldLabels: Record<DebtCategory, { description: string; original:
     payment: 'Monthly Payment',
   },
 };
-
-const COUNT_OPTIONS = [0, 1, 2, 3, 4, 5];
 
 const parseCurrencyInput = (value: string | undefined): string => {
   if (!value) return '';
@@ -142,8 +155,6 @@ type AddingFirstDebtState = Partial<Record<DebtCategory, boolean>>;
 
 const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepProps>((
   { 
-    onNext, 
-    onBack, 
     isFormValid, 
     onFormDataChange, 
     onProgressChange,
@@ -190,13 +201,6 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
     LINE_OF_CREDIT: false,
     OTHER: false,
   });
-  const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
-
-  // Ref to store the stringified version of the last data sent to the parent
-  const lastSentDataRef = useRef<string | null>(null);
-
-  // State to track internal validity
-  const [isValid, setIsValid] = useState(false);
 
   // State to track the first input field with a validation error
   const [errorFields, setErrorFields] = useState<Record<string, boolean>>({});
@@ -287,16 +291,14 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
         setTimeout(() => {
           const element = document.getElementById(firstErrorId);
           if (element) {
-            element.focus();
-            // Optionally, scroll into view if needed
-            // element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.focus({ preventScroll: true });
           }
-        }, 50); // Small delay to allow DOM update
+        }, 100); // Small delay to allow DOM update
       }
       return false; // Validation failed
     }
 
-    setIsValid(validationPassed); // Update internal state if needed
     isFormValid?.(validationPassed); // Notify parent
     return true; // Validation passed
   }, [debts, isFormValid, showToast, isAddingFirstDebt]);
@@ -358,6 +360,30 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
       };
     });
     // Note: No toast needed here unless requested
+  }, []);
+
+  const addEntry = useCallback((categoryId: DebtCategory) => {
+    setDebts((prev: Record<DebtCategory, ReadonlyArray<Debt>>) => {
+      const currentEntries = [...(prev[categoryId] || [])];
+      const hasOnlyEmptyPlaceholder =
+        currentEntries.length === 1 &&
+        currentEntries[0] &&
+        currentEntries[0].description.trim() === '' &&
+        currentEntries[0].monthlyPayment.trim() === '' &&
+        currentEntries[0].originalLoanAmount.trim() === '' &&
+        currentEntries[0].outstandingBalance.trim() === '';
+
+      const nextEntries = hasOnlyEmptyPlaceholder
+        ? [emptyDebt(categoryId)]
+        : [...currentEntries, emptyDebt(categoryId)];
+
+      return {
+        ...prev,
+        [categoryId]: nextEntries.slice(0, MAX_ROWS) as ReadonlyArray<Debt>,
+      };
+    });
+    setIsAddingFirstDebt((prev) => ({ ...prev, [categoryId]: true }));
+    setAnsweredCategories((prev) => ({ ...prev, [categoryId]: true }));
   }, []);
 
   // --- Utility: Flatten and filter debts for parent ---
@@ -444,38 +470,6 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
     });
   }, [answeredCategories, getCategoryEntryCount, onProgressChange]);
 
-  const setCategoryCount = useCallback((categoryId: DebtCategory, count: number) => {
-    setDebts((prev) => {
-      const currentEntries = [...(prev[categoryId] || [])];
-      const sanitizedCurrentEntries =
-        currentEntries.length === 1 &&
-        currentEntries[0] &&
-        currentEntries[0].description.trim() === '' &&
-        currentEntries[0].monthlyPayment.trim() === '' &&
-        currentEntries[0].originalLoanAmount.trim() === '' &&
-        currentEntries[0].outstandingBalance.trim() === ''
-          ? []
-          : currentEntries;
-
-      if (count === 0) {
-        return {
-          ...prev,
-          [categoryId]: [emptyDebt(categoryId)] as ReadonlyArray<Debt>,
-        };
-      }
-
-      const nextEntries = Array.from({ length: count }, (_, index) => sanitizedCurrentEntries[index] ?? emptyDebt(categoryId));
-
-      return {
-        ...prev,
-        [categoryId]: nextEntries as ReadonlyArray<Debt>,
-      };
-    });
-
-    setIsAddingFirstDebt((prev) => ({ ...prev, [categoryId]: count > 0 }));
-    setAnsweredCategories((prev) => ({ ...prev, [categoryId]: true }));
-  }, []);
-
   const isEntryComplete = useCallback((entry: Debt) => {
     return entry.description.trim() !== '' && parseCurrencyInput(entry.monthlyPayment) !== '';
   }, []);
@@ -487,9 +481,6 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
     return categoryDebts.slice(0, count).every(isEntryComplete);
   }, [debts, getCategoryEntryCount, isEntryComplete]);
 
-  const activeCategory = categories[activeCategoryIndex] ?? categories[0]!;
-  const activeCategoryDebts = debts[activeCategory.id] || [];
-  const activeCategoryCount = getCategoryEntryCount(activeCategory.id);
   const allCategoriesComplete = categories.every((category) => isCategoryComplete(category.id));
   const completedCategoryCount = categories.filter((category) => isCategoryComplete(category.id)).length;
   const completionPercent = Math.round((completedCategoryCount / categories.length) * 100);
@@ -541,14 +532,6 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
   const overallUtilization =
     revolvingTotals.totalOriginal > 0 ? (revolvingTotals.totalBalance / revolvingTotals.totalOriginal) * 100 : null;
 
-  const scrollToDebtSectionTop = useCallback(() => {
-    if (typeof window === 'undefined') return;
-
-    window.requestAnimationFrame(() => {
-      debtSectionTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, []);
-
   return (
     <div className="space-y-6">
       <Toast message={message} visible={visible} onClose={closeToast} />
@@ -560,12 +543,12 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Debt Intake</div>
             <h2 className="mt-1 text-2xl font-bold text-slate-900">Business Debt Summary</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Capture debt details one category at a time in the same style as the standalone debt summary template.
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+              Add only the business debts that apply. If a category does not apply, leave it blank and continue.
             </p>
           </div>
           <div className={`rounded-full px-3 py-1 text-xs font-semibold ${allCategoriesComplete ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`}>
-            {allCategoriesComplete ? 'All categories complete' : `${completedCategoryCount}/${categories.length} complete`}
+            {totals.accounts === 0 ? 'No debts added yet' : `${totals.accounts} debt ${totals.accounts === 1 ? 'entry' : 'entries'}`}
           </div>
         </div>
 
@@ -582,242 +565,163 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
               />
             </div>
             <div className="mt-2 text-xs font-medium text-slate-600">
-              {completedCategoryCount} of {categories.length} debt categories complete
+              Blank categories are okay. Entries only become required after you add or start filling one out.
             </div>
           </div>
         )}
 
-        <div className="mb-4 md:hidden">
-          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {categories.map((category, index) => {
-              const active = category.id === activeCategory.id;
-              const done = isCategoryComplete(category.id);
-              return (
-                <button
-                  key={`mobile-${category.id}`}
-                  type="button"
-                  onClick={() => setActiveCategoryIndex(index)}
-                  className={`flex-none whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                    active
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : done
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
-                      : 'border-slate-300 bg-white text-slate-700'
-                  }`}
-                >
-                  {done && !active ? '✓ ' : ''}
-                  {category.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <div className="space-y-5">
+          {categories.map((category) => {
+            const categoryDebts = debts[category.id] || [];
+            const categoryCount = getCategoryEntryCount(category.id);
+            const visibleDebts = categoryDebts.slice(0, Math.max(categoryCount, isAddingFirstDebt[category.id] ? 1 : 0));
+            const labels = categoryFieldLabels[category.id];
+            const guidance = categoryGuidance[category.id];
+            const categoryComplete = isCategoryComplete(category.id);
 
-        <div className="mb-6 hidden gap-3 md:grid md:grid-cols-5">
-          {categories.map((category, index) => {
-            const active = category.id === activeCategory.id;
-            const done = isCategoryComplete(category.id);
             return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => setActiveCategoryIndex(index)}
-                className={`rounded-xl border px-3 py-2 text-left transition ${
-                  active
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : done
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
-                    : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50'
-                }`}
-              >
-                <div className="text-[11px] font-semibold uppercase tracking-wide">
-                  {active ? 'Current' : done ? 'Complete' : 'Pending'}
+              <div key={category.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                <div className="max-w-3xl">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-bold text-slate-900">{category.name}</h3>
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${categoryCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
+                      {categoryCount > 0 ? `${categoryCount} added` : 'Optional'}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-slate-700">{guidance.intro}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{guidance.examples}</p>
                 </div>
-                <div className="mt-1 text-sm font-semibold">{category.name}</div>
-              </button>
+
+                {visibleDebts.length === 0 ? (
+                  <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4">
+                    <button
+                      type="button"
+                      onClick={() => addEntry(category.id)}
+                      disabled={categoryCount >= MAX_ROWS}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      Add {category.name}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-5 space-y-4">
+                    {visibleDebts.map((entry, index) => {
+                      const fieldIdPrefix = `debt-${category.id}-${index}`;
+                      const descriptionId = `${fieldIdPrefix}-description`;
+                      const monthlyPaymentId = `${fieldIdPrefix}-monthlyPayment`;
+
+                      return (
+                        <Card key={`${fieldIdPrefix}-entry`} className="border-slate-200 bg-white shadow-sm">
+                          <CardContent className="space-y-4 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-sm font-semibold text-slate-900">
+                                {category.name} #{index + 1}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeEntry(category.id, index)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+                                aria-label={`Delete ${category.name} entry ${index + 1}`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Delete entry
+                              </button>
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <FormField
+                                label={labels.description}
+                                htmlFor={descriptionId}
+                                required
+                                help="Use a short lender or account description that will still make sense in the final report."
+                                error={errorFields[descriptionId] ? 'Description is required.' : undefined}
+                                className="md:col-span-2"
+                              >
+                                <Input
+                                  id={descriptionId}
+                                  type="text"
+                                  placeholder={descriptionPlaceholders[category.id]}
+                                  value={entry.description}
+                                  onChange={(e) => handleEntryChange(category.id, index, 'description', e.target.value)}
+                                  maxLength={DESCRIPTION_MAX_LEN}
+                                />
+                              </FormField>
+
+                              <FormField
+                                label={labels.original}
+                                htmlFor={`${fieldIdPrefix}-originalAmount`}
+                                help={category.id === 'CREDIT_CARD' || category.id === 'LINE_OF_CREDIT' ? 'Enter the full credit limit.' : 'Original loan amount when opened.'}
+                              >
+                                <Input
+                                  id={`${fieldIdPrefix}-originalAmount`}
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="$0"
+                                  value={formatCurrency(entry.originalLoanAmount)}
+                                  onChange={(e) => handleEntryChange(category.id, index, 'originalLoanAmount', e.target.value)}
+                                />
+                              </FormField>
+
+                              <FormField
+                                label={labels.balance}
+                                htmlFor={`${fieldIdPrefix}-balance`}
+                                help="Current amount still owed today."
+                              >
+                                <Input
+                                  id={`${fieldIdPrefix}-balance`}
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="$0"
+                                  value={formatCurrency(entry.outstandingBalance)}
+                                  onChange={(e) => handleEntryChange(category.id, index, 'outstandingBalance', e.target.value)}
+                                />
+                              </FormField>
+
+                              <FormField
+                                label={labels.payment}
+                                htmlFor={monthlyPaymentId}
+                                required
+                                help="Required monthly payment only. If the lender drafts weekly or daily, convert it to a monthly equivalent."
+                                error={errorFields[monthlyPaymentId] ? 'Monthly payment is required.' : undefined}
+                              >
+                                <Input
+                                  id={monthlyPaymentId}
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="$0"
+                                  value={formatCurrency(entry.monthlyPayment)}
+                                  onChange={(e) => handleEntryChange(category.id, index, 'monthlyPayment', e.target.value)}
+                                />
+                              </FormField>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                    {categoryCount < MAX_ROWS ? (
+                      <button
+                        type="button"
+                        onClick={() => addEntry(category.id)}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 sm:w-auto"
+                      >
+                        <PlusCircle className="h-4 w-4" />
+                        Add {category.name}
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+
+                {categoryCount >= MAX_ROWS ? (
+                  <p className="mt-3 text-xs font-medium text-slate-500">Maximum of {MAX_ROWS} entries reached for {category.name}.</p>
+                ) : null}
+
+                {!categoryComplete ? (
+                  <p className="mt-3 text-sm font-semibold text-amber-700">Add a description and monthly payment for each listed account.</p>
+                ) : null}
+              </div>
             );
           })}
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">{activeCategory.name}</h3>
-              <p className="mt-1 text-sm text-slate-700">{categoryQuestions[activeCategory.id]}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">{activeCategory.description}</p>
-            </div>
-            <div className="text-sm text-slate-500">Category {activeCategoryIndex + 1} of {categories.length}</div>
-          </div>
-
-          <div className="mt-4">
-            <div className="text-sm font-semibold text-slate-900">How many accounts belong in this category?</div>
-            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {COUNT_OPTIONS.map((count) => {
-                const selected = activeCategoryCount === count;
-                return (
-                  <button
-                    key={`${activeCategory.id}-${count}`}
-                    type="button"
-                    onClick={() => setCategoryCount(activeCategory.id, count)}
-                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                      selected
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    {count}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {activeCategoryCount === 0 ? (
-            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-600">
-              No {activeCategory.name.toLowerCase()} entries will be included unless you choose a count above 0.
-            </div>
-          ) : (
-            <div className="mt-5 space-y-4">
-              {activeCategoryDebts.slice(0, activeCategoryCount).map((entry, index) => {
-                const fieldIdPrefix = `debt-${activeCategory.id}-${index}`;
-                const descriptionId = `${fieldIdPrefix}-description`;
-                const monthlyPaymentId = `${fieldIdPrefix}-monthlyPayment`;
-                const labels = categoryFieldLabels[activeCategory.id];
-
-                return (
-                  <Card key={`${fieldIdPrefix}-entry`} className="border-slate-200 bg-white shadow-sm">
-                    <CardContent className="space-y-4 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {activeCategory.name} #{index + 1}
-                        </div>
-                        {activeCategoryCount > 1 ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              removeEntry(activeCategory.id, index);
-                              const nextCount = Math.max(0, activeCategoryCount - 1);
-                              setTimeout(() => setCategoryCount(activeCategory.id, nextCount), 0);
-                            }}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50"
-                            aria-label={`Delete ${activeCategory.name} entry ${index + 1}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete entry
-                          </button>
-                        ) : null}
-                      </div>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <FormField
-                          label={labels.description}
-                          htmlFor={descriptionId}
-                          required
-                          help="Use a short lender or account description that will still make sense in the final report."
-                          error={errorFields[descriptionId] ? 'Description is required.' : undefined}
-                          className="md:col-span-2"
-                        >
-                          <Input
-                            type="text"
-                            placeholder={descriptionPlaceholders[activeCategory.id]}
-                            value={entry.description}
-                            onChange={(e) => handleEntryChange(activeCategory.id, index, 'description', e.target.value)}
-                            maxLength={DESCRIPTION_MAX_LEN}
-                          />
-                        </FormField>
-
-                        <FormField
-                          label={labels.original}
-                          htmlFor={`${fieldIdPrefix}-originalAmount`}
-                          help={activeCategory.id === 'CREDIT_CARD' || activeCategory.id === 'LINE_OF_CREDIT' ? 'Enter the full credit limit.' : 'Original loan amount when opened.'}
-                        >
-                          <Input
-                            type="text"
-                            inputMode='numeric'
-                            placeholder="$0"
-                            value={formatCurrency(entry.originalLoanAmount)}
-                            onChange={(e) => handleEntryChange(activeCategory.id, index, 'originalLoanAmount', e.target.value)}
-                          />
-                        </FormField>
-
-                        <FormField
-                          label={labels.balance}
-                          htmlFor={`${fieldIdPrefix}-balance`}
-                          help="Current amount still owed today."
-                        >
-                          <Input
-                            type="text"
-                            placeholder="$0"
-                            value={formatCurrency(entry.outstandingBalance)}
-                            onChange={(e) => handleEntryChange(activeCategory.id, index, 'outstandingBalance', e.target.value)}
-                          />
-                        </FormField>
-
-                        <FormField
-                          label={labels.payment}
-                          htmlFor={monthlyPaymentId}
-                          required
-                          help="Required monthly payment only. If the lender drafts weekly or daily, convert it to a monthly equivalent."
-                          error={errorFields[monthlyPaymentId] ? 'Monthly payment is required.' : undefined}
-                        >
-                          <Input
-                            type="text"
-                            inputMode='numeric'
-                            placeholder="$0"
-                            value={formatCurrency(entry.monthlyPayment)}
-                            onChange={(e) => handleEntryChange(activeCategory.id, index, 'monthlyPayment', e.target.value)}
-                          />
-                        </FormField>
-
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-
-              {activeCategoryCount < MAX_ROWS ? (
-                <button
-                  type="button"
-                  onClick={() => setCategoryCount(activeCategory.id, activeCategoryCount + 1)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  Add entry
-                </button>
-              ) : null}
-            </div>
-          )}
-
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategoryIndex((prev) => Math.max(0, prev - 1));
-                scrollToDebtSectionTop();
-              }}
-              disabled={activeCategoryIndex === 0}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Previous Category
-            </button>
-
-            <div className={`text-sm font-semibold ${isCategoryComplete(activeCategory.id) ? 'text-emerald-700' : 'text-amber-700'}`}>
-              {isCategoryComplete(activeCategory.id) ? 'Category complete' : 'Add a description and monthly payment for each listed account'}
-            </div>
-
-            {activeCategoryIndex < categories.length - 1 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveCategoryIndex((prev) => Math.min(categories.length - 1, prev + 1));
-                  scrollToDebtSectionTop();
-                }}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                Next Category
-              </button>
-            ) : null}
-          </div>
         </div>
       </section>
 
@@ -826,9 +730,6 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Live Summary</div>
             <h2 className="mt-1 text-2xl font-bold text-slate-900">Debt Summary</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              This mirrors the running summary style from the dedicated Business Debt Summary template form.
-            </p>
           </div>
           <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
             {totals.accounts} total accounts
@@ -836,11 +737,10 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse text-sm md:min-w-[760px]">
+          <table className="w-full min-w-[560px] border-collapse text-sm md:min-w-[680px]">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-2 py-2">Category</th>
-                <th className="px-2 py-2 text-right">Accounts</th>
+                <th className="w-[28%] py-2 pr-3">Category</th>
                 <th className="px-2 py-2 text-right">Monthly Payment</th>
                 <th className="hidden px-2 py-2 text-right md:table-cell">Yearly Payment</th>
                 <th className="px-2 py-2 text-right">Total Balance</th>
@@ -851,8 +751,9 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
             <tbody>
               {categorySummary.map((row) => (
                 <tr key={row.category.id} className="border-b border-slate-100">
-                  <td className="px-2 py-2 font-medium text-slate-900">{row.category.name}</td>
-                  <td className="px-2 py-2 text-right text-slate-700">{row.accounts}</td>
+                  <td className="py-2 pr-3 font-medium text-slate-900">
+                    {row.category.name} ({row.accounts})
+                  </td>
                   <td className="px-2 py-2 text-right text-slate-700">${row.monthlyPayment.toLocaleString()}</td>
                   <td className="hidden px-2 py-2 text-right text-slate-700 md:table-cell">${row.yearlyPayment.toLocaleString()}</td>
                   <td className="px-2 py-2 text-right text-slate-700">${row.totalBalance.toLocaleString()}</td>
@@ -863,8 +764,7 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
             </tbody>
             <tfoot>
               <tr className="border-t border-slate-300 bg-slate-50 text-sm font-semibold text-slate-900">
-                <td className="px-2 py-2">Total</td>
-                <td className="px-2 py-2 text-right">{totals.accounts}</td>
+                <td className="py-2 pr-3">Total ({totals.accounts})</td>
                 <td className="px-2 py-2 text-right">${totals.monthlyPayment.toLocaleString()}</td>
                 <td className="hidden px-2 py-2 text-right md:table-cell">${totals.yearlyPayment.toLocaleString()}</td>
                 <td className="px-2 py-2 text-right">${totals.totalBalance.toLocaleString()}</td>
@@ -901,32 +801,6 @@ const BusinessDebtsStep = forwardRef<BusinessDebtsStepHandle, BusinessDebtsStepP
 });
 
 BusinessDebtsStep.displayName = 'BusinessDebtsStep'; // Good practice for debugging
-
-// Helper function to initialize debts state from initialData prop
-function initializeDebtsState(initialData: Debt[]): Record<DebtCategory, ReadonlyArray<Debt>> {
-  const initialDebts: Record<DebtCategory, Debt[]> = {
-    REAL_ESTATE: [],
-    VEHICLE_EQUIPMENT: [],
-    CREDIT_CARD: [],
-    LINE_OF_CREDIT: [],
-    OTHER: [],
-  };
-
-  // Populate from initialData
-  initialData.forEach(debt => {
-    if (initialDebts[debt.category]) {
-      initialDebts[debt.category].push(debt);
-    }
-  });
-
-  // Ensure each category has at least one (potentially empty) entry
-  categories.forEach(cat => {
-    if (initialDebts[cat.id].length === 0) {
-      initialDebts[cat.id].push(emptyDebt(cat.id));
-    }
-  });
-  return initialDebts as Record<DebtCategory, ReadonlyArray<Debt>>;
-}
 
 export function getDebtsByCategory(debts: Debt[]): Record<DebtCategory, Debt[]> {
   const grouped: Record<DebtCategory, Debt[]> = {

@@ -12,6 +12,12 @@ type AnyRow = Record<string, unknown>;
 
 interface CoverLetterStructuredInputs {
   businessDescription: string;
+  industry: string;
+  entityType: string;
+  customerType: string;
+  topCustomers: string;
+  websiteUrl: string;
+  ownerManagementExperience: string;
   operatingHistory: string;
   businessModelType: string;
   businessLocationDetails: string;
@@ -23,6 +29,11 @@ interface CoverLetterStructuredInputs {
   useOfFundsBreakdown: UseOfFundsBreakdownItem[];
   useOfFundsNarrative: string;
   timingNarrative: string;
+  noLoanImpact: string;
+  withLoanImpact: string;
+  currentFinancialBaseline: string;
+  projectedFinancialImpact: string;
+  cashFlowSummary: unknown;
   repaymentSource: string;
   repaymentSourceOther: string;
   revenueStreams: string[];
@@ -32,6 +43,11 @@ interface CoverLetterStructuredInputs {
   repaymentNotes: string;
   supportingFactors: string[];
   supportingFactorsOther: string;
+  supportingFactorsDetails: string;
+  collateralDetails: string;
+  personalGuaranteeDetails: string;
+  ownerInvestmentDetails: string;
+  weaknessMitigation: string;
   additionalLenderNotes: string;
 }
 
@@ -46,6 +62,12 @@ interface CoverLetterInput {
   loanAmount: number | null;
   annualRevenue: number | null;
   businessDescription: string;
+  industry: string;
+  entityType: string;
+  customerType: string;
+  topCustomers: string;
+  websiteUrl: string;
+  ownerManagementExperience: string;
   operatingHistory: string;
   businessModelType: string;
   businessLocation: string;
@@ -56,11 +78,21 @@ interface CoverLetterInput {
   useOfFundsBreakdown: UseOfFundsBreakdownItem[];
   useOfFundsNarrative: string;
   timingNarrative: string;
+  noLoanImpact: string;
+  withLoanImpact: string;
+  currentFinancialBaseline: string;
+  projectedFinancialImpact: string;
+  cashFlowSummary: unknown;
   repaymentSource: string;
   revenueStreams: string[];
   financingImpact: string[];
   repaymentNotes: string;
   supportingFactors: string[];
+  supportingFactorsDetails: string;
+  collateralDetails: string;
+  personalGuaranteeDetails: string;
+  ownerInvestmentDetails: string;
+  weaknessMitigation: string;
   additionalLenderNotes: string;
 }
 
@@ -105,6 +137,12 @@ const useOfFundsBreakdownSchema = z.array(
 
 const coverLetterStructuredInputsSchema = z.object({
   businessDescription: z.string().trim().max(3000),
+  industry: z.string().trim().max(200).optional().default(''),
+  entityType: z.string().trim().max(100).optional().default(''),
+  customerType: z.string().trim().max(3000).optional().default(''),
+  topCustomers: z.string().trim().max(3000).optional().default(''),
+  websiteUrl: z.string().trim().max(500).optional().default(''),
+  ownerManagementExperience: z.string().trim().max(3000).optional().default(''),
   operatingHistory: z.string().trim().max(300),
   businessModelType: z.string().trim().max(50).optional().default(''),
   businessLocationDetails: z.string().trim().max(500).optional().default(''),
@@ -116,6 +154,11 @@ const coverLetterStructuredInputsSchema = z.object({
   useOfFundsBreakdown: useOfFundsBreakdownSchema.optional().default([]),
   useOfFundsNarrative: z.string().trim().max(4000),
   timingNarrative: z.string().trim().max(3000),
+  noLoanImpact: z.string().trim().max(3000).optional().default(''),
+  withLoanImpact: z.string().trim().max(3000).optional().default(''),
+  currentFinancialBaseline: z.string().trim().max(3000).optional().default(''),
+  projectedFinancialImpact: z.string().trim().max(3000).optional().default(''),
+  cashFlowSummary: z.unknown().optional().default(null),
   repaymentSource: z.string().trim().max(300),
   repaymentSourceOther: z.string().trim().max(300).optional().default(''),
   revenueStreams: stringArraySchema.max(5),
@@ -125,6 +168,11 @@ const coverLetterStructuredInputsSchema = z.object({
   repaymentNotes: z.string().trim().max(3000).optional().default(''),
   supportingFactors: stringArraySchema.max(5),
   supportingFactorsOther: z.string().trim().max(300).optional().default(''),
+  supportingFactorsDetails: z.string().trim().max(3000).optional().default(''),
+  collateralDetails: z.string().trim().max(2000).optional().default(''),
+  personalGuaranteeDetails: z.string().trim().max(2000).optional().default(''),
+  ownerInvestmentDetails: z.string().trim().max(2000).optional().default(''),
+  weaknessMitigation: z.string().trim().max(3000).optional().default(''),
   additionalLenderNotes: z.string().trim().max(4000).optional().default(''),
 });
 
@@ -347,6 +395,24 @@ function mergeStructuredCoverLetterInputs(
     businessDescription:
       payloadInputs?.businessDescription ??
       getFirstNonEmptyText(existingInputs.businessDescription, existingInputs.businessOverview),
+    industry:
+      payloadInputs?.industry ??
+      getFirstNonEmptyText(existingInputs.industry),
+    entityType:
+      payloadInputs?.entityType ??
+      getFirstNonEmptyText(existingInputs.entityType),
+    customerType:
+      payloadInputs?.customerType ??
+      getFirstNonEmptyText(existingInputs.customerType),
+    topCustomers:
+      payloadInputs?.topCustomers ??
+      getFirstNonEmptyText(existingInputs.topCustomers),
+    websiteUrl:
+      payloadInputs?.websiteUrl ??
+      getFirstNonEmptyText(existingInputs.websiteUrl),
+    ownerManagementExperience:
+      payloadInputs?.ownerManagementExperience ??
+      getFirstNonEmptyText(existingInputs.ownerManagementExperience),
     operatingHistory:
       payloadInputs?.operatingHistory ??
       getFirstNonEmptyText(existingInputs.operatingHistory, existingInputs.foundedYear, existingInputs.yearsInBusiness),
@@ -378,6 +444,22 @@ function mergeStructuredCoverLetterInputs(
     timingNarrative:
       payloadInputs?.timingNarrative ??
       getFirstNonEmptyText(existingInputs.timingNarrative, existingInputs.timingDetails, existingInputs.timingReason, existingInputs.urgencyReason),
+    noLoanImpact:
+      payloadInputs?.noLoanImpact ??
+      getFirstNonEmptyText(existingInputs.noLoanImpact, existingInputs.fundingDelayImpact),
+    withLoanImpact:
+      payloadInputs?.withLoanImpact ??
+      getFirstNonEmptyText(existingInputs.withLoanImpact, existingInputs.projectStatus),
+    currentFinancialBaseline:
+      payloadInputs?.currentFinancialBaseline ??
+      getFirstNonEmptyText(existingInputs.currentFinancialBaseline, existingInputs.borrowerContribution),
+    projectedFinancialImpact:
+      payloadInputs?.projectedFinancialImpact ??
+      getFirstNonEmptyText(existingInputs.projectedFinancialImpact, existingInputs.projectEvidence),
+    cashFlowSummary:
+      payloadInputs?.cashFlowSummary ??
+      existingInputs.cashFlowSummary ??
+      null,
     repaymentSource:
       payloadInputs?.repaymentSource ??
       getFirstNonEmptyText(existingInputs.repaymentSource),
@@ -402,6 +484,21 @@ function mergeStructuredCoverLetterInputs(
     supportingFactorsOther:
       payloadInputs?.supportingFactorsOther ??
       getFirstNonEmptyText(existingInputs.supportingFactorsOther, existingInputs.ownerStrengths),
+    supportingFactorsDetails:
+      payloadInputs?.supportingFactorsDetails ??
+      getFirstNonEmptyText(existingInputs.supportingFactorsDetails),
+    collateralDetails:
+      payloadInputs?.collateralDetails ??
+      getFirstNonEmptyText(existingInputs.collateralDetails),
+    personalGuaranteeDetails:
+      payloadInputs?.personalGuaranteeDetails ??
+      getFirstNonEmptyText(existingInputs.personalGuaranteeDetails),
+    ownerInvestmentDetails:
+      payloadInputs?.ownerInvestmentDetails ??
+      getFirstNonEmptyText(existingInputs.ownerInvestmentDetails),
+    weaknessMitigation:
+      payloadInputs?.weaknessMitigation ??
+      getFirstNonEmptyText(existingInputs.weaknessMitigation),
     additionalLenderNotes:
       payloadInputs?.additionalLenderNotes ??
       getFirstNonEmptyText(existingInputs.additionalLenderNotes, existingInputs.additionalContext),
@@ -538,6 +635,7 @@ function generateFallbackCoverLetter(input: CoverLetterInput): string {
   ].join(' ');
   const businessOverviewParagraph = [
     formatSentence(input.businessDescription),
+    formatSentence([input.entityType, input.industry, input.customerType ? `serving ${input.customerType}` : '', input.websiteUrl ? `Website: ${input.websiteUrl}` : ''].filter(Boolean).join(' ')),
     formatBusinessLocationAndHistory(input.businessLocation, input.operatingHistory),
     formatSentence(
       input.employeeCount
@@ -545,8 +643,8 @@ function generateFallbackCoverLetter(input: CoverLetterInput): string {
         : `Revenue is generated through ${formatList(input.revenueStreams)}`
     ),
     formatSentence(
-      input.currentBusinessTraitsDetails
-        ? input.currentBusinessTraitsDetails
+      input.currentBusinessTraitsDetails || input.topCustomers
+        ? [input.currentBusinessTraitsDetails, input.topCustomers ? `Customer notes: ${input.topCustomers}` : ''].filter(Boolean).join(' ')
         : input.currentBusinessTraits.length > 0
         ? `Key indicators of business stability include ${formatList(input.currentBusinessTraits)}`
         : 'The business presents as an established operating company with ongoing customer activity'
@@ -556,7 +654,7 @@ function generateFallbackCoverLetter(input: CoverLetterInput): string {
     formatSentence(`Loan proceeds are expected to be allocated across ${formatUseOfFundsSummary(input.useOfFundsBreakdown)}`),
     formatSentence(input.useOfFundsNarrative),
     formatSentence(input.timingNarrative),
-    'Overall, the proposed use of proceeds appears aligned with the company’s current operations and intended to support sustainable business performance.',
+    formatSentence([input.noLoanImpact, input.withLoanImpact, input.currentFinancialBaseline, input.projectedFinancialImpact].filter(Boolean).join(' ')),
   ].join(' ');
   const repaymentParagraph = [
     formatSentence(`The primary source of repayment is expected to be ${input.repaymentSource.toLowerCase()}`),
@@ -572,19 +670,21 @@ function generateFallbackCoverLetter(input: CoverLetterInput): string {
   ].join(' ');
   const strengthsParagraph = [
     formatSentence(
-      input.supportingFactors.length > 0
+      input.ownerManagementExperience ||
+      (input.supportingFactors.length > 0
         ? `Management strengths supporting this request include ${input.supportingFactors[0]}`
-        : 'The request is supported by experienced ownership and ongoing management oversight'
+        : 'The request is supported by experienced ownership and ongoing management oversight')
     ),
     formatSentence(
-      input.supportingFactors.length > 1
+      input.supportingFactorsDetails ||
+      (input.supportingFactors.length > 1
         ? `Additional business strengths include ${formatList(input.supportingFactors.slice(1))}`
-        : 'The business also shows operating characteristics that support lender confidence'
+        : 'The business also shows operating characteristics that support lender confidence')
     ),
     formatSentence(
-      input.additionalLenderNotes
-        ? input.additionalLenderNotes
-        : 'The borrower appears meaningfully invested in the business and focused on long-term operating stability'
+      [input.collateralDetails, input.personalGuaranteeDetails, input.ownerInvestmentDetails, input.weaknessMitigation, input.additionalLenderNotes]
+        .filter(Boolean)
+        .join(' ') || 'The borrower appears meaningfully invested in the business and focused on long-term operating stability'
     ),
     'Taken together, these factors help reduce perceived credit risk and support the credibility of the repayment narrative.',
   ].join(' ');
@@ -777,6 +877,12 @@ export async function POST(req: NextRequest) {
         loanRequest.business_description,
         'The business has an established operating history and a defined customer base.',
       ),
+    industry: structuredInputs.industry,
+    entityType: structuredInputs.entityType,
+    customerType: structuredInputs.customerType,
+    topCustomers: structuredInputs.topCustomers,
+    websiteUrl: structuredInputs.websiteUrl,
+    ownerManagementExperience: structuredInputs.ownerManagementExperience,
     operatingHistory:
       structuredInputs.operatingHistory ||
       getFirstNonEmptyText(loanRequest.years_in_business),
@@ -798,6 +904,11 @@ export async function POST(req: NextRequest) {
     timingNarrative:
       structuredInputs.timingNarrative ||
       'The timing of this request aligns with an active business need that management is addressing now.',
+    noLoanImpact: structuredInputs.noLoanImpact,
+    withLoanImpact: structuredInputs.withLoanImpact,
+    currentFinancialBaseline: structuredInputs.currentFinancialBaseline,
+    projectedFinancialImpact: structuredInputs.projectedFinancialImpact,
+    cashFlowSummary: structuredInputs.cashFlowSummary,
     repaymentSource:
       narrativeSelections.repaymentSource ||
       'ongoing business cash flow',
@@ -814,6 +925,11 @@ export async function POST(req: NextRequest) {
       narrativeSelections.supportingFactors.length > 0
         ? narrativeSelections.supportingFactors
         : ['experienced ownership'],
+    supportingFactorsDetails: structuredInputs.supportingFactorsDetails,
+    collateralDetails: structuredInputs.collateralDetails,
+    personalGuaranteeDetails: structuredInputs.personalGuaranteeDetails,
+    ownerInvestmentDetails: structuredInputs.ownerInvestmentDetails,
+    weaknessMitigation: structuredInputs.weaknessMitigation,
     additionalLenderNotes: structuredInputs.additionalLenderNotes,
   };
 

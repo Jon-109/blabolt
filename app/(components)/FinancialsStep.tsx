@@ -11,38 +11,30 @@ import {
   forwardRef, 
   useImperativeHandle 
 } from 'react';
-import { 
-  Button
-} from '@/app/(components)/ui/button';
 import {
   Card,
   CardContent,
 } from '@/app/(components)/ui/card';
 import { Input } from '@/app/(components)/ui/input';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/app/(components)/ui/tabs"
 import { Checkbox } from "./ui/checkbox"; 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip'; 
 import { Info } from 'lucide-react'; 
 import { useToast } from '@/app/(components)/shared/useToast'; 
 import { cn } from "@/lib/utils";
-import FormField from '@/app/(components)/templates/shared/FormField';
 
 // Full data for each year, including all fields for input persistence
 export interface FullFinancialData {
   revenue: string;
   cogs: string;
   operatingExpenses: string;
-  nonRecurringIncome: string;
-  nonRecurringExpenses: string;
+  otherIncome: string; // NEW FIELD - Other Income from CPA statements
+  interestIncome: string; // NEW FIELD - Interest Income from CPA statements
+  nonRecurringIncome: string; // True non-recurring income (one-time events)
+  nonRecurringExpenses: string; // True non-recurring expenses (one-time events)
   depreciation: string;
   amortization: string;
-  interest: string; // NEW FIELD
-  taxes: string;    // NEW FIELD
+  interest: string; // Interest Expense
+  taxes: string;    // Income Tax Expense
   // netIncome removed: it is a calculated field only, not user input
 }
 
@@ -53,10 +45,13 @@ export type NumericFinancialData = {
   netIncome: number;
   ebitda: number;
   grossProfit: number;
-  interest: number; // NEW FIELD
-  taxes: number;    // NEW FIELD
+  operatingIncome: number; // NEW FIELD - Operating Income
+  interest: number; // Interest Expense
+  taxes: number;    // Income Tax Expense
   cogs: number;
   operatingExpenses: number;
+  otherIncome: number; // NEW FIELD - Other Income
+  interestIncome: number; // NEW FIELD - Interest Income
   depreciation: number;
   amortization: number;
   nonRecurringIncome: number;
@@ -84,16 +79,19 @@ interface FinancialsStepHandle {
 }
 
 interface FinancialInputsProps {
-  year: string;
-  data: FullFinancialData;
-  setData: React.Dispatch<React.SetStateAction<FullFinancialData>>;
+  data2024: FullFinancialData;
+  data2025: FullFinancialData;
+  data2026: FullFinancialData;
+  setData2024: React.Dispatch<React.SetStateAction<FullFinancialData>>;
+  setData2025: React.Dispatch<React.SetStateAction<FullFinancialData>>;
+  setData2026: React.Dispatch<React.SetStateAction<FullFinancialData>>;
   ytdMonth: string;
   setYtdMonth: (month: string) => void;
   availableYtdMonths?: ReadonlyArray<{ value: string; label: string }>;
-  defaultYtdMonthLabel?: string;
-  skip: boolean; 
-  errors: FinancialErrorData & { ytdMonth?: boolean }; // Add errors prop
-  showErrors: boolean; // new flag to control when to display errors
+  skip2024: boolean;
+  skip2026: boolean;
+  errors: FieldErrors;
+  showErrors: boolean;
 }
 
 interface FinancialFieldInfo {
@@ -126,6 +124,14 @@ const financialFieldsInfo: Record<keyof FullFinancialData, FinancialFieldInfo> =
     shortDescription: `All regular business expenses.\nExamples:\n• rent\n• payroll\n• marketing\n• software\n• utilities\n• insurance`,
     whereToFind: 'Income statement below gross profit, or business tax return under expenses/deductions.'
   },
+  otherIncome: {
+    shortDescription: 'Other income from normal business operations (not one-time events).',
+    whereToFind: 'Income statement, usually listed as "Other Income" or similar.'
+  },
+  interestIncome: {
+    shortDescription: 'Interest income earned on bank accounts, investments, or loans to others.',
+    whereToFind: 'Income statement, usually listed as "Interest Income" or similar.'
+  },
   nonRecurringIncome: {
     shortDescription: `Income that is not part of your normal business operations and is unlikely to happen again.\nExamples:\n• selling equipment\n• insurance payouts\n• grants\n• forgiven debt\n• lawsuit settlements`,
     whereToFind: 'Usually listed as "Other income" or a separate line on your income statement. May also appear in your business tax return under "other income" or attached statements.'
@@ -156,24 +162,28 @@ const fieldTitles: Record<keyof FullFinancialData, string> = {
   revenue: "Revenue",
   cogs: "Cost of Goods Sold (COGS)",
   operatingExpenses: "Operating Expenses",
+  otherIncome: "Other Income",
+  interestIncome: "Interest Income",
   nonRecurringIncome: "Non-Recurring Income",
   nonRecurringExpenses: "Non-Recurring Expenses",
   depreciation: "Depreciation",
   amortization: "Amortization",
-  interest: "Interest Expense", // NEW
-  taxes: "Income Taxes"         // NEW
+  interest: "Interest Expense",
+  taxes: "Income Taxes"
 };
 
 const createEmptyFinancialData = (): FullFinancialData => ({
   revenue: '',
   cogs: '',
   operatingExpenses: '',
+  otherIncome: '',
+  interestIncome: '',
   nonRecurringIncome: '',
   nonRecurringExpenses: '',
   depreciation: '',
   amortization: '',
-  interest: '', // NEW
-  taxes: '',     // NEW
+  interest: '',
+  taxes: '',
 });
 
 const MONTH_OPTIONS = [
@@ -246,35 +256,62 @@ const formatCurrency = (rawValue: string) => {
   return `$${numericValue.toLocaleString('en-US')}`; 
 };
 
-const getYearSourceGuidance = (year: string) => {
-  if (year === '2026') {
-    return 'Best source: your 2026 year-to-date income statement / profit and loss statement. A 2026 tax return usually does not exist yet, and that is okay.';
-  }
-
-  return `Best source: your ${year} business income statement / profit and loss statement, or your ${year} business tax return if that is the cleanest source you have.`;
-};
-
 const getFieldExamples = (key: keyof FullFinancialData) =>
   financialFieldsInfo[key].shortDescription
     .split('\n')
     .filter((line) => line.trim().startsWith('•'))
     .map((line) => line.replace(/^•\s*/, '').trim());
 
+const getFieldDescription = (key: keyof FullFinancialData) => {
+  const examples = getFieldExamples(key);
+  const baseDescription = financialFieldsInfo[key].shortDescription
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('•'))
+    .join(' ')
+    .replace(/\s*Examples:\s*$/, '')
+    .trim();
+
+  if (examples.length === 0) {
+    return baseDescription;
+  }
+
+  return `${baseDescription} Examples: ${examples.join(', ')}.`;
+};
 
 
-const FinancialInputs = memo(({ 
-  year, 
-  data, 
-  setData,
+
+const FINANCIAL_FIELD_ORDER: Array<keyof FullFinancialData> = [
+  'revenue',
+  'operatingExpenses',
+  'nonRecurringIncome',
+  'nonRecurringExpenses',
+  'cogs',
+  'depreciation',
+  'amortization',
+  'interest',
+  'taxes'
+];
+
+const FinancialInputs = memo(({
+  data2024,
+  data2025,
+  data2026,
+  setData2024,
+  setData2025,
+  setData2026,
   ytdMonth,
   setYtdMonth,
   availableYtdMonths = MONTH_OPTIONS,
-  defaultYtdMonthLabel = 'the last full month',
-  skip,
+  skip2024,
+  skip2026,
   errors,
   showErrors
 }: FinancialInputsProps) => {
-  const handleChange = useCallback((key: keyof FullFinancialData, input: string) => {
+  const handleChange = useCallback((
+    setData: React.Dispatch<React.SetStateAction<FullFinancialData>>,
+    key: keyof FullFinancialData,
+    input: string
+  ) => {
     // If input is empty, set as empty string (for placeholder)
     if (input === '') {
       setData(prev => ({ ...prev, [key]: '' }));
@@ -290,116 +327,115 @@ const FinancialInputs = memo(({
       ...prev,
       [key]: formatCurrency(rawValue?.toString() ?? '') // Format before setting
     }));
-  }, [setData]);
+  }, []);
+
+  const renderInput = (
+    year: '2024' | '2025' | '2026',
+    key: keyof FullFinancialData,
+    data: FullFinancialData,
+    setData: React.Dispatch<React.SetStateAction<FullFinancialData>>,
+    skip: boolean
+  ) => (
+    <div className="space-y-1">
+      <Input
+        id={`${year}-${key}`}
+        value={formatCurrency(data[key] ?? '')}
+        onChange={e => handleChange(setData, key, e.target.value)}
+        type="text"
+        inputMode="numeric"
+        placeholder="Enter $0 if none"
+        className={cn(
+          "h-10 w-[112px] font-mono placeholder:font-sans",
+          showErrors && errors[year][key] && "border-red-500 focus:ring-red-500"
+        )}
+        disabled={skip}
+      />
+      {showErrors && errors[year][key] && (
+        <p className="text-xs font-medium text-red-600">Required for {year}.</p>
+      )}
+    </div>
+  );
 
   return (
-    <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-5">
-        <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-          {year === '2026' ? 'Current Year-To-Date' : 'Full Year'}
-        </div>
-        <h3 className="mt-1 text-xl font-bold text-slate-900">{year}{year === '2026' ? ' YTD' : ''}</h3>
-        <p className="mt-1 text-sm text-slate-600">
-          {getYearSourceGuidance(year)}
-        </p>
-        <p className="mt-2 text-sm text-slate-500">
+    <div className="rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 p-4 sm:p-5">
+        <p className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
           If a line is not shown separately on your statement, or it does not apply to your business, enter `$0`. That is completely fine.
         </p>
       </div>
-      {year === '2026' && (
-        <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <FormField
-            label="Last Full Month Included"
-            htmlFor={`${year}-ytd-month`}
-            required
-            help={`Select the last full month included in your 2026 year-to-date income statement. We default this to ${defaultYtdMonthLabel}, but you can change it if your statement covers a different month.`}
-            error={showErrors && errors.ytdMonth ? `YTD Month is required for ${year}.` : undefined}
-            className="max-w-xs"
-          >
-            <select
-              id={`${year}-ytd-month`}
-              value={ytdMonth}
-              onChange={(e) => setYtdMonth(e.target.value)}
-              className={cn(
-                "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                showErrors && errors.ytdMonth && "border-red-500 focus:ring-red-500"
-              )}
-              required
-              disabled={skip}
-            >
-              <option value="" disabled>Select last full month...</option>
-              {availableYtdMonths.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </select>
-          </FormField>
-          <p className="mt-3 text-xs leading-5 text-slate-500">
-            Only months reached so far in 2026 are shown. Choose the last fully completed month covered by your statement.
-          </p>
-        </div>
-      )}
-      <div className="grid gap-4 md:grid-cols-2">
-        {[
-          'revenue',
-          'operatingExpenses',
-          'nonRecurringIncome',
-          'nonRecurringExpenses',
-          'cogs',
-          'depreciation',
-          'amortization',
-          'interest', // NEW
-          'taxes'     // NEW
-        ].map((key) => (
-          <div key={`${year}-${key}`} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-            <FormField
-              label={fieldTitles[key as keyof FullFinancialData]}
-              htmlFor={`${year}-${key}`}
-              required
-              help={
-                <span>
-                  <span className="block">{financialFieldsInfo[key as keyof FullFinancialData].shortDescription.split('\n')[0]}</span>
-                  <span className="mt-1 block text-slate-500">
-                    Where to find it: {financialFieldsInfo[key as keyof FullFinancialData].whereToFind}
-                  </span>
-                  {financialFieldsInfo[key as keyof FullFinancialData].additionalNote && (
-                    <span className="mt-1 block text-slate-500">
-                      {financialFieldsInfo[key as keyof FullFinancialData].additionalNote}
-                    </span>
-                  )}
-                </span>
-              }
-              error={
-                showErrors && errors[key as keyof FullFinancialData]
-                  ? `${fieldTitles[key as keyof FullFinancialData]} is required for ${year}.`
-                  : undefined
-              }
-            >
-              <Input
-                value={formatCurrency(data[key as keyof FullFinancialData] ?? '')}
-                onChange={e => handleChange(key as keyof FullFinancialData, e.target.value)}
-                type="text"
-                inputMode="numeric"
-                placeholder="Enter $0 if none"
-                className={cn(
-                  "font-mono placeholder:font-sans",
-                  showErrors && errors[key as keyof FullFinancialData] && "border-red-500 focus:ring-red-500"
-                )}
-                disabled={skip}
-              />
-            </FormField>
 
-            {key !== 'operatingExpenses' && getFieldExamples(key as keyof FullFinancialData).length > 0 && (
-              <div className="mt-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Examples</div>
-                <p className="mt-2 text-xs leading-5 text-slate-600">
-                  {getFieldExamples(key as keyof FullFinancialData).join(', ')}
-                </p>
-              </div>
-            )}
-          </div>
-        ))}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[680px] table-fixed border-separate border-spacing-0">
+          <colgroup>
+            <col />
+            <col className="w-[128px]" />
+            <col className="w-[128px]" />
+            <col className="w-[176px]" />
+          </colgroup>
+          <thead>
+            <tr className="bg-slate-50 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+              <th className="sticky left-0 z-10 border-b border-slate-200 bg-slate-50 px-4 py-4 sm:px-5">Financial Line Item</th>
+              <th className="border-b border-slate-200 px-2 py-4">2024</th>
+              <th className="border-b border-slate-200 px-2 py-4">2025</th>
+              <th className="border-b border-slate-200 px-2 py-4">
+                <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
+                  <span>2026 YTD</span>
+                  <select
+                    id="2026-ytd-month"
+                    value={ytdMonth}
+                    onChange={(e) => setYtdMonth(e.target.value)}
+                    className={cn(
+                      "h-8 w-[82px] rounded-md border border-input bg-background px-2 py-1 text-xs font-semibold normal-case tracking-normal text-slate-700 ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                      showErrors && errors['2026'].ytdMonth && "border-red-500 focus:ring-red-500"
+                    )}
+                    required
+                    disabled={skip2026}
+                    aria-label="Last full month included for 2026 YTD"
+                  >
+                    <option value="" disabled>Month</option>
+                    {availableYtdMonths.map((month) => (
+                      <option key={month.value} value={month.value}>
+                        {month.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {showErrors && errors['2026'].ytdMonth && (
+                  <p className="mt-1 text-xs font-medium normal-case tracking-normal text-red-600">Required.</p>
+                )}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {FINANCIAL_FIELD_ORDER.map((key) => (
+              <tr key={key} className="align-top">
+                <td className="sticky left-0 z-10 border-b border-slate-200 bg-white px-4 py-5 sm:px-5">
+                  <div className="w-full">
+                    <div className="text-sm font-bold text-slate-900">{fieldTitles[key]}</div>
+                    <p className="mt-1 text-xs leading-5 text-slate-600">
+                      {getFieldDescription(key)}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                      <span className="font-semibold text-slate-600">Where to find it:</span> {financialFieldsInfo[key].whereToFind}
+                    </p>
+                    {financialFieldsInfo[key].additionalNote && (
+                      <p className="mt-2 text-xs leading-5 text-slate-500">{financialFieldsInfo[key].additionalNote}</p>
+                    )}
+                  </div>
+                </td>
+                <td className="border-b border-slate-200 px-2 py-5">
+                  {renderInput('2024', key, data2024, setData2024, skip2024)}
+                </td>
+                <td className="border-b border-slate-200 px-2 py-5">
+                  {renderInput('2025', key, data2025, setData2025, false)}
+                </td>
+                <td className="border-b border-slate-200 px-2 py-5">
+                  {renderInput('2026', key, data2026, setData2026, skip2026)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -409,8 +445,6 @@ FinancialInputs.displayName = 'FinancialInputs';
 
 const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
   {
-    onNext,
-    onBack,
     isFormValid, 
     onFormDataChange,
     initialData
@@ -421,7 +455,6 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
 
   const { showToast } = useToast(); 
 
-  const [activeTab, setActiveTab] = useState('2024');
   const [ytdMonth, setYtdMonth] = useState<string>(''); 
 
   const [internalIsValid, setInternalIsValid] = useState(false);
@@ -459,9 +492,6 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
   const lastNonSkipped2026 = useRef<FullFinancialData | null>(null);
   const availableYtdMonths = useMemo(() => getAvailableYtdMonths(new Date()), []);
   const defaultYtdMonthValue = useMemo(() => getDefaultYtdMonthValue(new Date()), []);
-  const defaultYtdMonthLabel =
-    availableYtdMonths.find((month) => month.value === defaultYtdMonthValue)?.label ?? 'the last full month';
-
   useEffect(() => {
     // console.log("[DEBUG FinancialsStep] Mount effect running.");
     if (initialData) {
@@ -478,7 +508,7 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
   useEffect(() => {
     if (skip2024) {
       lastNonSkipped2024.current = data2024;
-      setData2024(prev => {
+      setData2024(() => {
         const zeroed: FullFinancialData = { ...createEmptyFinancialData() };
         Object.keys(zeroed).forEach(key => zeroed[key as keyof FullFinancialData] = '0');
         return zeroed;
@@ -491,7 +521,7 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
   useEffect(() => {
     if (skip2026) {
       lastNonSkipped2026.current = data2026;
-      setData2026(prev => {
+      setData2026(() => {
         const zeroed: FullFinancialData = { ...createEmptyFinancialData() };
         Object.keys(zeroed).forEach(key => zeroed[key as keyof FullFinancialData] = '0');
         return zeroed;
@@ -515,20 +545,6 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
     }
   }, [availableYtdMonths, defaultYtdMonthValue, skip2026, ytdMonth]);
 
-  const safeToString = (value: number | null | undefined): string => {
-    if (value === null || value === undefined || value === 0) {
-      return '';
-    } 
-    return value.toString(); 
-  };
-
-  const unformatCurrency = (value: string): number | undefined => {
-    if (!value) return undefined; 
-    const numbers = value.replace(/\D/g, '');
-    const numericValue = Number(numbers);
-    return isNaN(numericValue) ? undefined : numericValue; 
-  };
-
   const validateYear = useCallback(( 
     data: FullFinancialData, 
     year: string, 
@@ -538,25 +554,18 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
     if (skip) return {}; // No errors if skipped
 
     const errors: FinancialErrorData & { ytdMonth?: boolean } = {};
-    let yearIsValid = true; // Keep track for logging if needed
-
-    // Check each field defined in FullFinancialData
-    (Object.keys(createEmptyFinancialData()) as Array<keyof FullFinancialData>).forEach(key => {
-      // Check if the field is empty (basic validation)
-      // Also consider just '$' as empty after formatting
+    FINANCIAL_FIELD_ORDER.forEach(key => {
       if (!data[key] || data[key].trim() === '' || data[key].trim() === '$') { 
         errors[key] = true;
-        yearIsValid = false;
       }
     });
 
     // Special check for 2026 YTD month
     if (year === '2026' && (!currentYtdMonth || currentYtdMonth === '')) {
       errors.ytdMonth = true;
-      yearIsValid = false;
     }
 
-    // console.log(`[DEBUG FinancialsStep] validateYear(${year}) - Skip: ${skip}, Valid: ${yearIsValid}, Errors:`, errors);
+    // console.log(`[DEBUG FinancialsStep] validateYear(${year}) - Skip: ${skip}, Errors:`, errors);
     return errors; // Return the errors object
   }, []); // No dependencies needed as it operates on arguments
 
@@ -617,33 +626,43 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
 
   const runValidation = useCallback(() => {
     // console.log('[DEBUG FinancialsStep] Running validation via runValidation...');
-    const isValid = validateForm(); // This now sets fieldErrors internally
+    const errors2024 = validateYear(data2024, '2024', ytdMonth, skip2024);
+    const errors2025 = validateYear(data2025, '2025', ytdMonth, false);
+    const errors2026 = validateYear(data2026, '2026', ytdMonth, skip2026);
+    const nextFieldErrors: FieldErrors = {
+      '2024': errors2024,
+      '2025': errors2025,
+      '2026': errors2026,
+    };
+    const isValid =
+      Object.keys(errors2024).length === 0 &&
+      Object.keys(errors2025).length === 0 &&
+      Object.keys(errors2026).length === 0;
+
+    setFieldErrors(nextFieldErrors);
 
     // Show toast only if validation fails
     if (!isValid) {
       setShowErrors(true); // show errors on failed validation
-      showToast('Please fill all required fields marked in red.');
+      showToast('Please complete the required field highlighted in red.');
 
-      // --- Redirect to first error field ---
-      // Find first year with error
       const yearOrder: Array<'2024' | '2025' | '2026'> = ['2024', '2025', '2026'];
-      let found = false;
       for (const year of yearOrder) {
-        const errors = fieldErrors[year];
-        if (errors && Object.keys(errors).length > 0 && !found) {
-          setActiveTab(year);
-          // Find first field with error
-          let firstField = Object.keys(errors)[0];
-          let fieldId = year + '-' + firstField;
-          // Special case for ytdMonth (for 2026)
+        const currentErrors = nextFieldErrors[year];
+        if (currentErrors && Object.keys(currentErrors).length > 0) {
+          const firstField = Object.keys(currentErrors)[0];
+          let fieldId = `${year}-${firstField}`;
           if (firstField === 'ytdMonth') {
-            fieldId = year + '-ytd-month';
+            fieldId = '2026-ytd-month';
           }
           setTimeout(() => {
             const el = document.getElementById(fieldId);
-            if (el) el.focus();
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.focus({ preventScroll: true });
+            }
           }, 100);
-          found = true;
+          break;
         }
       }
     } else {
@@ -655,7 +674,7 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
     isFormValid?.(isValid);
 
     return isValid;
-  }, [validateForm, showToast, isFormValid, fieldErrors]); // Dependencies
+  }, [data2024, data2025, data2026, isFormValid, showToast, skip2024, skip2026, validateYear, ytdMonth]); // Dependencies
 
   useImperativeHandle(ref, () => ({
     validate: runValidation
@@ -682,207 +701,81 @@ const FinancialsStep = forwardRef<FinancialsStepHandle, FinancialsStepProps>((
               </p>
             </div>
 
-            <Tabs value={activeTab} onValueChange={(val)=>{ setActiveTab(val); setShowErrors(false); }} className="w-full">
-            <TabsList className="mb-5 flex h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
-  <TabsTrigger
-    value="2024"
-    className={cn(
-      'relative flex items-center justify-center rounded-full border px-4 py-2 text-sm font-bold transition-all duration-200 focus:outline-none',
-      activeTab === '2024'
-        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400',
-      'min-w-[110px]'
-    )}
-  >
-    2024
-    {(skip2024 || Object.keys(fieldErrors['2024']).length === 0) && (
-      <span className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full px-2 py-0.5 text-xs font-bold shadow">✓</span>
-    )}
-  </TabsTrigger>
-  <TabsTrigger
-    value="2025"
-    className={cn(
-      'relative flex items-center justify-center rounded-full border px-4 py-2 text-sm font-bold transition-all duration-200 focus:outline-none',
-      activeTab === '2025'
-        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400',
-      'min-w-[110px]'
-    )}
-  >
-    2025
-    {Object.keys(fieldErrors['2025']).length === 0 && (
-      <span className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full px-2 py-0.5 text-xs font-bold shadow">✓</span>
-    )}
-  </TabsTrigger>
-  <TabsTrigger
-    value="2026"
-    className={cn(
-      'relative flex items-center justify-center rounded-full border px-4 py-2 text-sm font-bold transition-all duration-200 focus:outline-none',
-      activeTab === '2026'
-        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400',
-      'min-w-[130px]'
-    )}
-  >
-    2026 YTD
-    {Object.keys(fieldErrors['2026']).length === 0 && (
-      <span className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full px-2 py-0.5 text-xs font-bold shadow">✓</span>
-    )}
-  </TabsTrigger>
-</TabsList>
-
-            <TabsContent value="2024" className='pt-2'>
-              <div className="mb-4 flex items-center space-x-2 rounded-xl border border-blue-200 bg-blue-50 p-3">
+            <div className="mb-5 grid gap-3 md:grid-cols-2">
+              <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
                 <Checkbox 
                   id="skip2024"
                   checked={skip2024}
                   onCheckedChange={() => setSkip2024(!skip2024)}
+                  className="mt-0.5"
                 />
-                <label
-                  htmlFor="skip2024"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Skip 2024 Financials
-                </label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                     <Info className="h-4 w-4 text-gray-500 cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs bg-gray-800 text-white p-2 rounded">
-                    <p className="text-xs">
-                      Check this if you do not have a 2024 income statement or 2024 business tax return available. That is okay.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="skip2024" className="text-sm font-bold text-blue-950">
+                      Skip 2024 Financials
+                    </label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 cursor-pointer text-blue-700" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs bg-gray-800 text-white p-2 rounded">
+                        <p className="text-xs">
+                          Check this if you do not have a 2024 income statement or 2024 business tax return available. That is okay.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-blue-800">
+                    When selected, the 2024 column is disabled and saved as `$0` values.
+                  </p>
+                </div>
               </div>
 
-              <FinancialInputs 
-                year="2024" 
-                data={data2024} 
-                setData={setData2024}
-                ytdMonth={ytdMonth} 
-                setYtdMonth={() => {}} // Pass dummy function
-                availableYtdMonths={availableYtdMonths}
-                defaultYtdMonthLabel={defaultYtdMonthLabel}
-                skip={skip2024}
-                errors={fieldErrors['2024']}
-                showErrors={showErrors}
-              />
-            </TabsContent>
-
-            <TabsContent value="2025" className='pt-2'>
-              <FinancialInputs 
-                year="2025" 
-                data={data2025} 
-                setData={setData2025}
-                skip={false}
-                ytdMonth={ytdMonth} // Doesn't need ytdMonth or setYtdMonth
-                setYtdMonth={() => {}} // Pass dummy function
-                availableYtdMonths={availableYtdMonths}
-                defaultYtdMonthLabel={defaultYtdMonthLabel}
-                errors={fieldErrors['2025']}
-                showErrors={showErrors}
-              />
-            </TabsContent>
-
-            <TabsContent value="2026" className='pt-2'>
-              <div className="mb-4 flex items-center space-x-2 rounded-xl border border-blue-200 bg-blue-50 p-3">
-                 <Checkbox 
+              <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <Checkbox 
                   id="skip2026"
                   checked={skip2026}
                   onCheckedChange={() => setSkip2026(!skip2026)}
+                  className="mt-0.5"
                 />
-                <label
-                  htmlFor="skip2026"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Skip 2026 Year-to-Date Financials
-                </label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                     <Info className="h-4 w-4 text-gray-500 cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs bg-gray-800 text-white p-2 rounded">
-                    <p className="text-xs">
-                      Check this if you do not have a 2026 year-to-date income statement yet. That is okay.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="skip2026" className="text-sm font-bold text-blue-950">
+                      Skip 2026 Year-to-Date Financials
+                    </label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 cursor-pointer text-blue-700" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs bg-gray-800 text-white p-2 rounded">
+                        <p className="text-xs">
+                          Check this if you do not have a 2026 year-to-date income statement yet. That is okay.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-blue-800">
+                    When selected, the 2026 YTD column and month selector are disabled.
+                  </p>
+                </div>
               </div>
-
-              <FinancialInputs 
-                year="2026" 
-                data={data2026} 
-                setData={setData2026}
-                skip={skip2026}
-                ytdMonth={ytdMonth}
-                setYtdMonth={setYtdMonth}
-                availableYtdMonths={availableYtdMonths}
-                defaultYtdMonthLabel={defaultYtdMonthLabel}
-                errors={fieldErrors['2026']}
-                showErrors={showErrors}
-              />
-            </TabsContent>
-
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              {activeTab === '2024' && (
-                <Button
-                  variant="default"
-                  className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                  onClick={() => {
-                    setActiveTab('2025');
-                    document.getElementById('financials-step-top')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  aria-label="Go to 2025"
-                >
-                  Next: 2025
-                  <span className="ml-2"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg></span>
-                </Button>
-              )}
-              {activeTab === '2025' && (
-                <>
-                  <Button
-                    variant="secondary"
-                    className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    onClick={() => {
-                      setActiveTab('2024');
-                      document.getElementById('financials-step-top')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    aria-label="Go back to 2024"
-                  >
-                    <span className="mr-2"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg></span>
-                    Back: 2024
-                  </Button>
-                  <Button
-                    variant="default"
-                    className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                    onClick={() => {
-                      setActiveTab('2026');
-                      document.getElementById('financials-step-top')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    aria-label="Go to 2026 YTD"
-                  >
-                    Next: 2026 YTD
-                    <span className="ml-2"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg></span>
-                  </Button>
-                </>
-              )}
-              {activeTab === '2026' && (
-                <Button
-                  variant="secondary"
-                  className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                  onClick={() => {
-                    setActiveTab('2025');
-                    document.getElementById('financials-step-top')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  aria-label="Go back to 2025"
-                >
-                  <span className="mr-2"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg></span>
-                  Back: 2025
-                </Button>
-              )}
             </div>
-          </Tabs>
+
+            <FinancialInputs
+              data2024={data2024}
+              data2025={data2025}
+              data2026={data2026}
+              setData2024={setData2024}
+              setData2025={setData2025}
+              setData2026={setData2026}
+              ytdMonth={ytdMonth}
+              setYtdMonth={setYtdMonth}
+              availableYtdMonths={availableYtdMonths}
+              skip2024={skip2024}
+              skip2026={skip2026}
+              errors={fieldErrors}
+              showErrors={showErrors}
+            />
           </CardContent>
         </Card>
       </div>

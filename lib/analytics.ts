@@ -36,7 +36,9 @@ export type GA4EventName =
   | 'page_section_view'
   | 'cta_click'
   | 'calculator_interaction'
-  | 'calculator_result';
+  | 'calculator_result'
+  | 'begin_checkout'
+  | 'sign_up';
 
 // Event Parameter Types
 export interface PageViewParams {
@@ -50,8 +52,12 @@ export interface GenerateLeadParams {
   submission_method: 'resend';
   loan_amount?: number;
   loan_purpose?: string;
+  funding_amount_range?: string;
+  service_interest?: string;
   lead_source?: string;
   status: 'success';
+  value?: number;
+  currency?: string;
 }
 
 export interface LeadSubmissionErrorParams {
@@ -132,6 +138,18 @@ export interface CalculatorInteractionParams {
   recommended_action?: string;
 }
 
+export interface CheckoutParams {
+  item_id: string;
+  item_name: string;
+  value?: number;
+  currency?: string;
+}
+
+export interface SignUpParams {
+  method: string;
+  redirect_to?: string;
+}
+
 export type EventParams =
   | PageViewParams
   | GenerateLeadParams
@@ -145,7 +163,9 @@ export type EventParams =
   | ScrollParams
   | PageSectionViewParams
   | CtaClickParams
-  | CalculatorInteractionParams;
+  | CalculatorInteractionParams
+  | CheckoutParams
+  | SignUpParams;
 
 // ============================================================================
 // Configuration
@@ -163,8 +183,13 @@ const ALLOWED_PARAMS = new Set([
   'submission_method',
   'loan_amount',
   'loan_purpose',
+  'funding_amount_range',
+  'service_interest',
   'lead_source',
   'status',
+  'value',
+  'currency',
+  'send_to',
   'error_stage',
   'message',
   'item_list_id',
@@ -194,6 +219,10 @@ const ALLOWED_PARAMS = new Set([
   'assumption_term_months',
   'assumption_down_payment_pct',
   'recommended_action',
+  'item_id',
+  'item_name',
+  'method',
+  'redirect_to',
   // UTM parameters
   'utm_source',
   'utm_medium',
@@ -212,6 +241,18 @@ const ALLOWED_PARAMS = new Set([
  */
 export function getMeasurementId(): string | undefined {
   return process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+}
+
+export function getGoogleAdsId(): string | undefined {
+  return process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
+}
+
+export function getGoogleAdsLeadConversionLabel(): string | undefined {
+  return process.env.NEXT_PUBLIC_GOOGLE_ADS_LEAD_CONVERSION_LABEL;
+}
+
+export function getGoogleAdsCheckoutConversionLabel(): string | undefined {
+  return process.env.NEXT_PUBLIC_GOOGLE_ADS_CHECKOUT_CONVERSION_LABEL;
 }
 
 /**
@@ -272,6 +313,7 @@ export function track(
     }
 
     window.gtag!('event', eventName, sanitizedParams);
+    window.dataLayer?.push({ event: eventName, ...sanitizedParams });
   } catch (error) {
     console.error('[Analytics] Error tracking event:', error);
   }
@@ -299,7 +341,9 @@ export function trackPageview(path: string, title?: string): void {
       console.log('[Analytics] Page view:', params);
     }
 
-    window.gtag!('event', 'page_view', sanitizeParams(params));
+    const sanitizedParams = sanitizeParams(params);
+    window.gtag!('event', 'page_view', sanitizedParams);
+    window.dataLayer?.push({ event: 'page_view', ...sanitizedParams });
   } catch (error) {
     console.error('[Analytics] Error tracking page view:', error);
   }
@@ -596,6 +640,42 @@ export function trackCalculatorInteraction(params: CalculatorInteractionParams):
 
 export function trackCalculatorResult(params: CalculatorInteractionParams): void {
   track('calculator_result', params);
+}
+
+export function trackGoogleAdsConversion(
+  label: string | undefined,
+  params: Record<string, unknown> = {},
+): void {
+  const adsId = getGoogleAdsId();
+  if (!adsId || !label || !isAnalyticsEnabled()) return;
+
+  const conversionParams = sanitizeParams({
+    ...params,
+    send_to: `${adsId}/${label}`,
+  });
+
+  window.gtag?.('event', 'conversion', conversionParams);
+  window.dataLayer?.push({ event: 'conversion', ...conversionParams });
+}
+
+export function trackLeadConversion(params: GenerateLeadParams): void {
+  track('generate_lead', params);
+  trackGoogleAdsConversion(getGoogleAdsLeadConversionLabel(), {
+    value: params.value,
+    currency: params.currency,
+  });
+}
+
+export function trackBeginCheckout(params: CheckoutParams): void {
+  track('begin_checkout', params);
+  trackGoogleAdsConversion(getGoogleAdsCheckoutConversionLabel(), {
+    value: params.value,
+    currency: params.currency,
+  });
+}
+
+export function trackSignUp(params: SignUpParams): void {
+  track('sign_up', params);
 }
 
 // ============================================================================

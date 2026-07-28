@@ -22,8 +22,8 @@ import type { LucideIcon } from 'lucide-react';
 
 import LoanPaymentCalculator from '@/app/(components)/LoanPaymentCalculator';
 import Testimonials from '@/app/(components)/shared/Testimonials';
-import LoanPackagingExplainer from '@/app/(components)/shared/LoanPackagingExplainer';
 import ContactFormModal from '@/app/(components)/shared/ContactFormModal';
+import LeadInterestForm from '@/app/(components)/shared/LeadInterestForm';
 import AuthAwareCheckoutButton from '@/app/services/components/AuthAwareCheckoutButton';
 import AuthAwareRouteButton from '@/app/services/components/AuthAwareRouteButton';
 import type { StripeCheckoutProductType } from '@/lib/stripe/catalog';
@@ -440,10 +440,6 @@ export default function LoanServicesPage() {
         </div>
       </section>
 
-      <div data-loanservices-reveal className="home-reveal">
-        <LoanPackagingExplainer />
-      </div>
-
       <section className="bg-white py-9 sm:py-12" data-loanservices-reveal>
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="home-reveal grid gap-5 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
@@ -642,6 +638,14 @@ export default function LoanServicesPage() {
         </div>
       </section>
 
+      <section className="bg-[linear-gradient(180deg,#f8fafc_0%,#ecfeff_100%)] py-9 sm:py-12" data-loanservices-reveal>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="home-reveal mx-auto max-w-5xl">
+            <LeadInterestForm source="loan-services-embedded" />
+          </div>
+        </div>
+      </section>
+
       <section className="relative overflow-hidden bg-slate-950 py-9 text-white sm:py-12" data-loanservices-reveal>
         <div className="pointer-events-none absolute inset-0 opacity-55 [background-image:radial-gradient(circle_at_16%_20%,rgba(6,182,212,0.18),transparent_24%),radial-gradient(circle_at_82%_16%,rgba(251,191,36,0.14),transparent_22%),radial-gradient(circle_at_72%_84%,rgba(16,185,129,0.14),transparent_28%)]" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -715,6 +719,7 @@ export default function LoanServicesPage() {
       <ContactFormModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
+        source="loan-services-modal"
       />
     </div>
   );

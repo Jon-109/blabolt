@@ -298,7 +298,7 @@ const Header = () => {
   const loanPackagingNavHref = '/loan-packaging';
   const loanPackagingNavLabel = 'Loan Package';
 
-  if (pathname.startsWith('/report/print/')) return null;
+  if (pathname.startsWith('/report/print/') || pathname.startsWith('/report/template/')) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white">

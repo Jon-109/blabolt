@@ -32,6 +32,7 @@ interface ReviewSubmitStepProps {
 
   onSaveDraft: () => Promise<void>;
   onConfirmChange?: (confirmed: boolean) => void;
+  confirmationAttempted?: boolean;
 }
 
 const formatCurrency = (amount: number | string | null | undefined) => {
@@ -60,6 +61,7 @@ export function ReviewSubmitStep({
   submitError,
   pdfUrls,
   onConfirmChange,
+  confirmationAttempted = false,
 }: ReviewSubmitStepProps) {
   // SSR-safe: do not use window/localStorage in state initializers
   // All state is initialized to deterministic values
@@ -449,13 +451,19 @@ export function ReviewSubmitStep({
       </Card>
 
       {/* Confirmation Section */}
-      <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div
+        id="review-confirmation-section"
+        className={`mx-auto max-w-4xl rounded-2xl border p-5 ${confirmationAttempted && !isConfirmed ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-slate-50'}`}
+      >
         <label className="flex items-start space-x-3 text-sm text-slate-700">
-          <Checkbox checked={isConfirmed} onCheckedChange={(v) => setIsConfirmed(!!v)} />
+          <Checkbox id="review-confirmation" checked={isConfirmed} onCheckedChange={(v) => setIsConfirmed(!!v)} />
           <span>
             I confirm that the information provided above is accurate to the best of my knowledge. I understand that the analysis and recommendations are based on my inputs and do not constitute a loan approval or commitment.
           </span>
         </label>
+        {confirmationAttempted && !isConfirmed ? (
+          <p className="mt-3 text-sm font-medium text-red-700">Please confirm this statement before submitting your analysis.</p>
+        ) : null}
       </div>
 
       {error && (

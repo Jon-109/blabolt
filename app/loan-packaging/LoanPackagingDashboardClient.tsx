@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
@@ -129,6 +130,20 @@ interface LenderLink {
   shareUrl: string;
 }
 
+interface CashFlowSummaryYear {
+  label: string;
+  revenue: number | null;
+  netIncome: number | null;
+  debtService: number | null;
+  dscr: number | null;
+}
+
+interface CashFlowSummary {
+  id: string;
+  updatedAt: string | null;
+  years: CashFlowSummaryYear[];
+}
+
 interface DashboardPayload {
   loanRequest: LoanRequestRow | null;
   requirements: DocumentRequirement[];
@@ -140,6 +155,7 @@ interface DashboardPayload {
   loanRequestTemplateContext: Record<string, unknown>;
   cashFlowTemplatePrefill: Record<string, unknown>;
   latestCashFlowAnalysisId: string | null;
+  cashFlowSummary: CashFlowSummary | null;
   progress: {
     totalRequired: number;
     completedRequired: number;
@@ -164,6 +180,12 @@ type BusinessModelType = 'local' | 'regional' | 'nationwide' | 'online' | 'hybri
 
 interface CoverLetterFormState {
   businessDescription: string;
+  industry: string;
+  entityType: string;
+  customerType: string;
+  topCustomers: string;
+  websiteUrl: string;
+  ownerManagementExperience: string;
   operatingHistory: string;
   businessModelType: BusinessModelType | '';
   businessLocationDetails: string;
@@ -175,6 +197,10 @@ interface CoverLetterFormState {
   useOfFundsBreakdown: UseOfFundsLineItem[];
   useOfFundsNarrative: string;
   timingNarrative: string;
+  noLoanImpact: string;
+  withLoanImpact: string;
+  currentFinancialBaseline: string;
+  projectedFinancialImpact: string;
   repaymentSource: string;
   repaymentSourceOther: string;
   revenueStreams: string[];
@@ -184,6 +210,11 @@ interface CoverLetterFormState {
   repaymentNotes: string;
   supportingFactors: string[];
   supportingFactorsOther: string;
+  supportingFactorsDetails: string;
+  collateralDetails: string;
+  personalGuaranteeDetails: string;
+  ownerInvestmentDetails: string;
+  weaknessMitigation: string;
   additionalLenderNotes: string;
 }
 
@@ -235,8 +266,9 @@ type CoverLetterTabId =
   | 'business-overview'
   | 'use-of-funds'
   | 'repayment'
-  | 'business-strengths'
   | 'review';
+
+type WorkflowSectionId = 'loan-profile' | 'documents' | 'cover-letter' | 'package';
 
 function formatCurrency(value: number | null | undefined): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -397,13 +429,6 @@ const BUSINESS_MODEL_OPTIONS: Array<{
   { value: 'online', label: 'Online / E-commerce' },
   { value: 'hybrid', label: 'Hybrid (physical + online)' },
 ];
-
-const EMPLOYEE_COUNT_OPTIONS = [
-  '1-5',
-  '6-10',
-  '11-25',
-  '26+',
-] as const;
 
 const BUSINESS_TODAY_OPTIONS = [
   'Repeat customers',
@@ -685,7 +710,7 @@ const COVER_LETTER_TABS: Array<{
   {
     id: 'business-overview',
     label: 'Business Overview',
-    description: 'Business basics and credibility',
+    description: 'Business basics, customers, and strengths',
   },
   {
     id: 'use-of-funds',
@@ -698,24 +723,11 @@ const COVER_LETTER_TABS: Array<{
     description: 'How the loan gets repaid',
   },
   {
-    id: 'business-strengths',
-    label: 'Business Strengths',
-    description: 'Why the request is supportable',
-  },
-  {
     id: 'review',
     label: 'Review',
     description: 'Final notes and draft',
   },
 ];
-
-const COVER_LETTER_SECTION_INTROS: Record<CoverLetterTabId, string> = {
-  'business-overview': 'Keep this simple and specific so the lender can quickly understand what your business does.',
-  'use-of-funds': 'Break down the request and explain it clearly. The prompts below adjust to the loan purpose you selected.',
-  repayment: 'Explain how your business makes money today and what will be used to repay the loan.',
-  'business-strengths': 'Highlight the strongest factors that help a lender feel comfortable with the request.',
-  review: 'Add any final context, generate the cover letter, and review the draft before approval.',
-};
 
 function fromCalculatorPurpose(
   key: keyof typeof calculatorLoanPurposes,
@@ -878,8 +890,67 @@ function createUseOfFundsLineItem(
   };
 }
 
+const UNIVERSAL_USE_OF_FUNDS_ROWS = [
+  'Closing costs / lender fees',
+  'Professional fees',
+  'Operating reserve',
+  'Working capital cushion',
+  'Taxes, title, or recording fees',
+  'Appraisal / inspection costs',
+] as const;
+
+function getPurposeSpecificUseOfFundsRows(loanPurpose: string): string[] {
+  switch (loanPurpose) {
+    case 'Commercial Real Estate Purchase':
+      return ['Property purchase price', 'Down payment / equity injection', 'Tenant improvements', 'Initial reserves', 'Environmental report', 'Survey or title costs'];
+    case 'Commercial Real Estate Refinance':
+      return ['Existing loan payoff', 'Cash-out for business purpose', 'Prepayment penalty', 'Escrow or reserve funding', 'Property improvements', 'Debt service reserve'];
+    case 'Equipment Purchase':
+      return ['Equipment purchase', 'Delivery / freight', 'Installation / setup', 'Training or onboarding', 'Warranty / maintenance plan', 'Taxes or fees'];
+    case 'Vehicle Purchase':
+      return ['Vehicle purchase', 'Taxes, title, and registration', 'Commercial upfit', 'Insurance startup costs', 'Delivery costs', 'Fleet equipment'];
+    case 'Inventory Purchase':
+      return ['Inventory purchase', 'Freight / shipping', 'Vendor deposits', 'Bulk purchase discount', 'Storage / warehousing', 'Seasonal stock build'];
+    case 'Business Acquisition':
+      return ['Business purchase price', 'Seller note payoff', 'Transition working capital', 'Due diligence costs', 'Legal / closing fees', 'Post-close reserves'];
+    case 'Debt Refinance / Consolidation':
+      return ['Debt payoff', 'Merchant cash advance payoff', 'Credit card payoff', 'Prepayment penalty', 'Reserve cushion', 'Closing costs'];
+    case 'Business Expansion / New Location':
+      return ['Buildout / improvements', 'Equipment and fixtures', 'Opening inventory', 'Lease deposit', 'Hiring / training', 'Launch marketing'];
+    case 'Tenant Improvements / Renovation':
+      return ['Construction / buildout', 'Fixtures and equipment', 'Permits', 'Architect / contractor fees', 'Contingency', 'Furniture and signage'];
+    case 'Franchise Purchase':
+      return ['Franchise fee', 'Buildout', 'Equipment', 'Opening inventory', 'Training costs', 'Startup working capital'];
+    case 'Revolving Line of Credit':
+      return ['Working capital draws', 'Inventory purchases', 'Payroll timing', 'Vendor payments', 'Receivables timing gap', 'Seasonal operating needs'];
+    case 'Bridge Financing':
+      return ['Short-term payoff', 'Transaction timing gap', 'Temporary liquidity', 'Deposit funding', 'Closing costs', 'Expected takeout costs'];
+    case 'Working Capital':
+      return ['Payroll / staffing', 'Inventory or supplies', 'Vendor payments', 'Rent or occupancy costs', 'Receivables timing gap', 'Operating reserve'];
+    default:
+      return ['Primary business need', 'Equipment or supplies', 'Inventory', 'Payroll / staffing', 'Marketing / sales growth', 'Operating reserve'];
+  }
+}
+
+function getUseOfFundsStarterRows(loanPurpose: string): string[] {
+  return Array.from(new Set([
+    ...getPurposeSpecificUseOfFundsRows(loanPurpose),
+    ...UNIVERSAL_USE_OF_FUNDS_ROWS,
+  ]));
+}
+
+function buildUseOfFundsLineItemLabel(label: string): string {
+  return label.trim();
+}
+
 const EMPTY_COVER_LETTER_FORM: CoverLetterFormState = {
   businessDescription: '',
+  industry: '',
+  entityType: '',
+  customerType: '',
+  topCustomers: '',
+  websiteUrl: '',
+  ownerManagementExperience: '',
   operatingHistory: '',
   businessModelType: '',
   businessLocationDetails: '',
@@ -891,6 +962,10 @@ const EMPTY_COVER_LETTER_FORM: CoverLetterFormState = {
   useOfFundsBreakdown: [createUseOfFundsLineItem()],
   useOfFundsNarrative: '',
   timingNarrative: '',
+  noLoanImpact: '',
+  withLoanImpact: '',
+  currentFinancialBaseline: '',
+  projectedFinancialImpact: '',
   repaymentSource: '',
   repaymentSourceOther: '',
   revenueStreams: [],
@@ -900,6 +975,11 @@ const EMPTY_COVER_LETTER_FORM: CoverLetterFormState = {
   repaymentNotes: '',
   supportingFactors: [],
   supportingFactorsOther: '',
+  supportingFactorsDetails: '',
+  collateralDetails: '',
+  personalGuaranteeDetails: '',
+  ownerInvestmentDetails: '',
+  weaknessMitigation: '',
   additionalLenderNotes: '',
 };
 
@@ -1116,6 +1196,12 @@ function buildCoverLetterFormState(inputs: Record<string, unknown> | null | unde
     businessDescription:
       asCoverLetterText(source.businessDescription) ||
       asCoverLetterText(source.businessOverview),
+    industry: asCoverLetterText(source.industry),
+    entityType: asCoverLetterText(source.entityType),
+    customerType: asCoverLetterText(source.customerType),
+    topCustomers: asCoverLetterText(source.topCustomers),
+    websiteUrl: asCoverLetterText(source.websiteUrl),
+    ownerManagementExperience: asCoverLetterText(source.ownerManagementExperience),
     businessModelType,
     businessLocationDetails,
     operatingHistory: buildOperatingHistoryValue(source),
@@ -1133,6 +1219,10 @@ function buildCoverLetterFormState(inputs: Record<string, unknown> | null | unde
       asCoverLetterText(source.timingDetails) ||
       asCoverLetterText(source.timingReason) ||
       asCoverLetterText(source.urgencyReason),
+    noLoanImpact: asCoverLetterText(source.noLoanImpact) || asCoverLetterText(source.fundingDelayImpact),
+    withLoanImpact: asCoverLetterText(source.withLoanImpact) || asCoverLetterText(source.projectStatus),
+    currentFinancialBaseline: asCoverLetterText(source.currentFinancialBaseline) || asCoverLetterText(source.borrowerContribution),
+    projectedFinancialImpact: asCoverLetterText(source.projectedFinancialImpact) || asCoverLetterText(source.projectEvidence),
     repaymentSource: asCoverLetterText(source.repaymentSource),
     repaymentSourceOther: asCoverLetterText(source.repaymentSourceOther),
     revenueStreams: asCoverLetterStringArray(source.revenueStreams),
@@ -1148,6 +1238,11 @@ function buildCoverLetterFormState(inputs: Record<string, unknown> | null | unde
     supportingFactorsOther:
       asCoverLetterText(source.supportingFactorsOther) ||
       asCoverLetterText(source.ownerStrengths),
+    supportingFactorsDetails: asCoverLetterText(source.supportingFactorsDetails),
+    collateralDetails: asCoverLetterText(source.collateralDetails),
+    personalGuaranteeDetails: asCoverLetterText(source.personalGuaranteeDetails),
+    ownerInvestmentDetails: asCoverLetterText(source.ownerInvestmentDetails),
+    weaknessMitigation: asCoverLetterText(source.weaknessMitigation),
     additionalLenderNotes:
       asCoverLetterText(source.additionalLenderNotes) ||
       asCoverLetterText(source.additionalContext),
@@ -1238,6 +1333,12 @@ export default function LoanPackagingDashboardClient({
   const [showCoverLetterValidation, setShowCoverLetterValidation] = useState(false);
   const [showCurrentBusinessTraitsDetails, setShowCurrentBusinessTraitsDetails] = useState(false);
   const [activeCoverLetterTab, setActiveCoverLetterTab] = useState<CoverLetterTabId>('business-overview');
+  const [expandedWorkflowSections, setExpandedWorkflowSections] = useState<Record<WorkflowSectionId, boolean>>({
+    'loan-profile': true,
+    documents: false,
+    'cover-letter': false,
+    package: false,
+  });
 
   const [lenderTitle, setLenderTitle] = useState('Lender Package Access');
   const [lenderPassword, setLenderPassword] = useState('');
@@ -1341,6 +1442,20 @@ export default function LoanPackagingDashboardClient({
   const useOfFundsPrompt = useMemo<UseOfFundsPromptConfig>(() => {
     return USE_OF_FUNDS_PROMPTS_BY_PURPOSE[loanForm.loanPurpose] ?? DEFAULT_USE_OF_FUNDS_PROMPT;
   }, [loanForm.loanPurpose]);
+  const useOfFundsStarterRows = useMemo(() => getUseOfFundsStarterRows(loanForm.loanPurpose), [loanForm.loanPurpose]);
+  const isLoanBrokeringRequest = dashboard?.loanRequest?.service_type === 'loan_brokering';
+  const useOfFundsSubtotalBeforeBrokerFee = useMemo(
+    () =>
+      coverLetterForm.useOfFundsBreakdown.reduce((sum, row) => {
+        if (row.description.toLowerCase().includes('broker') && row.description.includes('1%')) {
+          return sum;
+        }
+
+        return sum + (parseNullableNumber(row.amount) ?? 0);
+      }, 0),
+    [coverLetterForm.useOfFundsBreakdown],
+  );
+  const brokerFeeAmount = (useOfFundsSubtotalBeforeBrokerFee > 0 ? useOfFundsSubtotalBeforeBrokerFee : loanAmountValue) * 0.01;
   const businessLocationSummary = useMemo(() => {
     return buildBusinessLocationSummary(
       coverLetterForm.businessModelType,
@@ -1393,6 +1508,26 @@ export default function LoanPackagingDashboardClient({
       errors.businessDescription = 'Tell us what the business does.';
     }
 
+    if (!coverLetterForm.industry.trim()) {
+      errors.industry = 'Add the industry.';
+    }
+
+    if (!coverLetterForm.entityType.trim()) {
+      errors.entityType = 'Add the business entity type.';
+    }
+
+    if (!coverLetterForm.customerType.trim()) {
+      errors.customerType = 'Describe your typical customers.';
+    }
+
+    if (!coverLetterForm.topCustomers.trim()) {
+      errors.topCustomers = 'Add top customer/client notes, or write none if not applicable.';
+    }
+
+    if (!coverLetterForm.ownerManagementExperience.trim()) {
+      errors.ownerManagementExperience = 'Add owner or management experience.';
+    }
+
     if (!coverLetterForm.operatingHistory.trim()) {
       errors.operatingHistory = 'Enter the year the business began operating.';
     } else if (!/^\d{4}$/.test(coverLetterForm.operatingHistory.trim())) {
@@ -1441,6 +1576,26 @@ export default function LoanPackagingDashboardClient({
       errors.timingNarrative = 'Explain why this financing matters right now.';
     }
 
+    if (!coverLetterForm.noLoanImpact.trim()) {
+      errors.noLoanImpact = 'Explain what happens if the loan is not approved.';
+    }
+
+    if (!coverLetterForm.withLoanImpact.trim()) {
+      errors.withLoanImpact = 'Explain what the loan would allow the business to do.';
+    }
+
+    if (!coverLetterForm.currentFinancialBaseline.trim()) {
+      errors.currentFinancialBaseline = 'Describe the current financial baseline or write not sure.';
+    }
+
+    if (!coverLetterForm.projectedFinancialImpact.trim()) {
+      errors.projectedFinancialImpact = 'Describe the expected financial impact or write not sure.';
+    }
+
+    if (!dashboard?.cashFlowSummary || dashboard.cashFlowSummary.years.length === 0) {
+      errors.repaymentNotes = 'Complete the comprehensive cash flow analysis before generating the cover letter.';
+    }
+
     if (!coverLetterForm.repaymentSource) {
       errors.repaymentSource = 'Choose the primary source of repayment.';
     } else if (
@@ -1468,31 +1623,39 @@ export default function LoanPackagingDashboardClient({
       errors.financingImpactOther = 'Describe the other expected impact.';
     }
 
-    if (coverLetterForm.supportingFactors.length === 0) {
-      errors.supportingFactors = 'Choose up to 5 supporting factors.';
-    } else if (
-      includesOtherValue(coverLetterForm.supportingFactors) &&
-      !coverLetterForm.supportingFactorsOther.trim()
-    ) {
-      errors.supportingFactorsOther = 'Describe the other supporting factor.';
+    if (!coverLetterForm.supportingFactorsDetails.trim()) {
+      errors.supportingFactorsDetails = 'Explain the strongest supporting factors.';
     }
 
     return errors;
-  }, [coverLetterForm]);
+  }, [coverLetterForm, dashboard?.cashFlowSummary]);
 
   const coverLetterReady = Object.keys(coverLetterFieldErrors).length === 0;
   const coverLetterTabFieldMap: Record<CoverLetterTabId, Array<keyof CoverLetterFormState>> = {
     'business-overview': [
       'businessDescription',
+      'industry',
+      'entityType',
+      'customerType',
+      'topCustomers',
+      'websiteUrl',
+      'ownerManagementExperience',
       'operatingHistory',
       'businessModelType',
       'businessLocationDetails',
       'currentBusinessTraits',
+      'currentBusinessTraitsOther',
+      'supportingFactorsDetails',
+      'weaknessMitigation',
     ],
     'use-of-funds': [
       'useOfFundsBreakdown',
       'useOfFundsNarrative',
       'timingNarrative',
+      'noLoanImpact',
+      'withLoanImpact',
+      'currentFinancialBaseline',
+      'projectedFinancialImpact',
     ],
     repayment: [
       'repaymentSource',
@@ -1502,10 +1665,6 @@ export default function LoanPackagingDashboardClient({
       'financingImpact',
       'financingImpactOther',
     ],
-    'business-strengths': [
-      'supportingFactors',
-      'supportingFactorsOther',
-    ],
     review: [],
   };
   const coverLetterTabHasErrors = useMemo<Record<CoverLetterTabId, boolean>>(() => {
@@ -1513,7 +1672,6 @@ export default function LoanPackagingDashboardClient({
       'business-overview': coverLetterTabFieldMap['business-overview'].some((field) => Boolean(coverLetterFieldErrors[field])),
       'use-of-funds': coverLetterTabFieldMap['use-of-funds'].some((field) => Boolean(coverLetterFieldErrors[field])),
       repayment: coverLetterTabFieldMap.repayment.some((field) => Boolean(coverLetterFieldErrors[field])),
-      'business-strengths': coverLetterTabFieldMap['business-strengths'].some((field) => Boolean(coverLetterFieldErrors[field])),
       review: false,
     };
   }, [coverLetterFieldErrors]);
@@ -1522,7 +1680,6 @@ export default function LoanPackagingDashboardClient({
       'business-overview': !coverLetterTabHasErrors['business-overview'],
       'use-of-funds': !coverLetterTabHasErrors['use-of-funds'],
       repayment: !coverLetterTabHasErrors.repayment,
-      'business-strengths': !coverLetterTabHasErrors['business-strengths'],
       review: coverLetterDraft.trim().length >= 50 || coverLetterComplete,
     };
   }, [coverLetterComplete, coverLetterDraft, coverLetterTabHasErrors]);
@@ -1539,17 +1696,23 @@ export default function LoanPackagingDashboardClient({
       return 'repayment';
     }
 
-    if (coverLetterTabHasErrors['business-strengths']) {
-      return 'business-strengths';
-    }
-
     return 'review';
   }, [coverLetterTabHasErrors]);
   const activeCoverLetterTabIndex = useMemo(
     () => Math.max(COVER_LETTER_TABS.findIndex((tab) => tab.id === activeCoverLetterTab), 0),
     [activeCoverLetterTab],
   );
-  const activeCoverLetterTabConfig = COVER_LETTER_TABS[activeCoverLetterTabIndex] ?? COVER_LETTER_TABS[0]!;
+  const coverLetterTabsRef = useRef<HTMLDivElement | null>(null);
+  const scrollCoverLetterTabsIntoView = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      coverLetterTabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+  const goToCoverLetterTab = useCallback((tabId: CoverLetterTabId) => {
+    setActiveCoverLetterTab(tabId);
+    scrollCoverLetterTabsIntoView();
+  }, [scrollCoverLetterTabsIntoView]);
+
   const previousCoverLetterTab = activeCoverLetterTabIndex > 0
     ? (COVER_LETTER_TABS[activeCoverLetterTabIndex - 1] ?? null)
     : null;
@@ -1560,7 +1723,6 @@ export default function LoanPackagingDashboardClient({
     () => COVER_LETTER_TABS.filter((tab) => coverLetterTabCompleted[tab.id]).length,
     [coverLetterTabCompleted],
   );
-  const coverLetterProgressPercent = Math.round(((activeCoverLetterTabIndex + 1) / COVER_LETTER_TABS.length) * 100);
 
   const workflowSteps = [
     {
@@ -1596,6 +1758,75 @@ export default function LoanPackagingDashboardClient({
         : !packageComplete
           ? 'Build the package ZIP and create lender access once the package is fully ready.'
           : 'Your lender package is ready to download and share.';
+
+  const nextOpenWorkflowSectionId: WorkflowSectionId = !loanProfileComplete
+    ? 'loan-profile'
+    : !documentsComplete
+      ? 'documents'
+      : !coverLetterComplete
+        ? 'cover-letter'
+        : 'package';
+
+  useEffect(() => {
+    setExpandedWorkflowSections((previous) => {
+      if (previous[nextOpenWorkflowSectionId]) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        [nextOpenWorkflowSectionId]: true,
+      };
+    });
+  }, [nextOpenWorkflowSectionId]);
+
+  const toggleWorkflowSection = useCallback((sectionId: WorkflowSectionId) => {
+    setExpandedWorkflowSections((previous) => ({
+      ...previous,
+      [sectionId]: !previous[sectionId],
+    }));
+  }, []);
+
+  const renderWorkflowSectionHeader = (
+    sectionId: WorkflowSectionId,
+    number: number,
+    title: string,
+    description: string,
+    complete: boolean,
+    summary: string,
+  ) => {
+    const expanded = expandedWorkflowSections[sectionId];
+
+    return (
+      <button
+        type="button"
+        onClick={() => toggleWorkflowSection(sectionId)}
+        className="flex min-h-[74px] w-full items-center justify-between gap-4 rounded-2xl px-5 py-3 text-left transition hover:bg-slate-50"
+        aria-expanded={expanded}
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${complete ? 'bg-emerald-600 text-white' : expanded ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'}`}>
+            {complete ? <CheckCircle2 className="h-5 w-5" /> : number}
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className={`${headingClassName} text-lg text-slate-950`}>{title}</h2>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${complete ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                {complete ? 'Complete' : 'Needs action'}
+              </span>
+            </div>
+            <p className="mt-0.5 whitespace-normal text-xs leading-5 text-slate-500">{expanded ? description : summary}</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="hidden rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 sm:inline-flex">
+            {expanded ? 'Collapse' : 'Open'}
+          </span>
+          <ChevronDown className={`h-5 w-5 text-slate-500 transition ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+    );
+  };
 
   const apiFetch = useCallback(
     async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
@@ -1914,6 +2145,50 @@ export default function LoanPackagingDashboardClient({
   }, [accessToken, loadDashboard]);
 
   useEffect(() => {
+    setCoverLetterForm((previous) => {
+      const brokerFeeDescription = 'Broker fee (1%)';
+      const rowsWithoutBrokerFee = previous.useOfFundsBreakdown.filter(
+        (row) => !(row.description.toLowerCase().includes('broker') && row.description.includes('1%')),
+      );
+
+      if (!isLoanBrokeringRequest) {
+        if (rowsWithoutBrokerFee.length === previous.useOfFundsBreakdown.length) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          useOfFundsBreakdown: rowsWithoutBrokerFee.length > 0 ? rowsWithoutBrokerFee : [createUseOfFundsLineItem()],
+        };
+      }
+
+      if (!(brokerFeeAmount > 0)) {
+        return previous;
+      }
+
+      const nextBrokerAmount = formatCurrencyInput(String(brokerFeeAmount));
+      const existingBrokerFee = previous.useOfFundsBreakdown.find(
+        (row) => row.description.toLowerCase().includes('broker') && row.description.includes('1%'),
+      );
+
+      if (existingBrokerFee?.amount === nextBrokerAmount && existingBrokerFee.description === brokerFeeDescription) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        useOfFundsBreakdown: [
+          ...rowsWithoutBrokerFee.filter((row) => row.description.trim() || row.amount.trim()),
+          createUseOfFundsLineItem({
+            description: brokerFeeDescription,
+            amount: nextBrokerAmount,
+          }),
+        ],
+      };
+    });
+  }, [brokerFeeAmount, isLoanBrokeringRequest]);
+
+  useEffect(() => {
     if (!dashboard?.loanRequest?.id || !accessToken) {
       return;
     }
@@ -2138,6 +2413,15 @@ export default function LoanPackagingDashboardClient({
     }));
   }, [currentFinancingDefaults.paymentMode, loanAmountValue]);
 
+  const handleUseOfFundsAmountBlur = useCallback(() => {
+    if (useOfFundsBreakdownTotal > loanAmountValue) {
+      setLoanForm((previous) => ({
+        ...previous,
+        loanAmount: formatCurrencyInput(String(useOfFundsBreakdownTotal)),
+      }));
+    }
+  }, [loanAmountValue, useOfFundsBreakdownTotal]);
+
   const handleTermYearsChange = useCallback((value: string) => {
     const sanitized = value.replace(/[^\d]/g, '');
     const numeric = parseNullableNumber(sanitized);
@@ -2341,6 +2625,12 @@ export default function LoanPackagingDashboardClient({
           businessDescription: loanForm.loanPurposeDescription,
           coverLetterInputs: {
             businessDescription: coverLetterForm.businessDescription,
+            industry: coverLetterForm.industry,
+            entityType: coverLetterForm.entityType,
+            customerType: coverLetterForm.customerType,
+            topCustomers: coverLetterForm.topCustomers,
+            websiteUrl: coverLetterForm.websiteUrl,
+            ownerManagementExperience: coverLetterForm.ownerManagementExperience,
             operatingHistory: coverLetterForm.operatingHistory,
             businessModelType: coverLetterForm.businessModelType,
             businessLocationDetails: coverLetterForm.businessLocationDetails,
@@ -2357,6 +2647,11 @@ export default function LoanPackagingDashboardClient({
               .filter((row) => row.description.length > 0 && row.amount > 0),
             useOfFundsNarrative: coverLetterForm.useOfFundsNarrative,
             timingNarrative: coverLetterForm.timingNarrative,
+            noLoanImpact: coverLetterForm.noLoanImpact,
+            withLoanImpact: coverLetterForm.withLoanImpact,
+            currentFinancialBaseline: coverLetterForm.currentFinancialBaseline,
+            projectedFinancialImpact: coverLetterForm.projectedFinancialImpact,
+            cashFlowSummary: dashboard?.cashFlowSummary ?? null,
             repaymentSource: coverLetterForm.repaymentSource,
             repaymentSourceOther: coverLetterForm.repaymentSourceOther,
             revenueStreams: coverLetterForm.revenueStreams,
@@ -2364,8 +2659,13 @@ export default function LoanPackagingDashboardClient({
             financingImpact: coverLetterForm.financingImpact,
             financingImpactOther: coverLetterForm.financingImpactOther,
             repaymentNotes: coverLetterForm.repaymentNotes,
-            supportingFactors: coverLetterForm.supportingFactors,
-            supportingFactorsOther: coverLetterForm.supportingFactorsOther,
+            supportingFactors: coverLetterForm.currentBusinessTraits,
+            supportingFactorsOther: coverLetterForm.currentBusinessTraitsOther,
+            supportingFactorsDetails: coverLetterForm.supportingFactorsDetails,
+            collateralDetails: coverLetterForm.collateralDetails,
+            personalGuaranteeDetails: coverLetterForm.personalGuaranteeDetails,
+            ownerInvestmentDetails: coverLetterForm.ownerInvestmentDetails,
+            weaknessMitigation: coverLetterForm.weaknessMitigation,
             additionalLenderNotes: coverLetterForm.additionalLenderNotes,
           },
         }),
@@ -2387,15 +2687,29 @@ export default function LoanPackagingDashboardClient({
     apiFetch,
     coverLetterForm.additionalLenderNotes,
     coverLetterForm.businessDescription,
+    coverLetterForm.noLoanImpact,
     coverLetterForm.businessLocation,
     coverLetterForm.businessLocationDetails,
     coverLetterForm.businessModelType,
+    coverLetterForm.collateralDetails,
     coverLetterForm.currentBusinessTraits,
     coverLetterForm.currentBusinessTraitsOther,
     coverLetterForm.currentBusinessTraitsDetails,
+    coverLetterForm.customerType,
+    coverLetterForm.topCustomers,
+    coverLetterForm.websiteUrl,
     coverLetterForm.employeeCount,
+    coverLetterForm.entityType,
     coverLetterForm.financingImpact,
     coverLetterForm.financingImpactOther,
+    coverLetterForm.projectedFinancialImpact,
+    coverLetterForm.industry,
+    coverLetterForm.ownerInvestmentDetails,
+    coverLetterForm.ownerManagementExperience,
+    coverLetterForm.personalGuaranteeDetails,
+    coverLetterForm.currentFinancialBaseline,
+    coverLetterForm.withLoanImpact,
+    coverLetterForm.supportingFactorsDetails,
     coverLetterForm.useOfFundsBreakdown,
     coverLetterForm.useOfFundsNarrative,
     coverLetterForm.operatingHistory,
@@ -2407,7 +2721,9 @@ export default function LoanPackagingDashboardClient({
     coverLetterForm.supportingFactors,
     coverLetterForm.supportingFactorsOther,
     coverLetterForm.timingNarrative,
+    coverLetterForm.weaknessMitigation,
     businessLocationSummary,
+    dashboard?.cashFlowSummary,
     coverLetterReady,
     ensureLoanRequest,
     firstIncompleteCoverLetterTab,
@@ -2665,14 +2981,18 @@ export default function LoanPackagingDashboardClient({
           </aside>
 
           <div className="space-y-6">
-            <section className="rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm">
-              <div className="flex flex-col gap-2 mb-6">
-                <h2 className={`${headingClassName} text-2xl`}>1. Loan Profile</h2>
-                <p className="text-sm text-slate-600">
-                  Add the core loan details once. We reuse these details across your package so you do not need to retype them.
-                </p>
-              </div>
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
+              {renderWorkflowSectionHeader(
+                'loan-profile',
+                1,
+                'Loan Profile',
+                'Add the core loan details once. We reuse these details across your package so you do not need to retype them.',
+                loanProfileComplete,
+                loanForm.businessName || loanForm.loanPurpose || 'Business, request amount, use of funds, and estimated loan structure',
+              )}
 
+              {expandedWorkflowSections['loan-profile'] ? (
+                <div className="border-t border-slate-100 p-6">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[0.7fr_1.3fr]">
                 <label className="space-y-1 text-sm">
                   <span className="font-semibold text-slate-700">Business Name</span>
@@ -2741,6 +3061,135 @@ export default function LoanPackagingDashboardClient({
                 </div>
               </div>
 
+              <div className="mt-4 rounded-[26px] border border-blue-100 bg-[linear-gradient(135deg,_rgba(239,246,255,0.98)_0%,_rgba(255,255,255,0.99)_52%,_rgba(240,253,250,0.95)_100%)] p-4 shadow-sm">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-3xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">Use of Funds</p>
+                    <h3 className={`${headingClassName} mt-0.5 text-[1.35rem] leading-tight`}>Tell lenders exactly where the money is going</h3>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      Break the request into plain-English line items. Include the main purchase or need, plus normal loan-related costs such as closing costs, appraisal or inspection costs, reserves, delivery, installation, and professional fees when they apply. If the total goes above the loan amount, the loan amount updates so the request stays consistent.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Breakdown Total</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-950">{formatCurrency(useOfFundsBreakdownTotal)}</p>
+                    <p className="mt-1 text-xs text-slate-500">Loan amount: {formatCurrency(loanAmountValue)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3">
+                  <p className="text-sm font-semibold text-slate-800">Suggested line items for {loanForm.loanPurpose || 'this loan purpose'}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    The first options are tailored to the selected purpose. The rest are common loan package costs that may apply to many requests.
+                  </p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {useOfFundsStarterRows.map((label) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() =>
+                          setCoverLetterForm((previous) => ({
+                            ...previous,
+                            useOfFundsBreakdown: [
+                              ...previous.useOfFundsBreakdown.filter((row) => row.description.trim() || row.amount.trim()),
+                              createUseOfFundsLineItem({ description: buildUseOfFundsLineItemLabel(label) }),
+                            ],
+                          }))
+                        }
+                        className="min-h-10 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-semibold text-blue-800 transition hover:border-blue-300 hover:bg-blue-100"
+                      >
+                        + {label}
+                      </button>
+                    ))}
+                  </div>
+                  {isLoanBrokeringRequest && brokerFeeAmount > 0 ? (
+                    <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                      Broker fee is being included automatically for this brokering request as a 1% use-of-funds line item.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <div className="grid grid-cols-[minmax(0,1fr)_160px_48px] border-b border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    <span>What the funds will pay for</span>
+                    <span>Amount</span>
+                    <span className="sr-only">Remove</span>
+                  </div>
+                  <div className="divide-y divide-slate-200">
+                    {coverLetterForm.useOfFundsBreakdown.map((row, index) => (
+                      <div key={row.id} className="grid grid-cols-[minmax(0,1fr)_160px_48px] items-center gap-3 px-3 py-3">
+                        <input
+                          type="text"
+                          value={row.description}
+                          onChange={(event) =>
+                            setCoverLetterForm((previous) => ({
+                              ...previous,
+                              useOfFundsBreakdown: previous.useOfFundsBreakdown.map((item) =>
+                                item.id === row.id ? { ...item, description: event.target.value } : item,
+                              ),
+                            }))
+                          }
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder={index === 0 ? 'Property purchase price, equipment, inventory, working capital...' : 'Describe this use of funds'}
+                        />
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={row.amount}
+                            onChange={(event) =>
+                              setCoverLetterForm((previous) => ({
+                                ...previous,
+                                useOfFundsBreakdown: previous.useOfFundsBreakdown.map((item) =>
+                                  item.id === row.id
+                                    ? { ...item, amount: formatCurrencyInput(sanitizeCurrencyInput(event.target.value)) }
+                                    : item,
+                                ),
+                              }))
+                            }
+                            onBlur={handleUseOfFundsAmountBlur}
+                            className="w-full rounded-lg border border-slate-300 py-2 pl-7 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="25,000"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCoverLetterForm((previous) => {
+                              const nextRows = previous.useOfFundsBreakdown.filter((item) => item.id !== row.id);
+                              return {
+                                ...previous,
+                                useOfFundsBreakdown: nextRows.length > 0 ? nextRows : [createUseOfFundsLineItem()],
+                              };
+                            })
+                          }
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 text-slate-500 transition hover:border-slate-400 hover:text-slate-900"
+                          aria-label={`Remove use of funds row ${index + 1}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCoverLetterForm((previous) => ({
+                        ...previous,
+                        useOfFundsBreakdown: [...previous.useOfFundsBreakdown, createUseOfFundsLineItem()],
+                      }))
+                    }
+                    className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    Add line
+                  </button>
+                </div>
+              </div>
+
               {loanAmountValue > 0 ? (
                 <div className="mt-4 rounded-[26px] border border-slate-200 bg-[linear-gradient(135deg,_rgba(239,246,255,0.95)_0%,_rgba(255,255,255,0.98)_45%,_rgba(241,245,249,0.95)_100%)] p-4 shadow-sm">
                   <div className="flex flex-col gap-1.5">
@@ -2774,7 +3223,6 @@ export default function LoanPackagingDashboardClient({
                           <span className="text-sm font-semibold text-slate-500">%</span>
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500">Editable to match the lender terms you expect.</p>
                     </label>
 
                     <label className="group rounded-2xl border border-slate-200 bg-white/90 p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -2801,11 +3249,6 @@ export default function LoanPackagingDashboardClient({
                           )}
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                        {isInterestOnlyFinancing
-                          ? 'LOC estimates use the full requested amount, so down payment is fixed at 0%.'
-                          : 'Editing the percent updates the dollar amount.'}
-                      </p>
                     </label>
 
                     <label className="group rounded-2xl border border-slate-200 bg-white/90 p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -2832,11 +3275,6 @@ export default function LoanPackagingDashboardClient({
                           )}
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                        {isInterestOnlyFinancing
-                          ? 'For LOC-style estimates, term does not drive the monthly payment.'
-                          : 'Adjust if your lender is offering a different repayment term.'}
-                      </p>
                     </label>
 
                     <label className="group rounded-2xl border border-slate-200 bg-white/90 p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -2863,11 +3301,6 @@ export default function LoanPackagingDashboardClient({
                           )}
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                        {isInterestOnlyFinancing
-                          ? 'No down payment reduction is applied to the LOC payment estimate.'
-                          : 'Editing the amount updates the percentage.'}
-                      </p>
                     </label>
 
                     <div className="rounded-2xl border border-slate-900 bg-slate-950 p-3.5 text-white shadow-sm">
@@ -2885,16 +3318,22 @@ export default function LoanPackagingDashboardClient({
                 </div>
               ) : null}
 
+                </div>
+              ) : null}
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm">
-              <div className="flex flex-col gap-2 mb-6">
-                <h2 className={`${headingClassName} text-2xl`}>2. Document Checklist</h2>
-                <p className="text-sm text-slate-600">
-                  Upload what you already have, use guided templates where available, and complete generated items like the broker agreement directly inside the platform.
-                </p>
-              </div>
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
+              {renderWorkflowSectionHeader(
+                'documents',
+                2,
+                'Document Checklist',
+                'Upload what you already have, use guided templates where available, and complete generated items directly inside the platform.',
+                documentsComplete,
+                `${dashboard?.progress.completedRequired ?? 0} of ${dashboard?.progress.totalRequired ?? 0} required documents complete`,
+              )}
 
+              {expandedWorkflowSections.documents ? (
+                <div className="border-t border-slate-100 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {(dashboard?.requirements ?? []).map((requirement) => {
                   if (requirement.requirement_key === 'cover_letter') {
@@ -3069,16 +3508,22 @@ export default function LoanPackagingDashboardClient({
                   );
                 })}
               </div>
+                </div>
+              ) : null}
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm space-y-5">
-              <div className="space-y-2">
-                <h2 className={`${headingClassName} text-2xl`}>3. Cover Letter</h2>
-                <p className="text-sm text-slate-600">
-                  Answer a few guided questions so we can turn your request into a polished lender-facing cover letter.
-                </p>
-              </div>
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
+              {renderWorkflowSectionHeader(
+                'cover-letter',
+                3,
+                'Cover Letter',
+                'Share as much detail as you can in plain language. Do not worry about grammar, formatting, or perfect wording — we will organize and polish it into a lender-facing cover letter.',
+                coverLetterComplete,
+                coverLetterComplete ? 'Approved and saved as PDF' : `${completedCoverLetterTabCount} of ${COVER_LETTER_TABS.length} cover letter steps ready`,
+              )}
 
+              {expandedWorkflowSections['cover-letter'] ? (
+                <div className="space-y-5 border-t border-slate-100 p-6">
               {!loanProfileComplete ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   Add the {loanProfileMissingFields.join(', ')} in Loan Profile first so the cover letter can reuse those details automatically.
@@ -3091,7 +3536,7 @@ export default function LoanPackagingDashboardClient({
                 </div>
               ) : null}
 
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div ref={coverLetterTabsRef} className="scroll-mt-24 flex gap-2 overflow-x-auto pb-1">
                 {COVER_LETTER_TABS.map((tab) => {
                   const isActive = activeCoverLetterTab === tab.id;
                   const isComplete = coverLetterTabCompleted[tab.id];
@@ -3101,7 +3546,7 @@ export default function LoanPackagingDashboardClient({
                     <button
                       key={tab.id}
                       type="button"
-                      onClick={() => setActiveCoverLetterTab(tab.id)}
+                      onClick={() => goToCoverLetterTab(tab.id)}
                       className={`min-w-[180px] rounded-2xl border px-4 py-3 text-left transition ${
                         isActive
                           ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
@@ -3137,32 +3582,6 @@ export default function LoanPackagingDashboardClient({
                 })}
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                      Section {activeCoverLetterTabIndex + 1} of {COVER_LETTER_TABS.length}
-                    </p>
-                    <div>
-                      <p className="text-base font-semibold text-slate-900">{activeCoverLetterTabConfig.label}</p>
-                      <p className="text-sm text-slate-600">{COVER_LETTER_SECTION_INTROS[activeCoverLetterTab]}</p>
-                    </div>
-                  </div>
-                  <div className="text-sm text-slate-600">
-                    <span className="font-semibold text-slate-900">{completedCoverLetterTabCount}</span>
-                    {' '}
-                    of {COVER_LETTER_TABS.length} tabs ready
-                  </div>
-                </div>
-
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-slate-900 transition-all"
-                    style={{ width: `${coverLetterProgressPercent}%` }}
-                  />
-                </div>
-              </div>
-
               <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
                 {activeCoverLetterTab === 'business-overview' ? (
                   <div className="space-y-4">
@@ -3180,6 +3599,98 @@ export default function LoanPackagingDashboardClient({
                       />
                       {showCoverLetterValidation && coverLetterFieldErrors.businessDescription ? (
                         <p className="text-xs font-medium text-rose-600">{coverLetterFieldErrors.businessDescription}</p>
+                      ) : null}
+                    </label>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <label className="block space-y-1.5 text-sm">
+                        <span className="font-semibold text-slate-700">Industry *</span>
+                        <input
+                          type="text"
+                          value={coverLetterForm.industry}
+                          onChange={(event) => setCoverLetterForm((previous) => ({ ...previous, industry: event.target.value }))}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Construction, restaurant, trucking, medical practice"
+                        />
+                        {showCoverLetterValidation && coverLetterFieldErrors.industry ? (
+                          <p className="text-xs font-medium text-rose-600">{coverLetterFieldErrors.industry}</p>
+                        ) : null}
+                      </label>
+
+                      <label className="block space-y-1.5 text-sm">
+                        <span className="font-semibold text-slate-700">Entity type *</span>
+                        <select
+                          value={coverLetterForm.entityType}
+                          onChange={(event) => setCoverLetterForm((previous) => ({ ...previous, entityType: event.target.value }))}
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select one</option>
+                          <option value="Sole Proprietorship">Sole Proprietorship</option>
+                          <option value="LLC">LLC</option>
+                          <option value="Corporation">Corporation</option>
+                          <option value="S Corporation">S Corporation</option>
+                          <option value="Partnership">Partnership</option>
+                          <option value="Nonprofit">Nonprofit</option>
+                          <option value="Other">Other</option>
+                        </select>
+                        {showCoverLetterValidation && coverLetterFieldErrors.entityType ? (
+                          <p className="text-xs font-medium text-rose-600">{coverLetterFieldErrors.entityType}</p>
+                        ) : null}
+                      </label>
+
+                      <label className="block space-y-1.5 text-sm">
+                        <span className="font-semibold text-slate-700">Website URL</span>
+                        <input
+                          type="url"
+                          value={coverLetterForm.websiteUrl}
+                          onChange={(event) => setCoverLetterForm((previous) => ({ ...previous, websiteUrl: event.target.value }))}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="https://yourbusiness.com"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="block space-y-1.5 text-sm">
+                        <span className="font-semibold text-slate-700">Describe your typical customers *</span>
+                        <span className="text-xs text-slate-500">Tell us who buys from you, where they are located, and what problem you solve for them.</span>
+                        <textarea
+                          value={coverLetterForm.customerType}
+                          onChange={(event) => setCoverLetterForm((previous) => ({ ...previous, customerType: event.target.value }))}
+                          className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="We primarily serve commercial property managers, general contractors, and local business owners across Central Texas."
+                        />
+                        {showCoverLetterValidation && coverLetterFieldErrors.customerType ? (
+                          <p className="text-xs font-medium text-rose-600">{coverLetterFieldErrors.customerType}</p>
+                        ) : null}
+                      </label>
+
+                      <label className="block space-y-1.5 text-sm">
+                        <span className="font-semibold text-slate-700">Top customers or client notes *</span>
+                        <span className="text-xs text-slate-500">List major customers, repeat clients, contracts, concentration risk, or write none if not applicable.</span>
+                        <textarea
+                          value={coverLetterForm.topCustomers}
+                          onChange={(event) => setCoverLetterForm((previous) => ({ ...previous, topCustomers: event.target.value }))}
+                          className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Top customers include three repeat commercial accounts representing about 35% of monthly revenue; no single client exceeds 20%."
+                        />
+                        {showCoverLetterValidation && coverLetterFieldErrors.topCustomers ? (
+                          <p className="text-xs font-medium text-rose-600">{coverLetterFieldErrors.topCustomers}</p>
+                        ) : null}
+                      </label>
+                    </div>
+
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-semibold text-slate-700">Owner or management experience *</span>
+                      <span className="text-xs text-slate-500">Include industry experience, licenses, certifications, or background that helps a lender trust the operator.</span>
+                      <textarea
+                        value={coverLetterForm.ownerManagementExperience}
+                        onChange={(event) => setCoverLetterForm((previous) => ({ ...previous, ownerManagementExperience: event.target.value }))}
+                        className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="The owner has 12 years of industry experience and directly oversees sales, operations, and customer relationships."
+                      />
+                      {showCoverLetterValidation && coverLetterFieldErrors.ownerManagementExperience ? (
+                        <p className="text-xs font-medium text-rose-600">{coverLetterFieldErrors.ownerManagementExperience}</p>
                       ) : null}
                     </label>
 
@@ -3321,21 +3832,20 @@ export default function LoanPackagingDashboardClient({
                       <span className="text-xs text-slate-500">
                         Optional. This helps show business scale and operating capacity.
                       </span>
-                      <select
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
                         value={coverLetterForm.employeeCount}
                         onChange={(event) =>
                           setCoverLetterForm((previous) => ({
                             ...previous,
-                            employeeCount: event.target.value,
+                            employeeCount: event.target.value.replace(/[^\d]/g, ''),
                           }))
                         }
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select if you want to include this</option>
-                        {EMPLOYEE_COUNT_OPTIONS.map((option) => (
-                          <option key={option} value={option}>{option}</option>
-                        ))}
-                      </select>
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="12"
+                      />
                     </label>
 
                     <div className="space-y-1.5 text-sm">
@@ -3407,169 +3917,66 @@ export default function LoanPackagingDashboardClient({
                         </p>
                       ) : null}
                     </div>
+
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-semibold text-slate-700">Explain the strongest supporting factors *</span>
+                      <span className="text-xs text-slate-500">Give the lender specific context behind the selected strengths.</span>
+                      <textarea
+                        value={coverLetterForm.supportingFactorsDetails}
+                        onChange={(event) => setCoverLetterForm((previous) => ({ ...previous, supportingFactorsDetails: event.target.value }))}
+                        className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="The business has served several repeat commercial customers for 5+ years and maintains steady referral activity."
+                      />
+                      {showCoverLetterValidation && coverLetterFieldErrors.supportingFactorsDetails ? (
+                        <p className="text-xs font-medium text-rose-600">{coverLetterFieldErrors.supportingFactorsDetails}</p>
+                      ) : null}
+                    </label>
+
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-semibold text-slate-700">Any weaknesses or lender concerns to explain?</span>
+                      <span className="text-xs text-slate-500">Optional. Explain revenue dips, short time in business, high debt, credit issues, or other concerns with mitigation.</span>
+                      <textarea value={coverLetterForm.weaknessMitigation} onChange={(event) => setCoverLetterForm((previous) => ({ ...previous, weaknessMitigation: event.target.value }))} className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Optional: explain any risk factors and what the business is doing to address them." />
+                    </label>
                   </div>
                 ) : null}
 
                 {activeCoverLetterTab === 'use-of-funds' ? (
                   <div className="space-y-4">
-                    <div className="grid gap-4 lg:grid-cols-2">
-                      <label className="space-y-1 text-sm">
-                        <span className="font-semibold text-slate-700">Loan Purpose</span>
-                        <input
-                          value={loanForm.loanPurpose}
-                          readOnly
-                          className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700"
-                          placeholder="Add this in Loan Profile"
-                        />
-                      </label>
-
-                      <label className="space-y-1 text-sm">
-                        <span className="font-semibold text-slate-700">Requested Loan Amount (USD)</span>
-                        <div className="relative">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
-                          <input
-                            value={loanForm.loanAmount}
-                            readOnly
-                            className="w-full rounded-lg border border-slate-300 bg-slate-100 py-2 pl-7 pr-3 text-slate-700"
-                            placeholder="Add this in Loan Profile"
-                          />
+                    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Use-of-funds pulled from Loan Profile</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">
+                            No need to re-enter the breakdown here. Update Loan Profile if these numbers need to change.
+                          </p>
                         </div>
-                      </label>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
-                      <div className="flex flex-col gap-1">
-                        <p className="text-sm font-semibold text-slate-900">Break down the requested amount</p>
-                        <p className="text-xs leading-5 text-slate-500">
-                          {useOfFundsPrompt.breakdownHelper}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 rounded-xl border border-slate-200 overflow-hidden">
-                        <div className="grid grid-cols-[minmax(0,1fr)_160px_56px] gap-0 border-b border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                          <span>Description</span>
-                          <span>Amount</span>
-                          <span className="sr-only">Remove row</span>
-                        </div>
-
-                        <div className="divide-y divide-slate-200 bg-white">
-                          {coverLetterForm.useOfFundsBreakdown.map((row, index) => (
-                            <div
-                              key={row.id}
-                              className="grid grid-cols-[minmax(0,1fr)_160px_56px] items-center gap-3 px-3 py-3"
-                            >
-                              <input
-                                type="text"
-                                value={row.description}
-                                onChange={(event) =>
-                                  setCoverLetterForm((previous) => ({
-                                    ...previous,
-                                    useOfFundsBreakdown: previous.useOfFundsBreakdown.map((item) =>
-                                      item.id === row.id ? { ...item, description: event.target.value } : item,
-                                    ),
-                                  }))
-                                }
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder={index === 0 ? 'Equipment purchase' : 'Describe this use of funds'}
-                              />
-
-                              <div className="relative">
-                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
-                                <input
-                                  type="text"
-                                  inputMode="decimal"
-                                  value={row.amount}
-                                  onChange={(event) =>
-                                    setCoverLetterForm((previous) => ({
-                                      ...previous,
-                                      useOfFundsBreakdown: previous.useOfFundsBreakdown.map((item) =>
-                                        item.id === row.id
-                                          ? {
-                                              ...item,
-                                              amount: formatCurrencyInput(sanitizeCurrencyInput(event.target.value)),
-                                            }
-                                          : item,
-                                      ),
-                                    }))
-                                  }
-                                  className="w-full rounded-lg border border-slate-300 py-2 pl-7 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  placeholder="25,000"
-                                />
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setCoverLetterForm((previous) => {
-                                    const nextRows = previous.useOfFundsBreakdown.filter((item) => item.id !== row.id);
-                                    return {
-                                      ...previous,
-                                      useOfFundsBreakdown: nextRows.length > 0 ? nextRows : [createUseOfFundsLineItem()],
-                                    };
-                                  })
-                                }
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 text-slate-500 transition hover:border-slate-400 hover:text-slate-900"
-                                aria-label={`Remove use of funds row ${index + 1}`}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
+                        <div className="grid gap-2 text-sm sm:grid-cols-3 lg:min-w-[520px]">
+                          <div className="rounded-lg bg-slate-50 px-3 py-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Purpose</p>
+                            <p className="mt-1 truncate font-semibold text-slate-900">{loanForm.loanPurpose || 'Not set'}</p>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 px-3 py-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Loan Amount</p>
+                            <p className="mt-1 font-semibold text-slate-900">{formatCurrency(loanAmountValue)}</p>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 px-3 py-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Funds Total</p>
+                            <p className="mt-1 font-semibold text-slate-900">{formatCurrency(useOfFundsBreakdownTotal)}</p>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCoverLetterForm((previous) => ({
-                              ...previous,
-                              useOfFundsBreakdown: [...previous.useOfFundsBreakdown, createUseOfFundsLineItem()],
-                            }))
-                          }
-                          className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
-                        >
-                          Add row
-                        </button>
-
-                        <div className="text-right">
-                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Use of funds total</p>
-                          <p className="mt-1 text-lg font-semibold text-slate-900">{formatCurrency(useOfFundsBreakdownTotal)}</p>
-                        </div>
+                      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                        {coverLetterForm.useOfFundsBreakdown.filter((row) => row.description.trim() || row.amount.trim()).map((row) => (
+                          <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                            <span className="min-w-0 truncate font-medium text-slate-700">{row.description || 'Use of funds'}</span>
+                            <span className="shrink-0 font-semibold text-slate-950">{formatCurrency(parseNullableNumber(row.amount) ?? 0)}</span>
+                          </div>
+                        ))}
                       </div>
 
                       {showCoverLetterValidation && coverLetterFieldErrors.useOfFundsBreakdown ? (
                         <p className="mt-3 text-xs font-medium text-rose-600">{coverLetterFieldErrors.useOfFundsBreakdown}</p>
-                      ) : null}
-
-                      {useOfFundsBreakdownTotal > 0 ? (
-                        <div className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
-                          useOfFundsBreakdownDifference === 0
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                            : 'border-amber-200 bg-amber-50 text-amber-900'
-                        }`}>
-                          <p className="font-semibold">
-                            {useOfFundsBreakdownDifference === 0
-                              ? 'Your breakdown matches the requested loan amount.'
-                              : loanAmountValue > 0 && useOfFundsBreakdownDifference != null
-                                ? `Your breakdown is ${useOfFundsBreakdownDifference > 0 ? 'above' : 'below'} the requested amount by ${formatCurrency(Math.abs(useOfFundsBreakdownDifference))}.`
-                                : 'You can set the requested loan amount from this breakdown total.'}
-                          </p>
-                          <p className="mt-1 text-xs leading-5">
-                            Keep the total aligned with the requested amount so the cover letter and loan profile tell the same story.
-                          </p>
-                          <div className="mt-3">
-                            <button
-                              type="button"
-                              onClick={handleUpdateLoanAmountFromUseOfFunds}
-                              disabled={updatingLoanAmountFromUseOfFunds || useOfFundsBreakdownTotal <= 0 || useOfFundsBreakdownDifference === 0}
-                              className="inline-flex items-center gap-2 rounded-lg border border-slate-900 bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-300"
-                            >
-                              {updatingLoanAmountFromUseOfFunds ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                              {loanAmountValue > 0 ? 'Update loan amount from total' : 'Set loan amount from total'}
-                            </button>
-                          </div>
-                        </div>
                       ) : null}
                     </div>
 
@@ -3614,11 +4021,89 @@ export default function LoanPackagingDashboardClient({
                         <p className="text-xs font-medium text-rose-600">{coverLetterFieldErrors.timingNarrative}</p>
                       ) : null}
                     </label>
+
+                    <div className="space-y-4 rounded-xl border border-slate-200 bg-white px-4 py-4">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Loan impact comparison</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          Help the lender understand the difference between the business staying as-is and the business receiving the requested funds. Estimates are okay.
+                        </p>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {[
+                          ['noLoanImpact', 'If you do not get this loan, what happens? *', 'Describe the as-is outcome: delayed growth, cash flow pressure, missed opportunity, higher costs, or operational limits.'],
+                          ['withLoanImpact', 'If you do get this loan, what changes? *', 'Describe what the funds unlock: more revenue, lower costs, better capacity, faster delivery, inventory, equipment, staff, or stability.'],
+                          ['currentFinancialBaseline', 'Current financial baseline today *', 'Describe current monthly revenue, costs, margins, backlog, capacity, or write not sure if you do not have exact numbers.'],
+                          ['projectedFinancialImpact', 'Projected financial impact after funding *', 'Estimate expected revenue increase, cost savings, margin improvement, monthly cash flow impact, or write not sure and explain directionally.'],
+                        ].map(([field, label, helper]) => (
+                          <label key={field} className="block space-y-1.5 text-sm">
+                            <span className="font-semibold text-slate-700">{label}</span>
+                            <span className="text-xs text-slate-500">{helper}</span>
+                            <textarea
+                              value={String(coverLetterForm[field as keyof CoverLetterFormState] ?? '')}
+                              onChange={(event) => setCoverLetterForm((previous) => ({ ...previous, [field as string]: event.target.value }))}
+                              className="min-h-28 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            {showCoverLetterValidation && coverLetterFieldErrors[field as keyof CoverLetterFormState] ? (
+                              <p className="text-xs font-medium text-rose-600">{coverLetterFieldErrors[field as keyof CoverLetterFormState]}</p>
+                            ) : null}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ) : null}
 
                 {activeCoverLetterTab === 'repayment' ? (
                   <div className="space-y-4">
+                    <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">Comprehensive cash flow analysis</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">
+                            This cover letter uses the high-level cash flow, debt service, and DSCR results from the comprehensive analysis.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => router.push(dashboard?.latestCashFlowAnalysisId ? `/report-preview?id=${encodeURIComponent(dashboard.latestCashFlowAnalysisId)}` : '/comprehensive-cash-flow-analysis')}
+                          className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                        >
+                          {dashboard?.cashFlowSummary ? 'View Analysis' : 'Complete Analysis'}
+                        </button>
+                      </div>
+                      {dashboard?.cashFlowSummary ? (
+                        <div className="mt-4 overflow-x-auto">
+                          <table className="min-w-full text-left text-sm">
+                            <thead className="text-xs uppercase tracking-[0.12em] text-slate-500">
+                              <tr>
+                                <th className="px-3 py-2">Year</th>
+                                <th className="px-3 py-2">Revenue</th>
+                                <th className="px-3 py-2">Net Income</th>
+                                <th className="px-3 py-2">Debt Service</th>
+                                <th className="px-3 py-2">DSCR</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {dashboard.cashFlowSummary.years.map((year) => (
+                                <tr key={year.label}>
+                                  <td className="px-3 py-2 font-semibold text-slate-900">{year.label}</td>
+                                  <td className="px-3 py-2">{formatCurrency(year.revenue)}</td>
+                                  <td className="px-3 py-2">{formatCurrency(year.netIncome)}</td>
+                                  <td className="px-3 py-2">{formatCurrency(year.debtService)}</td>
+                                  <td className="px-3 py-2 font-semibold">{year.dscr == null ? 'N/A' : year.dscr.toFixed(2)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
+                          Complete the comprehensive cash flow analysis before generating the cover letter so the repayment narrative is supported by year-over-year financials.
+                        </p>
+                      )}
+                    </div>
+
                     <label className="block space-y-1.5 text-sm">
                       <span className="font-semibold text-slate-700">What will primarily be used to repay this loan? *</span>
                       <span className="text-xs text-slate-500">Select the main source of money that will be used to make loan payments.</span>
@@ -3765,59 +4250,12 @@ export default function LoanPackagingDashboardClient({
                   </div>
                 ) : null}
 
-                {activeCoverLetterTab === 'business-strengths' ? (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5 text-sm">
-                      <div className="space-y-1">
-                        <p className="font-semibold text-slate-700">What are the strongest factors supporting your financing request? *</p>
-                        <p className="text-xs text-slate-500">Choose up to 5.</p>
-                      </div>
-                      <MultiSelectChips
-                        options={SUPPORTING_FACTOR_OPTIONS}
-                        values={coverLetterForm.supportingFactors}
-                        maxSelections={5}
-                        onToggle={(option) =>
-                          setCoverLetterForm((previous) => {
-                            const nextValues = toggleSelection(previous.supportingFactors, option, 5);
-                            return {
-                              ...previous,
-                              supportingFactors: nextValues,
-                              supportingFactorsOther: nextValues.includes(COVER_LETTER_OTHER_VALUE)
-                                ? previous.supportingFactorsOther
-                                : '',
-                            };
-                          })
-                        }
-                      />
-                      {includesOtherValue(coverLetterForm.supportingFactors) ? (
-                        <input
-                          type="text"
-                          value={coverLetterForm.supportingFactorsOther}
-                          onChange={(event) =>
-                            setCoverLetterForm((previous) => ({
-                              ...previous,
-                              supportingFactorsOther: event.target.value,
-                            }))
-                          }
-                          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Please describe"
-                        />
-                      ) : null}
-                      {showCoverLetterValidation && (coverLetterFieldErrors.supportingFactors || coverLetterFieldErrors.supportingFactorsOther) ? (
-                        <p className="text-xs font-medium text-rose-600">
-                          {coverLetterFieldErrors.supportingFactors ?? coverLetterFieldErrors.supportingFactorsOther}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
-
                 {activeCoverLetterTab === 'review' ? (
                   <div className="space-y-5">
                     <div className="rounded-xl border border-slate-200 bg-white px-4 py-4">
                       <p className="text-sm font-semibold text-slate-900">Generate from everything you entered above</p>
                       <p className="mt-1 text-sm leading-6 text-slate-600">
-                        The draft uses your Loan Profile details together with every answer from Business Overview, Use of Funds, Repayment, and Business Strengths.
+                        The draft uses your Loan Profile details together with every answer from Business Overview, Use of Funds, and Repayment.
                       </p>
                     </div>
 
@@ -3826,7 +4264,7 @@ export default function LoanPackagingDashboardClient({
                         <button
                           key={tab.id}
                           type="button"
-                          onClick={() => setActiveCoverLetterTab(tab.id)}
+                          onClick={() => goToCoverLetterTab(tab.id)}
                           className={`rounded-xl border px-4 py-3 text-left transition ${
                             coverLetterTabCompleted[tab.id]
                               ? 'border-emerald-200 bg-emerald-50'
@@ -3897,7 +4335,7 @@ export default function LoanPackagingDashboardClient({
                     {previousCoverLetterTab ? (
                       <button
                         type="button"
-                        onClick={() => setActiveCoverLetterTab(previousCoverLetterTab.id)}
+                        onClick={() => goToCoverLetterTab(previousCoverLetterTab.id)}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                       >
                         <ChevronLeft className="h-4 w-4" />
@@ -3908,7 +4346,7 @@ export default function LoanPackagingDashboardClient({
                     {nextCoverLetterTab ? (
                       <button
                         type="button"
-                        onClick={() => setActiveCoverLetterTab(nextCoverLetterTab.id)}
+                        onClick={() => goToCoverLetterTab(nextCoverLetterTab.id)}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-900 bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
                       >
                         {nextCoverLetterTab.id === 'review' ? 'Go to Review' : 'Next Section'}
@@ -3918,16 +4356,22 @@ export default function LoanPackagingDashboardClient({
                   </div>
                 </div>
               </div>
+                </div>
+              ) : null}
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-sm space-y-6">
-              <div className="space-y-2">
-                <h2 className={`${headingClassName} text-2xl`}>4. Package Build & Lender Portal</h2>
-                <p className="text-sm text-slate-600">
-                  Generate an auditable package zip and distribute secure tokenized lender access links.
-                </p>
-              </div>
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
+              {renderWorkflowSectionHeader(
+                'package',
+                4,
+                'Package Build & Lender Portal',
+                'Generate an auditable package zip and distribute secure tokenized lender access links.',
+                packageComplete,
+                latestPackageDownloadUrl ? `Latest package available${dashboard?.loanRequest?.package_zip_generated_at ? ` · ${formatDate(dashboard.loanRequest.package_zip_generated_at)}` : ''}` : 'Build ZIP and create secure lender links',
+              )}
 
+              {expandedWorkflowSections.package ? (
+                <div className="space-y-6 border-t border-slate-100 p-6">
               {!documentsComplete ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   Complete every required checklist item before building the package so the ZIP reflects the full lender-ready file.
@@ -4068,6 +4512,8 @@ export default function LoanPackagingDashboardClient({
                   ))
                 )}
               </div>
+                </div>
+              ) : null}
             </section>
           </div>
         </div>

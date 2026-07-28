@@ -1089,7 +1089,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                       monthly_income: values.monthlyNetIncome || undefined,
                       monthly_debt_service: totalProjectedDebtService || undefined,
                       assumption_rate: Number(customRatePercent.toFixed(2)),
-                      assumption_term_months: selectedTerm,
+                      // assumption_term_months: selectedTerm,
                       assumption_down_payment_pct: Number(customDownPaymentPercent.toFixed(2)),
                     });
                     handleCalculate();

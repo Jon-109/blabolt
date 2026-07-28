@@ -8,7 +8,8 @@ import {
   normalizeLoanPurpose,
   type ServiceType,
 } from '@/lib/loan-packaging/constants';
-import { buildPackagingProgress } from '@/lib/admin/client-dashboard';
+import { buildPackagingProgress, normalizeDscrSnapshot } from '@/lib/admin/client-dashboard';
+import { CASH_FLOW_YEARS, normalizeFinancialsPayload, parseCurrencyLike } from '@/lib/financial/calculations';
 import {
   buildCashFlowTemplatePrefill,
   buildLoanRequestTemplateContext,
@@ -34,6 +35,20 @@ export const runtime = 'nodejs';
 
 type AnyRow = Record<string, unknown>;
 type SlotPeriodKind = 'annual' | 'ytd' | null;
+
+type CashFlowSummaryYear = {
+  label: string;
+  revenue: number | null;
+  netIncome: number | null;
+  debtService: number | null;
+  dscr: number | null;
+};
+
+type CashFlowSummary = {
+  id: string;
+  updatedAt: string | null;
+  years: CashFlowSummaryYear[];
+};
 
 interface SlotContext {
   slot_type: 'tax_return' | 'income_statement' | null;
@@ -253,6 +268,45 @@ function sortRequirementsByPriority(requirements: AnyRow[]): AnyRow[] {
     const rightLabel = String(right.display_name ?? right.requirement_key ?? '');
     return leftLabel.localeCompare(rightLabel);
   });
+}
+
+function buildCashFlowSummary(cashFlowAnalysis: AnyRow | null): CashFlowSummary | null {
+  if (!cashFlowAnalysis?.id) {
+    return null;
+  }
+
+  const financials = normalizeFinancialsPayload(cashFlowAnalysis.financials);
+  const dscrSnapshot = normalizeDscrSnapshot(cashFlowAnalysis.dscr ?? null);
+  const debts = cashFlowAnalysis.debts && typeof cashFlowAnalysis.debts === 'object'
+    ? cashFlowAnalysis.debts as AnyRow
+    : {};
+  const totalDebtService = debts.totalDebtService && typeof debts.totalDebtService === 'object'
+    ? debts.totalDebtService as Record<string, unknown>
+    : debts.annualDebtService && typeof debts.annualDebtService === 'object'
+      ? debts.annualDebtService as Record<string, unknown>
+      : {};
+
+  const years = CASH_FLOW_YEARS.map((yearKey) => {
+    const financialKey = yearKey === '2026YTD' ? 'year2026YTD' : `year${yearKey}`;
+    const summary = financials[financialKey as keyof typeof financials].summary;
+    const debtService = parseCurrencyLike(totalDebtService[yearKey]);
+
+    return {
+      label: yearKey === '2026YTD' ? '2026 YTD' : yearKey,
+      revenue: summary.revenue || null,
+      netIncome: summary.netIncome || null,
+      debtService: debtService || null,
+      dscr: dscrSnapshot.values[yearKey] ?? null,
+    };
+  }).filter((year) => year.revenue != null || year.netIncome != null || year.debtService != null || year.dscr != null);
+
+  return years.length > 0
+    ? {
+        id: String(cashFlowAnalysis.id),
+        updatedAt: typeof cashFlowAnalysis.updated_at === 'string' ? cashFlowAnalysis.updated_at : null,
+        years,
+      }
+    : null;
 }
 
 async function ensureRequirementSeed(admin: ReturnType<typeof getSupabaseAdmin>) {
@@ -585,13 +639,15 @@ async function buildDashboardPayload(
 
   const { data: cashFlowAnalysis } = await admin
     .from('cash_flow_analyses')
-    .select('id,business_name,loan_purpose,desired_amount,financials,first_name,last_name,debts,updated_at')
+    .select('id,business_name,loan_purpose,desired_amount,financials,first_name,last_name,debts,dscr,updated_at')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const cashFlowTemplatePrefill = buildCashFlowTemplatePrefill((cashFlowAnalysis as AnyRow | null) ?? null);
+  const normalizedCashFlowAnalysis = (cashFlowAnalysis as AnyRow | null) ?? null;
+  const cashFlowTemplatePrefill = buildCashFlowTemplatePrefill(normalizedCashFlowAnalysis);
+  const cashFlowSummary = buildCashFlowSummary(normalizedCashFlowAnalysis);
   const sharedProfileTemplateContext = normalizeTemplateContext({
     business_name: sharedProfile.businessName ?? sharedProfile.businessLegalName,
     loan_purpose: sharedProfile.loanPurpose,
@@ -606,7 +662,7 @@ async function buildDashboardPayload(
   });
   const loanRequestTemplateContext = buildLoanRequestTemplateContext(
     normalizedLoanRequest,
-    (cashFlowAnalysis as AnyRow | null) ?? null,
+    normalizedCashFlowAnalysis,
     templateSharedContext,
   );
 
@@ -622,7 +678,8 @@ async function buildDashboardPayload(
       templateSharedContext,
       loanRequestTemplateContext,
       cashFlowTemplatePrefill,
-      latestCashFlowAnalysisId: (cashFlowAnalysis as AnyRow | null)?.id ?? null,
+      latestCashFlowAnalysisId: normalizedCashFlowAnalysis?.id ?? null,
+      cashFlowSummary,
     };
   }
 
@@ -688,7 +745,8 @@ async function buildDashboardPayload(
     templateSharedContext,
     loanRequestTemplateContext,
     cashFlowTemplatePrefill,
-    latestCashFlowAnalysisId: (cashFlowAnalysis as AnyRow | null)?.id ?? null,
+    latestCashFlowAnalysisId: normalizedCashFlowAnalysis?.id ?? null,
+    cashFlowSummary,
   };
 }
 

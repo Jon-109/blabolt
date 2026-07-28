@@ -167,8 +167,11 @@ export default async function PrintReportPage({ params, searchParams }: any) {
 
   // Section rendering logic
   return (
-    <div className="print:bg-white print:text-black print:w-full print:p-0 print:mt-0 print:mb-0"
-     style={{ width: '100%', padding: 0, marginTop: 0, marginBottom: 0 }}>
+    <div
+      data-pdf-render-root
+      className="print:bg-white print:text-black print:w-full print:p-0 print:mt-0 print:mb-0"
+      style={{ width: '100%', padding: 0, marginTop: 0, marginBottom: 0 }}
+    >
 
       {type === 'full' && (
         <CashFlowReport
