@@ -153,17 +153,15 @@ export function buildPackagingProgress(requirements: AnyRow[], documents: AnyRow
     documents.map((document) => [String(document.requirement_key ?? ''), document]),
   );
   const requiredRequirements = sortRequirementsByPriority(
-    requirements
-      .filter((requirement) => Boolean(requirement.required))
-      .filter((requirement) => {
-        const document = documentByRequirement.get(String(requirement.requirement_key ?? ''));
-        return !isDocumentExcludedFromPackage(document);
-      }),
+    requirements.filter((requirement) => Boolean(requirement.required)),
   );
 
   const completedRequired = requiredRequirements.filter((requirement) => {
     const document = documentByRequirement.get(String(requirement.requirement_key ?? ''));
-    return document && COMPLETED_DOCUMENT_STATUSES.has(String(document.status ?? 'not_started') as never);
+    return (
+      isDocumentExcludedFromPackage(document) ||
+      (document && COMPLETED_DOCUMENT_STATUSES.has(String(document.status ?? 'not_started') as never))
+    );
   }).length;
 
   const totalRequired = requiredRequirements.length;
@@ -173,7 +171,10 @@ export function buildPackagingProgress(requirements: AnyRow[], documents: AnyRow
 
   const nextRequirement = requiredRequirements.find((requirement) => {
     const document = documentByRequirement.get(String(requirement.requirement_key ?? ''));
-    return !(document && COMPLETED_DOCUMENT_STATUSES.has(String(document.status ?? 'not_started') as never));
+    return !(
+      isDocumentExcludedFromPackage(document) ||
+      (document && COMPLETED_DOCUMENT_STATUSES.has(String(document.status ?? 'not_started') as never))
+    );
   });
 
   return {

@@ -10,11 +10,16 @@ import {
   CheckCircle2,
   Clock3,
   Download,
+  FileCheck2,
+  Handshake,
   Link2,
   Loader2,
   MoreHorizontal,
   Package,
   Percent,
+  Phone,
+  Search,
+  Send,
   ShieldCheck,
   Wallet,
   Upload,
@@ -224,6 +229,34 @@ interface UseOfFundsLineItem {
   amount: string;
 }
 
+interface BusinessResearchSuggestions {
+  businessDescription?: string;
+  industry?: string;
+  entityType?: string;
+  customerType?: string;
+  topCustomers?: string;
+  websiteUrl?: string;
+  ownerManagementExperience?: string;
+  operatingHistory?: string;
+  businessModelType?: BusinessModelType | '';
+  businessLocationDetails?: string;
+  businessLocation?: string;
+  currentBusinessTraits?: string[];
+  currentBusinessTraitsDetails?: string;
+  employeeCount?: string;
+  revenueStreams?: string[];
+  repaymentSource?: string;
+  supportingFactors?: string[];
+  supportingFactorsDetails?: string;
+  additionalLenderNotes?: string;
+}
+
+interface BusinessResearchResponse {
+  suggestions: BusinessResearchSuggestions;
+  sources: Array<{ type: string; url?: string; title?: string }>;
+  message: string;
+}
+
 interface PackageBuildResult {
   packagePath: string;
   downloadUrl: string | null;
@@ -249,7 +282,7 @@ interface FinancingDefaults {
   summary: string;
 }
 
-type DocumentCardStatus = LoanRequestDocument['status'] | 'removed';
+type DocumentCardStatus = LoanRequestDocument['status'] | 'skipped';
 type CoverLetterFieldErrors = Partial<Record<keyof CoverLetterFormState, string>>;
 
 interface UseOfFundsPromptConfig {
@@ -269,6 +302,10 @@ type CoverLetterTabId =
   | 'review';
 
 type WorkflowSectionId = 'loan-profile' | 'documents' | 'cover-letter' | 'package';
+
+const LOAN_PROFILE_PROGRESS_WEIGHT = 25;
+const DOCUMENT_CHECKLIST_PROGRESS_WEIGHT = 50;
+const COVER_LETTER_PROGRESS_WEIGHT = 25;
 
 function formatCurrency(value: number | null | undefined): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -339,12 +376,12 @@ function clampNumber(value: number, minimum: number, maximum: number): number {
 }
 
 function getDocumentDisplayStatus(document: LoanRequestDocument | null | undefined): DocumentCardStatus {
-  return isDocumentExcludedFromPackage(document) ? 'removed' : document?.status ?? 'not_started';
+  return isDocumentExcludedFromPackage(document) ? 'skipped' : document?.status ?? 'not_started';
 }
 
 function mapStatusColor(status: DocumentCardStatus): string {
   switch (status) {
-    case 'removed':
+    case 'skipped':
       return 'bg-amber-100 text-amber-900 border-amber-200';
     case 'approved':
       return 'bg-emerald-100 text-emerald-800 border-emerald-200';
@@ -1249,6 +1286,71 @@ function buildCoverLetterFormState(inputs: Record<string, unknown> | null | unde
   };
 }
 
+function mergeBusinessResearchSuggestions(
+  previous: CoverLetterFormState,
+  suggestions: BusinessResearchSuggestions,
+): CoverLetterFormState {
+  const next: CoverLetterFormState = { ...previous };
+  const textFields: Array<keyof Pick<CoverLetterFormState,
+    | 'businessDescription'
+    | 'industry'
+    | 'entityType'
+    | 'customerType'
+    | 'topCustomers'
+    | 'websiteUrl'
+    | 'ownerManagementExperience'
+    | 'operatingHistory'
+    | 'businessLocationDetails'
+    | 'businessLocation'
+    | 'currentBusinessTraitsDetails'
+    | 'employeeCount'
+    | 'repaymentSource'
+    | 'supportingFactorsDetails'
+    | 'additionalLenderNotes'
+  >> = [
+    'businessDescription',
+    'industry',
+    'entityType',
+    'customerType',
+    'topCustomers',
+    'websiteUrl',
+    'ownerManagementExperience',
+    'operatingHistory',
+    'businessLocationDetails',
+    'businessLocation',
+    'currentBusinessTraitsDetails',
+    'employeeCount',
+    'repaymentSource',
+    'supportingFactorsDetails',
+    'additionalLenderNotes',
+  ];
+
+  textFields.forEach((field) => {
+    const value = suggestions[field];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      next[field] = value.trim();
+    }
+  });
+
+  if (suggestions.businessModelType) {
+    next.businessModelType = suggestions.businessModelType;
+  }
+
+  if (Array.isArray(suggestions.currentBusinessTraits) && suggestions.currentBusinessTraits.length > 0) {
+    next.currentBusinessTraits = suggestions.currentBusinessTraits;
+  }
+
+  if (Array.isArray(suggestions.revenueStreams) && suggestions.revenueStreams.length > 0) {
+    next.revenueStreams = suggestions.revenueStreams;
+  }
+
+  if (Array.isArray(suggestions.supportingFactors) && suggestions.supportingFactors.length > 0) {
+    next.supportingFactors = suggestions.supportingFactors;
+  }
+
+  return next;
+}
+
 function MultiSelectChips({
   options,
   values,
@@ -1332,9 +1434,16 @@ export default function LoanPackagingDashboardClient({
   const [updatingLoanAmountFromUseOfFunds, setUpdatingLoanAmountFromUseOfFunds] = useState(false);
   const [showCoverLetterValidation, setShowCoverLetterValidation] = useState(false);
   const [showCurrentBusinessTraitsDetails, setShowCurrentBusinessTraitsDetails] = useState(false);
+  const [researchPanelDismissed, setResearchPanelDismissed] = useState(false);
+  const [researchPanelExpanded, setResearchPanelExpanded] = useState(true);
+  const [researchBusinessName, setResearchBusinessName] = useState('');
+  const [researchLocation, setResearchLocation] = useState('');
+  const [researchWebsiteUrl, setResearchWebsiteUrl] = useState('');
+  const [researchingBusiness, setResearchingBusiness] = useState(false);
+  const [researchSources, setResearchSources] = useState<BusinessResearchResponse['sources']>([]);
   const [activeCoverLetterTab, setActiveCoverLetterTab] = useState<CoverLetterTabId>('business-overview');
   const [expandedWorkflowSections, setExpandedWorkflowSections] = useState<Record<WorkflowSectionId, boolean>>({
-    'loan-profile': true,
+    'loan-profile': false,
     documents: false,
     'cover-letter': false,
     package: false,
@@ -1387,6 +1496,20 @@ export default function LoanPackagingDashboardClient({
       loanForm.loanAmount.trim().length > 0
     );
   }, [loanForm.businessName, loanForm.loanPurpose, loanForm.loanAmount]);
+  const loanProfileSummary = useMemo(() => {
+    const businessName = loanForm.businessName.trim();
+    const loanPurpose = loanForm.loanPurpose.trim();
+    const loanAmount = parseNullableNumber(loanForm.loanAmount);
+    const summaryParts = [
+      businessName,
+      loanAmount !== null ? `${formatCurrency(loanAmount)} request` : '',
+      loanPurpose,
+    ].filter(Boolean);
+
+    return summaryParts.length > 0
+      ? summaryParts.join(' • ')
+      : 'Business, request amount, use of funds, and estimated loan structure';
+  }, [loanForm.businessName, loanForm.loanPurpose, loanForm.loanAmount]);
 
   const documentsComplete = useMemo(() => {
     const progress = dashboard?.progress;
@@ -1398,8 +1521,11 @@ export default function LoanPackagingDashboardClient({
   }, [dashboard?.progress]);
 
   const coverLetterComplete = dashboard?.loanRequest?.cover_letter_status === 'approved';
+  const isLoanBrokeringRequest = dashboard?.loanRequest?.service_type === 'loan_brokering';
 
-  const packageComplete = Boolean(dashboard?.loanRequest?.package_zip_path);
+  const packageComplete = isLoanBrokeringRequest
+    ? documentsComplete && coverLetterComplete
+    : Boolean(dashboard?.loanRequest?.package_zip_path);
   const latestPackageDownloadUrl =
     packageResult?.downloadUrl ?? dashboard?.loanRequest?.package_download_url ?? null;
   const latestPackageFileName =
@@ -1443,7 +1569,6 @@ export default function LoanPackagingDashboardClient({
     return USE_OF_FUNDS_PROMPTS_BY_PURPOSE[loanForm.loanPurpose] ?? DEFAULT_USE_OF_FUNDS_PROMPT;
   }, [loanForm.loanPurpose]);
   const useOfFundsStarterRows = useMemo(() => getUseOfFundsStarterRows(loanForm.loanPurpose), [loanForm.loanPurpose]);
-  const isLoanBrokeringRequest = dashboard?.loanRequest?.service_type === 'loan_brokering';
   const useOfFundsSubtotalBeforeBrokerFee = useMemo(
     () =>
       coverLetterForm.useOfFundsBreakdown.reduce((sum, row) => {
@@ -1483,6 +1608,16 @@ export default function LoanPackagingDashboardClient({
     return Math.max(CURRENT_YEAR - operatingHistoryYear, 0);
   }, [operatingHistoryYear]);
   const currentBusinessTraitsDetailsVisible = showCurrentBusinessTraitsDetails || coverLetterForm.currentBusinessTraitsDetails.trim().length > 0;
+  const loanProfileProgressPercentage = useMemo(() => {
+    const completedFields = [
+      loanForm.businessName.trim(),
+      loanForm.loanPurpose.trim(),
+      loanForm.loanAmount.trim(),
+    ].filter(Boolean).length;
+
+    return (completedFields / 3) * LOAN_PROFILE_PROGRESS_WEIGHT;
+  }, [loanForm.businessName, loanForm.loanAmount, loanForm.loanPurpose]);
+
   const loanProfileMissingFields = useMemo(() => {
     const missing: string[] = [];
 
@@ -1630,6 +1765,57 @@ export default function LoanPackagingDashboardClient({
     return errors;
   }, [coverLetterForm, dashboard?.cashFlowSummary]);
 
+  const coverLetterProgressPercentage = useMemo(() => {
+    const requiredFields: Array<keyof CoverLetterFormState | 'repaymentNotes'> = [
+      'businessDescription',
+      'industry',
+      'entityType',
+      'customerType',
+      'topCustomers',
+      'ownerManagementExperience',
+      'operatingHistory',
+      'businessModelType',
+      'businessLocationDetails',
+      'currentBusinessTraits',
+      'useOfFundsBreakdown',
+      'useOfFundsNarrative',
+      'timingNarrative',
+      'noLoanImpact',
+      'withLoanImpact',
+      'currentFinancialBaseline',
+      'projectedFinancialImpact',
+      'repaymentNotes',
+      'repaymentSource',
+      'revenueStreams',
+      'financingImpact',
+      'supportingFactorsDetails',
+    ];
+    const conditionalFields: Array<keyof CoverLetterFormState> = [
+      'repaymentSourceOther',
+      'revenueStreamsOther',
+      'financingImpactOther',
+      'currentBusinessTraitsOther',
+    ];
+    const activeConditionalFields = conditionalFields.filter((field) => Boolean(coverLetterFieldErrors[field]));
+    const progressFields = [...requiredFields, ...activeConditionalFields];
+    const completedFields = progressFields.filter((field) => !coverLetterFieldErrors[field as keyof CoverLetterFormState]).length;
+    const completedUnits = completedFields + (coverLetterComplete ? 1 : 0);
+    const totalUnits = progressFields.length + 1;
+
+    return (completedUnits / totalUnits) * COVER_LETTER_PROGRESS_WEIGHT;
+  }, [coverLetterComplete, coverLetterFieldErrors]);
+
+  const weightedChecklistProgressPercentage = useMemo(() => {
+    const documentProgress = dashboard?.progress.totalRequired
+      ? (dashboard.progress.completedRequired / dashboard.progress.totalRequired) * DOCUMENT_CHECKLIST_PROGRESS_WEIGHT
+      : 0;
+
+    return Math.min(
+      100,
+      Math.round(loanProfileProgressPercentage + documentProgress + coverLetterProgressPercentage),
+    );
+  }, [coverLetterProgressPercentage, dashboard?.progress, loanProfileProgressPercentage]);
+
   const coverLetterReady = Object.keys(coverLetterFieldErrors).length === 0;
   const coverLetterTabFieldMap: Record<CoverLetterTabId, Array<keyof CoverLetterFormState>> = {
     'business-overview': [
@@ -1719,11 +1905,6 @@ export default function LoanPackagingDashboardClient({
   const nextCoverLetterTab = activeCoverLetterTabIndex < COVER_LETTER_TABS.length - 1
     ? (COVER_LETTER_TABS[activeCoverLetterTabIndex + 1] ?? null)
     : null;
-  const completedCoverLetterTabCount = useMemo(
-    () => COVER_LETTER_TABS.filter((tab) => coverLetterTabCompleted[tab.id]).length,
-    [coverLetterTabCompleted],
-  );
-
   const workflowSteps = [
     {
       id: 'loan-profile',
@@ -1742,7 +1923,7 @@ export default function LoanPackagingDashboardClient({
     },
     {
       id: 'package',
-      title: 'Package Build',
+      title: isLoanBrokeringRequest ? 'Lender Outreach' : 'Download Package',
       complete: packageComplete,
     },
   ];
@@ -1755,9 +1936,11 @@ export default function LoanPackagingDashboardClient({
         : 'Finish the remaining required checklist items.'
       : !coverLetterComplete
         ? 'Complete and approve the cover letter so lenders understand the story behind the numbers.'
-        : !packageComplete
-          ? 'Build the package ZIP and create lender access once the package is fully ready.'
-          : 'Your lender package is ready to download and share.';
+        : isLoanBrokeringRequest
+          ? 'Your package is ready for broker review and lender outreach.'
+          : !packageComplete
+            ? 'Build the package ZIP and create lender access once the package is fully ready.'
+            : 'Your lender package is ready to download and share.';
 
   const nextOpenWorkflowSectionId: WorkflowSectionId = !loanProfileComplete
     ? 'loan-profile'
@@ -1769,16 +1952,27 @@ export default function LoanPackagingDashboardClient({
 
   useEffect(() => {
     setExpandedWorkflowSections((previous) => {
-      if (previous[nextOpenWorkflowSectionId]) {
+      const next = {
+        'loan-profile': loanProfileComplete ? false : previous['loan-profile'],
+        documents: documentsComplete ? false : previous.documents,
+        'cover-letter': coverLetterComplete ? false : previous['cover-letter'],
+        package: packageComplete ? false : previous.package,
+      };
+
+      next[nextOpenWorkflowSectionId] = true;
+
+      if (
+        next['loan-profile'] === previous['loan-profile'] &&
+        next.documents === previous.documents &&
+        next['cover-letter'] === previous['cover-letter'] &&
+        next.package === previous.package
+      ) {
         return previous;
       }
 
-      return {
-        ...previous,
-        [nextOpenWorkflowSectionId]: true,
-      };
+      return next;
     });
-  }, [nextOpenWorkflowSectionId]);
+  }, [coverLetterComplete, documentsComplete, loanProfileComplete, nextOpenWorkflowSectionId, packageComplete]);
 
   const toggleWorkflowSection = useCallback((sectionId: WorkflowSectionId) => {
     setExpandedWorkflowSections((previous) => ({
@@ -1908,6 +2102,9 @@ export default function LoanPackagingDashboardClient({
     setShowCoverLetterValidation(false);
 
     const loanRequest = payload.loanRequest;
+    setResearchBusinessName(loanRequest?.business_name || fallbackBusinessName);
+    setResearchLocation(asCoverLetterText(loanRequest?.cover_letter_inputs?.businessLocationDetails));
+    setResearchWebsiteUrl(asCoverLetterText(loanRequest?.cover_letter_inputs?.websiteUrl));
     setLoanForm({
       businessName: loanRequest?.business_name || fallbackBusinessName,
       loanPurpose: loanRequest?.loan_purpose || nextSharedProfile.loanPurpose || '',
@@ -2435,6 +2632,10 @@ export default function LoanPackagingDashboardClient({
   }, []);
 
   const formatStatusLabel = useCallback((status: string) => {
+    if (status === 'skipped') {
+      return 'Skipped';
+    }
+
     return status
       .split('_')
       .filter(Boolean)
@@ -2539,8 +2740,8 @@ export default function LoanPackagingDashboardClient({
       setActiveRequirementMenuKey(null);
       setStatusMessage(
         packageExclusionDialog.nextExcludedFromPackage
-          ? `${packageExclusionDialog.displayName} removed from the package.`
-          : `${packageExclusionDialog.displayName} added back to the package.`,
+          ? `${packageExclusionDialog.displayName} skipped. You can still upload or complete it later.`
+          : `${packageExclusionDialog.displayName} marked as needed again.`,
       );
     } catch (error) {
       setErrorMessage(
@@ -2568,6 +2769,7 @@ export default function LoanPackagingDashboardClient({
 
       const params = new URLSearchParams({
         source: 'loan-packaging',
+        returnTo: 'loan-package',
         loanRequestId,
         requirementKey: requirement.requirement_key,
       });
@@ -2581,6 +2783,41 @@ export default function LoanPackagingDashboardClient({
       setErrorMessage(error instanceof Error ? error.message : 'Failed to open template');
     }
   }, [ensureLoanRequest, router]);
+
+  const handleResearchBusiness = useCallback(async () => {
+    const trimmedBusinessName = researchBusinessName.trim() || loanForm.businessName.trim();
+    if (trimmedBusinessName.length < 2) {
+      setErrorMessage('Add the business name before running research.');
+      return;
+    }
+
+    setResearchingBusiness(true);
+    setErrorMessage(null);
+    setStatusMessage(null);
+
+    try {
+      const loanRequestId = await ensureLoanRequest();
+      const payload = await apiFetch<BusinessResearchResponse>('/api/loan-packaging/business-research', {
+        method: 'POST',
+        body: JSON.stringify({
+          loanRequestId,
+          businessName: trimmedBusinessName,
+          location: researchLocation.trim(),
+          websiteUrl: researchWebsiteUrl.trim(),
+        }),
+      });
+
+      setCoverLetterForm((previous) => mergeBusinessResearchSuggestions(previous, payload.suggestions));
+      setResearchSources(payload.sources ?? []);
+      setShowCurrentBusinessTraitsDetails(true);
+      setResearchPanelExpanded(false);
+      setStatusMessage(payload.message || 'Research complete. Review the suggested answers before generating your cover letter.');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Business research failed');
+    } finally {
+      setResearchingBusiness(false);
+    }
+  }, [apiFetch, ensureLoanRequest, loanForm.businessName, researchBusinessName, researchLocation, researchWebsiteUrl]);
 
   const handleGenerateCoverLetter = useCallback(async () => {
     setShowCoverLetterValidation(true);
@@ -2920,7 +3157,7 @@ export default function LoanPackagingDashboardClient({
             </div>
             <div className="rounded-2xl border border-slate-700 bg-slate-900/60 px-6 py-4 w-full max-w-sm">
               <p className="text-xs uppercase tracking-[0.08em] text-slate-400 mb-2">Checklist Completion</p>
-              <p className="text-4xl font-bold text-white">{dashboard?.progress.percentage ?? 0}%</p>
+              <p className="text-4xl font-bold text-white">{weightedChecklistProgressPercentage}%</p>
               <p className="text-sm text-slate-300 mt-2">
                 {dashboard?.progress.completedRequired ?? 0} of {dashboard?.progress.totalRequired ?? 0} required documents complete
               </p>
@@ -2988,7 +3225,7 @@ export default function LoanPackagingDashboardClient({
                 'Loan Profile',
                 'Add the core loan details once. We reuse these details across your package so you do not need to retype them.',
                 loanProfileComplete,
-                loanForm.businessName || loanForm.loanPurpose || 'Business, request amount, use of funds, and estimated loan structure',
+                loanProfileSummary,
               )}
 
               {expandedWorkflowSections['loan-profile'] ? (
@@ -3485,7 +3722,7 @@ export default function LoanPackagingDashboardClient({
                                   }}
                                   className="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
                                 >
-                                  {isExcludedFromPackage ? 'Add back to package' : 'Remove from package'}
+                                  {isExcludedFromPackage ? 'Mark as needed again' : 'Skip this document'}
                                 </button>
                               </div>
                             ) : null}
@@ -3495,7 +3732,7 @@ export default function LoanPackagingDashboardClient({
 
                       {isExcludedFromPackage ? (
                         <p className="text-xs font-medium text-amber-900">
-                          Excluded from package. You can add it back from the menu.
+                          Skipped for now. Lenders may still request this document, and you can mark it as needed again from the menu.
                         </p>
                       ) : null}
 
@@ -3516,10 +3753,10 @@ export default function LoanPackagingDashboardClient({
               {renderWorkflowSectionHeader(
                 'cover-letter',
                 3,
-                'Cover Letter',
-                'Share as much detail as you can in plain language. Do not worry about grammar, formatting, or perfect wording — we will organize and polish it into a lender-facing cover letter.',
+                'Lender Cover Letter',
+                'Create the lender-facing summary that explains your loan request, use of funds, repayment story, and strengths.',
                 coverLetterComplete,
-                coverLetterComplete ? 'Approved and saved as PDF' : `${completedCoverLetterTabCount} of ${COVER_LETTER_TABS.length} cover letter steps ready`,
+                coverLetterComplete ? 'Approved and saved as PDF' : 'Create the lender-facing summary that explains your loan request, use of funds, repayment story, and strengths.',
               )}
 
               {expandedWorkflowSections['cover-letter'] ? (
@@ -3533,6 +3770,97 @@ export default function LoanPackagingDashboardClient({
               {showCoverLetterValidation && !coverLetterReady ? (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
                   Complete the remaining required questions below before generating the draft.
+                </div>
+              ) : null}
+
+              {!researchPanelDismissed ? (
+                <div className="overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50 shadow-sm">
+                  <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm">
+                          <Search className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-slate-950">Save time with business research</p>
+                          <p className="text-xs leading-5 text-slate-600">
+                            Enter your business name, location, and website. We will pull public business details into the cover letter questions for you to review.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setResearchPanelExpanded((current) => !current)}
+                        className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50"
+                      >
+                        {researchPanelExpanded ? 'Collapse' : 'Use research'}
+                        <ChevronDown className={`h-3.5 w-3.5 transition ${researchPanelExpanded ? 'rotate-180' : ''}`} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResearchPanelDismissed(true)}
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                      >
+                        Hide
+                      </button>
+                    </div>
+                  </div>
+
+                  {researchPanelExpanded ? (
+                    <div className="border-t border-blue-100 px-4 pb-4">
+                      <div className="grid gap-3 pt-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
+                        <label className="space-y-1 text-xs font-semibold text-slate-700">
+                          Business name
+                          <input
+                            type="text"
+                            value={researchBusinessName}
+                            onChange={(event) => setResearchBusinessName(event.target.value)}
+                            className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Business name"
+                          />
+                        </label>
+                        <label className="space-y-1 text-xs font-semibold text-slate-700">
+                          Location
+                          <input
+                            type="text"
+                            value={researchLocation}
+                            onChange={(event) => setResearchLocation(event.target.value)}
+                            className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="City, state or market served"
+                          />
+                        </label>
+                        <label className="space-y-1 text-xs font-semibold text-slate-700">
+                          Website
+                          <input
+                            type="url"
+                            value={researchWebsiteUrl}
+                            onChange={(event) => setResearchWebsiteUrl(event.target.value)}
+                            className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="https://yourbusiness.com"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleResearchBusiness}
+                          disabled={researchingBusiness}
+                          className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 lg:mt-5"
+                        >
+                          {researchingBusiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                          {researchingBusiness ? 'Researching...' : 'Research'}
+                        </button>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span>Fills matching fields automatically. Please review anything added before generating the final letter.</span>
+                        {researchSources.length > 0 ? (
+                          <span className="rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
+                            {researchSources.length} source{researchSources.length === 1 ? '' : 's'} used
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -4364,10 +4692,16 @@ export default function LoanPackagingDashboardClient({
               {renderWorkflowSectionHeader(
                 'package',
                 4,
-                'Package Build & Lender Portal',
-                'Generate an auditable package zip and distribute secure tokenized lender access links.',
+                isLoanBrokeringRequest ? 'Broker Review & Lender Outreach' : 'Download & Share Loan Package',
+                isLoanBrokeringRequest
+                  ? 'Once your profile, documents, and cover letter are complete, we review the package, send lender feelers, and connect you with interested lending partners.'
+                  : 'Download your completed loan package, create secure lender links, and understand what usually happens after lenders receive the file.',
                 packageComplete,
-                latestPackageDownloadUrl ? `Latest package available${dashboard?.loanRequest?.package_zip_generated_at ? ` · ${formatDate(dashboard.loanRequest.package_zip_generated_at)}` : ''}` : 'Build ZIP and create secure lender links',
+                isLoanBrokeringRequest
+                  ? 'After completion, we review the request, contact lending partners, and share the full package when a lender shows interest.'
+                  : latestPackageDownloadUrl
+                    ? `Latest package available${dashboard?.loanRequest?.package_zip_generated_at ? ` · ${formatDate(dashboard.loanRequest.package_zip_generated_at)}` : ''}`
+                    : 'Build and download your completed loan package',
               )}
 
               {expandedWorkflowSections.package ? (
@@ -4384,94 +4718,193 @@ export default function LoanPackagingDashboardClient({
                 </div>
               ) : null}
 
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={handleBuildPackage}
-                  disabled={buildingPackage || downloadingPackage || !documentsComplete || !coverLetterComplete}
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                >
-                  {buildingPackage || downloadingPackage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
-                  {buildingPackage ? 'Building Package ZIP...' : 'Build & Download ZIP'}
-                </button>
+              {isLoanBrokeringRequest ? (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm leading-6 text-emerald-950">
+                    Once everything is complete, your next step is handled through broker outreach instead of downloading the full package. We review the file, send a concise lender summary to potential partners, and only share the complete package with lenders who show interest.
+                  </div>
 
-                {latestPackageDownloadUrl ? (
-                  <button
-                    onClick={handleDownloadLatestPackage}
-                    disabled={downloadingPackage}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-400 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                  >
-                    {downloadingPackage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
-                    Download Latest ZIP
-                  </button>
-                ) : null}
-
-                {dashboard?.loanRequest?.package_zip_generated_at ? (
-                  <p className="text-xs text-slate-500">
-                    Last package build: {formatDate(dashboard.loanRequest.package_zip_generated_at)}
-                  </p>
-                ) : null}
-              </div>
-
-              {packageResult ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                  Package created with {packageResult.fileCount} document files ({bytesToDisplay(packageResult.packageSizeBytes)}).
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">1. Review</p>
+                      <h3 className={`${headingClassName} mt-1 text-base`}>We check the package</h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">We look for obvious gaps, make sure the request is understandable, and prepare the lender-facing story.</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">2. Outreach</p>
+                      <h3 className={`${headingClassName} mt-1 text-base`}>We send lender feelers</h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">We share the high-level deal summary with lending partners to see who may be interested in the request.</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">3. Connect</p>
+                      <h3 className={`${headingClassName} mt-1 text-base`}>Interested lenders review</h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">If a lender is interested, we share the complete package and help connect you for underwriting, closing, and funding.</p>
+                    </div>
+                  </div>
                 </div>
-              ) : null}
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={handleBuildPackage}
+                      disabled={buildingPackage || downloadingPackage || !documentsComplete || !coverLetterComplete}
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                    >
+                      {buildingPackage || downloadingPackage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+                      {buildingPackage ? 'Building Package ZIP...' : 'Build & Download ZIP'}
+                    </button>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
-                <h3 className={`${headingClassName} text-lg`}>Create Lender Access Link</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <label className="space-y-1 text-sm">
-                    <span className="font-semibold text-slate-700">Portal Title</span>
-                    <input
-                      value={lenderTitle}
-                      onChange={(event) => setLenderTitle(event.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </label>
-                  <label className="space-y-1 text-sm">
-                    <span className="font-semibold text-slate-700">Portal Password</span>
-                    <input
-                      type="password"
-                      value={lenderPassword}
-                      onChange={(event) => setLenderPassword(event.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="At least 8 characters"
-                    />
-                  </label>
-                  <label className="space-y-1 text-sm">
-                    <span className="font-semibold text-slate-700">Expires In (Days)</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="90"
-                      value={lenderExpiresInDays}
-                      onChange={(event) => setLenderExpiresInDays(event.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </label>
-                </div>
+                    {latestPackageDownloadUrl ? (
+                      <button
+                        onClick={handleDownloadLatestPackage}
+                        disabled={downloadingPackage}
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-400 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                      >
+                        {downloadingPackage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+                        Download Latest ZIP
+                      </button>
+                    ) : null}
 
-                <button
-                  onClick={handleCreateLenderLink}
-                  disabled={creatingLenderLink}
-                  className="inline-flex items-center gap-2 rounded-lg border border-blue-400 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
-                >
-                  {creatingLenderLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-                  Create Secure Lender Link
-                </button>
-              </div>
+                    {dashboard?.loanRequest?.package_zip_generated_at ? (
+                      <p className="text-xs text-slate-500">
+                        Last package build: {formatDate(dashboard.loanRequest.package_zip_generated_at)}
+                      </p>
+                    ) : null}
+                  </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className={`${headingClassName} text-lg`}>Active Lender Links</h3>
-                  {loadingLenderLinks ? <Loader2 className="h-4 w-4 animate-spin text-slate-500" /> : null}
-                </div>
+                  {packageResult ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                      Package created with {packageResult.fileCount} document files ({bytesToDisplay(packageResult.packageSizeBytes)}).
+                    </div>
+                  ) : null}
 
-                {lenderLinks.length === 0 ? (
-                  <p className="text-sm text-slate-500">No lender links created yet.</p>
-                ) : (
-                  lenderLinks.map((link) => (
+                  <div className="overflow-hidden rounded-[28px] border border-blue-100 bg-[radial-gradient(circle_at_top_left,_rgba(219,234,254,0.95)_0%,_rgba(255,255,255,0.98)_46%,_rgba(240,253,250,0.9)_100%)] shadow-sm">
+                    <div className="border-b border-blue-100 px-5 py-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">What happens next</p>
+                      <h3 className={`${headingClassName} mt-1 text-xl text-slate-950`}>A simple path from package to funding</h3>
+                      <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+                        Start with a polished lender summary, identify lenders who fit the deal, then share the full package only when there is real interest.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
+                      <div className="relative rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
+                        <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                          <FileCheck2 className="h-5 w-5" />
+                        </div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-emerald-700">1. Ready</p>
+                        <h4 className={`${headingClassName} mt-1 text-base text-slate-950`}>Download your package</h4>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">Your profile, documents, and cover letter are organized. Download the ZIP so it is ready when a lender asks.</p>
+                      </div>
+
+                      <div className="relative rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
+                        <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700">
+                          <Send className="h-5 w-5" />
+                        </div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-indigo-700">2. Introduce</p>
+                        <h4 className={`${headingClassName} mt-1 text-base text-slate-950`}>Send the cover letter first</h4>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">Use the cover letter as the short deal summary so lenders can quickly understand the request before reviewing documents.</p>
+                      </div>
+
+                      <div className="relative rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+                        <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+                          <Search className="h-5 w-5" />
+                        </div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-blue-700">3. Find fit</p>
+                        <h4 className={`${headingClassName} mt-1 text-base text-slate-950`}>Connect with lenders</h4>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">Look for lenders in your area or industry who fund your loan type, amount, business profile, and use of funds.</p>
+                      </div>
+
+                      <div className="relative rounded-2xl border border-amber-100 bg-white p-4 shadow-sm">
+                        <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                          <Handshake className="h-5 w-5" />
+                        </div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-amber-700">4. Share</p>
+                        <h4 className={`${headingClassName} mt-1 text-base text-slate-950`}>Send the full file when asked</h4>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">When a lender is interested, share the ZIP or secure lender link so they can review the backup documents.</p>
+                      </div>
+
+                      <div className="relative rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
+                          <ShieldCheck className="h-5 w-5" />
+                        </div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">5. Close</p>
+                        <h4 className={`${headingClassName} mt-1 text-base text-slate-950`}>Terms, underwriting, funding</h4>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">The lender may ask questions, request updates, issue terms, verify the file, prepare closing documents, and then fund the loan.</p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-blue-100 bg-white/70 px-5 py-4">
+                      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h4 className={`${headingClassName} text-base text-slate-950`}>Questions about what to do next?</h4>
+                          <p className="mt-1 leading-6">If you have any questions at all, feel free to reach out and we can help you think through the next step.</p>
+                        </div>
+                        <a
+                          href="tel:210-370-7402"
+                          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                        >
+                          <Phone className="h-4 w-4" />
+                          210-370-7402
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+                    <h3 className={`${headingClassName} text-lg`}>Create Lender Access Link</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <label className="space-y-1 text-sm">
+                        <span className="font-semibold text-slate-700">Portal Title</span>
+                        <input
+                          value={lenderTitle}
+                          onChange={(event) => setLenderTitle(event.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </label>
+                      <label className="space-y-1 text-sm">
+                        <span className="font-semibold text-slate-700">Portal Password</span>
+                        <input
+                          type="password"
+                          value={lenderPassword}
+                          onChange={(event) => setLenderPassword(event.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="At least 8 characters"
+                        />
+                      </label>
+                      <label className="space-y-1 text-sm">
+                        <span className="font-semibold text-slate-700">Expires In (Days)</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="90"
+                          value={lenderExpiresInDays}
+                          onChange={(event) => setLenderExpiresInDays(event.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </label>
+                    </div>
+
+                    <button
+                      onClick={handleCreateLenderLink}
+                      disabled={creatingLenderLink}
+                      className="inline-flex items-center gap-2 rounded-lg border border-blue-400 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                    >
+                      {creatingLenderLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                      Create Secure Lender Link
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className={`${headingClassName} text-lg`}>Active Lender Links</h3>
+                      {loadingLenderLinks ? <Loader2 className="h-4 w-4 animate-spin text-slate-500" /> : null}
+                    </div>
+
+                    {lenderLinks.length === 0 ? (
+                      <p className="text-sm text-slate-500">No lender links created yet.</p>
+                    ) : (
+                      lenderLinks.map((link) => (
                     <article key={link.id} className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
@@ -4509,9 +4942,11 @@ export default function LoanPackagingDashboardClient({
                         </button>
                       </div>
                     </article>
-                  ))
-                )}
-              </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
                 </div>
               ) : null}
             </section>
@@ -4531,12 +4966,12 @@ export default function LoanPackagingDashboardClient({
           <div className="px-6 py-5">
             <DialogHeader className="space-y-2 text-left">
               <DialogTitle className={`${headingClassName} text-xl`}>
-                {packageExclusionDialog?.nextExcludedFromPackage ? 'Remove from package?' : 'Add back to package?'}
+                {packageExclusionDialog?.nextExcludedFromPackage ? 'Skip this document?' : 'Mark this document as needed again?'}
               </DialogTitle>
               <DialogDescription className="text-sm leading-6 text-slate-600">
                 {packageExclusionDialog?.nextExcludedFromPackage
-                  ? 'This document is typically required for your selected loan purpose. Removing it will keep it out of the package and it will no longer count toward checklist completion. You can add it back later.'
-                  : 'Adding this document back will make it count as required again for checklist completion and package readiness.'}
+                  ? 'You can move forward without this document for now, but lenders may still ask for it before reviewing or approving your loan. This will count toward your checklist progress so you can continue building the package.'
+                  : 'This will put the document back into your checklist as an item that still needs to be uploaded or completed.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -4553,7 +4988,7 @@ export default function LoanPackagingDashboardClient({
                 disabled={Boolean(updatingPackageExclusionKey)}
                 className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {packageExclusionDialog?.nextExcludedFromPackage ? 'Keep Document' : 'Cancel'}
+                {packageExclusionDialog?.nextExcludedFromPackage ? 'Do Not Skip' : 'Cancel'}
               </button>
               <button
                 type="button"
@@ -4566,7 +5001,7 @@ export default function LoanPackagingDashboardClient({
                 }`}
               >
                 {updatingPackageExclusionKey ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {packageExclusionDialog?.nextExcludedFromPackage ? 'Yes, Remove' : 'Add Back'}
+                {packageExclusionDialog?.nextExcludedFromPackage ? 'Yes, Skip Document' : 'Mark as Needed'}
               </button>
             </DialogFooter>
           </div>

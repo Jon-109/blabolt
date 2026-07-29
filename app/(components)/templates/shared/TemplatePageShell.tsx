@@ -55,6 +55,7 @@ export default function TemplatePageShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const source = searchParams.get('source');
+  const returnTo = searchParams.get('returnTo');
   const loanRequestId = searchParams.get('loanRequestId');
   const submissionId = searchParams.get('submissionId');
   const pathSegments = pathname.split('/').filter(Boolean);
@@ -63,6 +64,7 @@ export default function TemplatePageShell({
     typeof lastSegment === 'string' && (TEMPLATE_KEYS as readonly string[]).includes(lastSegment)
       ? (lastSegment as TemplateKey)
       : null;
+  const showLoanPackageReturn = source === 'loan-packaging' || returnTo === 'loan-package';
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#dbeafe_0%,_#f8fafc_36%,_#f3f4f6_100%)] text-slate-900">
@@ -106,15 +108,15 @@ export default function TemplatePageShell({
         </div>
       </section>
       {fullWidthBelowHero}
-      {source === 'loan-packaging' ? (
+      {showLoanPackageReturn ? (
         <div className="mx-auto mt-4 max-w-7xl px-4 sm:px-6">
-          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex items-center justify-between gap-3">
-            <span>Opened from Loan Packaging.</span>
+          <div className="flex flex-col gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+            <span>You’re completing this template as part of your loan package checklist.</span>
             <Link
               href={loanRequestId ? `/loan-packaging?loanRequestId=${loanRequestId}` : '/loan-packaging'}
-              className="inline-flex items-center rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+              className="inline-flex items-center justify-center rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
             >
-              Return to Loan Packaging
+              ← Back to Loan Package
             </Link>
           </div>
         </div>

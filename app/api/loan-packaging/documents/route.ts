@@ -100,7 +100,7 @@ export async function PATCH(req: NextRequest) {
 
   if (!requirement.required) {
     return NextResponse.json(
-      { error: 'Only required checklist documents can be removed from the package.' },
+      { error: 'Only required checklist documents can be skipped.' },
       { status: 400 },
     );
   }
