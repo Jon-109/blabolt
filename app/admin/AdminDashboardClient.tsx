@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Manrope, Space_Grotesk } from 'next/font/google';
 import { supabase } from '@/supabase/helpers/client';
 import {
@@ -32,6 +32,8 @@ type DealStage = 'new_lead' | 'analysis_purchased' | 'analysis_complete' | 'pack
 type Priority = 'low' | 'normal' | 'high' | 'urgent';
 type SelectedPath = 'undecided' | 'self_serve_package' | 'lender_matching' | 'templates_only' | 'analysis_only';
 type LenderStatus = 'not_started' | 'needs_package' | 'ready_for_feeler' | 'feeler_sent' | 'interested' | 'declined' | 'connected' | 'funded';
+type SortKey = 'businessName' | 'fullName' | 'dealStage' | 'dscr' | 'progressPct' | 'estimatedBrokerFee' | 'lastUpdate';
+type SortDirection = 'asc' | 'desc';
 
 type ClientRow = {
   id: string;
@@ -187,6 +189,17 @@ type ClientDetail = {
       requirementKey: string;
       displayName: string;
       description: string;
+    }>;
+    documentChecklist: Array<{
+      requirementKey: string;
+      displayName: string;
+      description: string;
+      category: string;
+      required: boolean;
+      included: boolean;
+      completed: boolean;
+      custom: boolean;
+      status: string;
     }>;
   };
   cashFlowAnalysis: null | {
@@ -468,6 +481,16 @@ export default function AdminDashboardClient() {
   });
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
+  const [serviceMenuClientId, setServiceMenuClientId] = useState<string | null>(null);
+  const [clientSearch, setClientSearch] = useState('');
+  const [showClientFilters, setShowClientFilters] = useState(false);
+  const [serviceFilter, setServiceFilter] = useState<string[]>([]);
+  const [stageFilter, setStageFilter] = useState<DealStage[]>([]);
+  const [dscrFilter, setDscrFilter] = useState<string[]>([]);
+  const [pageSize, setPageSize] = useState<number | 'all'>(25);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'lastUpdate', direction: 'desc' });
+  const filterPopoverRef = useRef<HTMLDivElement | null>(null);
   const [detailsByClientId, setDetailsByClientId] = useState<Record<string, ClientDetail>>({});
   const [detailErrors, setDetailErrors] = useState<Record<string, string>>({});
   const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
@@ -512,6 +535,87 @@ export default function AdminDashboardClient() {
   useEffect(() => {
     void loadEverything();
   }, []);
+
+  useEffect(() => {
+    if (!showClientFilters) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (filterPopoverRef.current && !filterPopoverRef.current.contains(event.target as Node)) {
+        setShowClientFilters(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [showClientFilters]);
+
+  const serviceFilterOptions = useMemo(() => {
+    const serviceKeys = Array.from(new Set(clients.flatMap((client) => client.services.map((service) => service.key))));
+    return serviceKeys.map((key) => ({
+      key,
+      label: clients.flatMap((client) => client.services).find((service) => service.key === key)?.label ?? key.replaceAll('_', ' '),
+    }));
+  }, [clients]);
+
+  const filteredClients = useMemo(() => {
+    const normalizedSearch = clientSearch.trim().toLowerCase();
+
+    const matches = clients.filter((client) => {
+      const matchesSearch = !normalizedSearch || [client.businessName, client.fullName, client.email]
+        .some((value) => String(value ?? '').toLowerCase().includes(normalizedSearch));
+      const matchesService = serviceFilter.length === 0 || client.services.some((service) => serviceFilter.includes(service.key));
+      const matchesStage = stageFilter.length === 0 || stageFilter.includes(client.dealStage);
+      const matchesDscr = dscrFilter.length === 0 || dscrFilter.some((filter) => (
+        filter === 'none'
+          ? client.dscr == null
+          : filter === 'strong'
+            ? (client.dscr ?? 0) >= 1.25
+            : filter === 'watch'
+              ? (client.dscr ?? 0) > 0 && (client.dscr ?? 0) < 1.25
+              : client.dscr != null
+      ));
+
+      return matchesSearch && matchesService && matchesStage && matchesDscr;
+    });
+
+    return [...matches].sort((a, b) => {
+      const direction = sortConfig.direction === 'asc' ? 1 : -1;
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (sortConfig.key === 'lastUpdate') {
+        return ((Date.parse(String(aValue ?? '')) || 0) - (Date.parse(String(bValue ?? '')) || 0)) * direction;
+      }
+
+      if (typeof aValue === 'number' || typeof bValue === 'number' || aValue == null || bValue == null) {
+        return (((aValue == null ? -Infinity : Number(aValue)) - (bValue == null ? -Infinity : Number(bValue))) * direction);
+      }
+
+      return String(aValue).localeCompare(String(bValue), undefined, { sensitivity: 'base' }) * direction;
+    });
+  }, [clientSearch, clients, dscrFilter, serviceFilter, sortConfig, stageFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [clientSearch, dscrFilter, pageSize, serviceFilter, stageFilter]);
+
+  const pageCount = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(filteredClients.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, pageCount);
+  const paginatedClients = pageSize === 'all'
+    ? filteredClients
+    : filteredClients.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+  const activeFilterCount = serviceFilter.length + stageFilter.length + dscrFilter.length;
+
+  const toggleArrayFilter = <T extends string>(value: T, setter: (updater: (current: T[]) => T[]) => void) => {
+    setter((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
+  };
+
+  const toggleSort = (key: SortKey) => {
+    setSortConfig((current) => ({
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
 
   const loadClientDetail = async (clientId: string, force = false) => {
     if (!force && detailsByClientId[clientId]) {
@@ -738,21 +842,32 @@ export default function AdminDashboardClient() {
   };
 
   return (
-    <div className={`${bodyFont.className} min-h-screen bg-[radial-gradient(circle_at_top_left,_#dbeafe_0,_#f8fafc_35%,_#e2e8f0_100%)]`}>
-      <div className="mx-auto max-w-[1500px] px-4 pb-5 md:px-5">
-        <section className="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 shadow-sm">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+    <div className={`${bodyFont.className} h-[calc(100vh-56px)] overflow-hidden bg-[radial-gradient(circle_at_top_left,_#dbeafe_0,_#f8fafc_35%,_#e2e8f0_100%)]`}>
+      <div className="mx-auto flex h-full max-w-[1500px] flex-col overflow-hidden px-4 pb-3 pt-2 md:px-5">
+        <section className="sticky top-2 z-20 flex-none overflow-hidden rounded-[2rem] border border-white/70 bg-slate-950 px-6 py-6 shadow-2xl shadow-slate-300/50">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Admin Operations</p>
-              <h1 className={`${headingFont.className} text-2xl font-bold text-slate-900`}>Control Center</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-300">Admin Operations</p>
+              <h1 className={`${headingFont.className} mt-1 text-3xl font-bold tracking-tight text-white md:text-4xl`}>Client Command Center</h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-300">Manage borrower relationships, package readiness, lender workflow, and service access from one professional workspace.</p>
             </div>
-            <button
-              type="button"
-              onClick={() => void loadEverything()}
-              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-            >
-              Refresh
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">Total Clients</p>
+                <p className="text-xl font-bold text-white">{loading ? '...' : clients.length}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">Pipeline Value</p>
+                <p className="text-xl font-bold text-white">{dashboard ? money.format(dashboard.kpis.yearlyRevenue) : loading ? '...' : '$0'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void loadEverything()}
+                className="rounded-2xl bg-white px-4 py-3 text-xs font-bold text-slate-950 shadow-lg shadow-slate-950/20"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
         </section>
 
@@ -760,51 +875,101 @@ export default function AdminDashboardClient() {
           <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{errorMessage}</div>
         ) : null}
 
-        <section className="mt-2 grid gap-2 md:grid-cols-5">
-          <MiniCard label="Users" value={dashboard ? String(dashboard.kpis.totalUsers) : loading ? '...' : '0'} />
-          <MiniCard label="Template Users" value={dashboard ? String(dashboard.kpis.templateUsers) : loading ? '...' : '0'} />
-          <MiniCard label="Loan Packaging Users" value={dashboard ? String(dashboard.kpis.loanPackagingUsers) : loading ? '...' : '0'} />
-          <MiniCard label="Loan Brokering Users" value={dashboard ? String(dashboard.kpis.loanBrokeringUsers) : loading ? '...' : '0'} />
-          <MiniCard label="Yearly Revenue" value={dashboard ? money.format(dashboard.kpis.yearlyRevenue) : loading ? '...' : '$0'} />
-        </section>
-
-        <section className="mt-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900">Clients</h2>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-500">Click a row to expand the client workspace</span>
+        <section className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/95 p-4 shadow-xl shadow-slate-200/70">
+          <div className="sticky top-0 z-10 mb-3 flex flex-none flex-col gap-3 bg-white/95 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Clients</h2>
+              <p className="text-[11px] text-slate-500">Click a row to expand the client workspace.</p>
+            </div>
+            <div className="flex flex-col gap-2 md:flex-row md:items-center">
+              <div className="relative">
+                <input
+                  value={clientSearch}
+                  onChange={(event) => setClientSearch(event.target.value)}
+                  placeholder="Search name or business..."
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-9 text-xs font-medium text-slate-800 shadow-sm outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100 md:w-72"
+                />
+                <span className="pointer-events-none absolute left-3 top-2.5 text-xs text-slate-400">⌕</span>
+              </div>
+              <div ref={filterPopoverRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowClientFilters((current) => !current)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                  Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+                </button>
+                {showClientFilters ? (
+                  <div className="absolute right-0 z-40 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
+                    <div className="space-y-4">
+                      <FilterGroup title="Service">
+                        {serviceFilterOptions.map((service) => (
+                          <CheckboxFilterOption
+                            key={service.key}
+                            label={service.label}
+                            checked={serviceFilter.includes(service.key)}
+                            onChange={() => toggleArrayFilter(service.key, setServiceFilter)}
+                          />
+                        ))}
+                      </FilterGroup>
+                      <FilterGroup title="Stage">
+                        {dealStageOptions.map(([key, label]) => (
+                          <CheckboxFilterOption
+                            key={key}
+                            label={label}
+                            checked={stageFilter.includes(key)}
+                            onChange={() => toggleArrayFilter(key, setStageFilter)}
+                          />
+                        ))}
+                      </FilterGroup>
+                      <FilterGroup title="DSCR">
+                        <CheckboxFilterOption label="Strong: 1.25x+" checked={dscrFilter.includes('strong')} onChange={() => toggleArrayFilter('strong', setDscrFilter)} />
+                        <CheckboxFilterOption label="Watchlist: below 1.25x" checked={dscrFilter.includes('watch')} onChange={() => toggleArrayFilter('watch', setDscrFilter)} />
+                        <CheckboxFilterOption label="No DSCR yet" checked={dscrFilter.includes('none')} onChange={() => toggleArrayFilter('none', setDscrFilter)} />
+                      </FilterGroup>
+                      <button type="button" onClick={() => { setServiceFilter([]); setStageFilter([]); setDscrFilter([]); }} className="w-full rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
+                        Clear Filters
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
               <button
                 type="button"
                 onClick={() => setShowAddClientModal(true)}
-                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white"
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
               >
                 Add Client
               </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="min-h-0 flex-1 overflow-auto rounded-t-2xl border border-slate-100">
             <table className="min-w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-[11px] uppercase tracking-[0.14em] text-slate-500">
-                  <th className="px-2 py-2">Business</th>
-                  <th className="px-2 py-2">Name</th>
+              <thead className="sticky top-0 z-10 bg-white shadow-sm">
+                <tr className="border-b border-slate-200 text-[11px] font-bold tracking-[0.08em] text-slate-500">
+                  <SortableHeader label="Business" sortKey="businessName" sortConfig={sortConfig} onSort={toggleSort} />
+                  <SortableHeader label="Name" sortKey="fullName" sortConfig={sortConfig} onSort={toggleSort} />
                   <th className="px-2 py-2">Email</th>
                   <th className="px-2 py-2">Services</th>
-                  <th className="px-2 py-2">Stage</th>
-                  <th className="px-2 py-2">DSCR</th>
-                  <th className="px-2 py-2">Progress</th>
-                  <th className="px-2 py-2">Est. Fee</th>
-                  <th className="px-2 py-2">Last Update</th>
+                  <SortableHeader label="Stage" sortKey="dealStage" sortConfig={sortConfig} onSort={toggleSort} />
+                  <SortableHeader label="DSCR" sortKey="dscr" sortConfig={sortConfig} onSort={toggleSort} />
+                  <SortableHeader label="Progress" sortKey="progressPct" sortConfig={sortConfig} onSort={toggleSort} />
+                  <SortableHeader label="Est. Fee" sortKey="estimatedBrokerFee" sortConfig={sortConfig} onSort={toggleSort} />
+                  <SortableHeader label="Last Update" sortKey="lastUpdate" sortConfig={sortConfig} onSort={toggleSort} />
                   <th className="px-2 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {clients.map((client) => {
+                {paginatedClients.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-500">
+                      No clients match the current search or filters.
+                    </td>
+                  </tr>
+                ) : null}
+                {paginatedClients.map((client) => {
                   const isExpanded = expandedClientId === client.id;
-                  const detail = detailsByClientId[client.id];
-                  const draft = draftsByClientId[client.id];
-                  const detailError = detailErrors[client.id];
 
                   const hasManualTemplateGrant = (templateType: TemplateType) => client.grantedTemplateTypes.includes(templateType);
                   const hasBrokeringService = client.services.some((service) => service.key === 'loan_brokering');
@@ -839,7 +1004,23 @@ export default function AdminDashboardClient() {
                                 <ServiceBadge key={`${client.id}:${service.key}`} label={service.label} />
                               ))
                             ) : (
-                              <span className="text-slate-400">No Access</span>
+                              <div className="relative" onClick={(event) => event.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => setServiceMenuClientId(serviceMenuClientId === client.id ? null : client.id)}
+                                  className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-100"
+                                >
+                                  Add Service
+                                </button>
+                                {serviceMenuClientId === client.id ? (
+                                  <div className="absolute left-0 z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl">
+                                    <ActionButton label="Comprehensive Analysis" onClick={() => void runClientAction(client.id, 'grant_comprehensive')} />
+                                    <ActionButton label="Templates" onClick={() => void runClientAction(client.id, 'grant_templates')} />
+                                    <ActionButton label="Loan Packaging" onClick={() => void runClientAction(client.id, 'grant_packaging')} />
+                                    <ActionButton label="Loan Brokering" onClick={() => void runClientAction(client.id, 'grant_brokering')} />
+                                  </div>
+                                ) : null}
+                              </div>
                             )}
                           </div>
                         </td>
@@ -870,7 +1051,7 @@ export default function AdminDashboardClient() {
                         <td className="px-2 py-2" onClick={(event) => event.stopPropagation()}>
                           <div className="group relative inline-block">
                             <button type="button" className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700">
-                              More Actions
+                              MORE
                             </button>
                             <div className="invisible absolute right-0 z-20 mt-1 w-64 rounded-lg border border-slate-200 bg-white p-2 opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100">
                               <ActionButton
@@ -966,40 +1147,84 @@ export default function AdminDashboardClient() {
                           </div>
                         </td>
                       </tr>
-
-                      {isExpanded ? (
-                        <tr>
-                          <td colSpan={10} className="border-b border-slate-200 bg-slate-50/70 px-2 py-3">
-                            {loadingDetailId === client.id && !detail ? (
-                              <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading client workspace...</div>
-                            ) : detail ? (
-                              <ClientDetailPanel
-                                detail={detail}
-                                draft={draft ?? cloneDraft(detail)}
-                                isEditing={true}
-                                isSaving={savingTarget === `detail:${client.id}`}
-                                detailError={detailError}
-                                onSave={() => void saveDetail(client.id)}
-                                onDraftChange={(nextDraft) => {
-                                  setDraftsByClientId((current) => ({ ...current, [client.id]: nextDraft }));
-                                }}
-                              />
-                            ) : (
-                              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                                {detailError || 'Unable to load client details.'}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ) : null}
                     </Fragment>
                   );
                 })}
               </tbody>
             </table>
           </div>
+          <div className="sticky bottom-0 z-10 flex flex-none flex-col gap-3 rounded-b-2xl border-x border-b border-slate-100 bg-slate-50 px-4 py-3 shadow-[0_-10px_24px_rgba(15,23,42,0.06)] md:flex-row md:items-center md:justify-between">
+            <div className="text-xs font-medium text-slate-500">
+              Showing {paginatedClients.length} of {filteredClients.length} clients
+            </div>
+            <div className="flex items-center justify-center gap-1 text-xs font-semibold text-slate-700">
+              <button type="button" onClick={() => setCurrentPage(1)} disabled={safeCurrentPage === 1 || pageSize === 'all'} className="rounded-lg border border-slate-200 bg-white px-2 py-1 disabled:opacity-40">First</button>
+              <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={safeCurrentPage === 1 || pageSize === 'all'} className="rounded-lg border border-slate-200 bg-white px-2 py-1 disabled:opacity-40">Prev</button>
+              <span className="px-3 py-1 text-slate-500">Page {safeCurrentPage} of {pageCount}</span>
+              <button type="button" onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))} disabled={safeCurrentPage === pageCount || pageSize === 'all'} className="rounded-lg border border-slate-200 bg-white px-2 py-1 disabled:opacity-40">Next</button>
+              <button type="button" onClick={() => setCurrentPage(pageCount)} disabled={safeCurrentPage === pageCount || pageSize === 'all'} className="rounded-lg border border-slate-200 bg-white px-2 py-1 disabled:opacity-40">Last</button>
+            </div>
+            <label className="flex items-center justify-end gap-2 text-xs font-semibold text-slate-600">
+              <span>Show</span>
+              <select
+                value={pageSize}
+                onChange={(event) => setPageSize(event.target.value === 'all' ? 'all' : Number(event.target.value))}
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value="all">All</option>
+              </select>
+            </label>
+          </div>
         </section>
       </div>
+
+      {expandedClientId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="flex h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 shadow-2xl">
+            <div className="flex flex-none items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Client Workspace</p>
+                <h3 className="text-lg font-bold text-slate-950">
+                  {detailsByClientId[expandedClientId]?.client.fullName || detailsByClientId[expandedClientId]?.client.email || 'Loading client...'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExpandedClientId(null)}
+                className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+              {loadingDetailId === expandedClientId && !detailsByClientId[expandedClientId] ? (
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading client workspace...</div>
+              ) : detailsByClientId[expandedClientId] ? (
+                <ClientDetailPanel
+                  detail={detailsByClientId[expandedClientId]}
+                  draft={draftsByClientId[expandedClientId] ?? cloneDraft(detailsByClientId[expandedClientId])}
+                  isEditing={true}
+                  isSaving={savingTarget === `detail:${expandedClientId}`}
+                  detailError={detailErrors[expandedClientId]}
+                  onSave={() => void saveDetail(expandedClientId)}
+                  onDraftChange={(nextDraft) => {
+                    setDraftsByClientId((current) => ({ ...current, [expandedClientId]: nextDraft }));
+                  }}
+                  onReload={() => loadClientDetail(expandedClientId, true)}
+                />
+              ) : (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {detailErrors[expandedClientId] || 'Unable to load client details.'}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showAddClientModal ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/50 p-4">
@@ -1075,6 +1300,7 @@ function ClientDetailPanel({
   detailError,
   onSave,
   onDraftChange,
+  onReload,
 }: {
   detail: ClientDetail;
   draft: ClientDetailDraft;
@@ -1083,7 +1309,13 @@ function ClientDetailPanel({
   detailError?: string;
   onSave: () => void;
   onDraftChange: (draft: ClientDetailDraft) => void;
+  onReload: () => Promise<unknown>;
 }) {
+  const [customDocumentName, setCustomDocumentName] = useState('');
+  const [customDocumentDescription, setCustomDocumentDescription] = useState('');
+  const [documentActionError, setDocumentActionError] = useState<string | null>(null);
+  const [savingDocumentKey, setSavingDocumentKey] = useState<string | null>(null);
+
   const yearColumns = useMemo(
     () => [
       ['year2024', '2024'],
@@ -1107,6 +1339,73 @@ function ClientDetailPanel({
   const copyToClipboard = async (value: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       await navigator.clipboard.writeText(value);
+    }
+  };
+
+  const updateDocumentInclusion = async (requirementKey: string, included: boolean, custom: boolean) => {
+    if (!detail.packaging) return;
+    setSavingDocumentKey(requirementKey);
+    setDocumentActionError(null);
+
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const res = await fetch(`/api/admin/clients/${detail.client.id}/documents`, {
+        method: 'PATCH',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'set_included',
+          loanRequestId: detail.packaging.loanRequest.id,
+          requirementKey,
+          included,
+          custom,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Failed to update document checklist.');
+      await onReload();
+    } catch (error) {
+      setDocumentActionError(error instanceof Error ? error.message : 'Failed to update document checklist.');
+    } finally {
+      setSavingDocumentKey(null);
+    }
+  };
+
+  const addCustomDocument = async () => {
+    if (!detail.packaging || !customDocumentName.trim()) return;
+    setSavingDocumentKey('custom');
+    setDocumentActionError(null);
+
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const res = await fetch(`/api/admin/clients/${detail.client.id}/documents`, {
+        method: 'PATCH',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'add_custom',
+          loanRequestId: detail.packaging.loanRequest.id,
+          displayName: customDocumentName,
+          description: customDocumentDescription,
+          category: 'other',
+          required: true,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'Failed to add custom document.');
+      setCustomDocumentName('');
+      setCustomDocumentDescription('');
+      await onReload();
+    } catch (error) {
+      setDocumentActionError(error instanceof Error ? error.message : 'Failed to add custom document.');
+    } finally {
+      setSavingDocumentKey(null);
     }
   };
 
@@ -1384,22 +1683,11 @@ function ClientDetailPanel({
         {detailError ? (
           <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{detailError}</div>
         ) : null}
-
-        <div className="mt-4 grid gap-2 md:grid-cols-4">
-          <InfoCard label="Current DSCR" value={formatDscr(detail.client.dscr.currentValue)} detail={detail.client.dscr.currentYear ?? '-'} />
-          <InfoCard label="Last Update" value={formatDate(detail.client.lastUpdate)} detail="Latest touchpoint" />
-          <InfoCard label="Template Progress" value={`${detail.templateSummary.progressPct}%`} detail={detail.templateSummary.nextStep} />
-          <InfoCard
-            label="Packaging Progress"
-            value={detail.packaging?.progress ? `${detail.packaging.progress.percentage}%` : '-'}
-            detail={detail.packaging?.progress?.nextRequirement?.displayName ?? 'No active package'}
-          />
-        </div>
       </div>
 
       <div className="space-y-3">
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <SectionTitle title="White-Label Client Command Center" subtitle="Pipeline, lender matching, internal scoring, and client-facing access links for broker/consultant workflows." />
+          <SectionTitle title="Client Access & Pipeline" subtitle="Pipeline, lender matching, internal scoring, and user-facing access links for this client." />
           <div className="mt-3 grid gap-3 md:grid-cols-4">
             <LabeledField label="Deal Stage">
               <select value={draft.account.dealStage} onChange={(event) => updateAccount('dealStage', event.target.value as DealStage)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
@@ -1446,9 +1734,9 @@ function ClientDetailPanel({
               </div>
             </div>
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
-              <p className="text-xs font-bold text-blue-950">Admin Prefill Link</p>
-              <p className="mt-1 text-[11px] text-blue-800">Open the comprehensive form as admin to prefill what you already know.</p>
-              <button type="button" onClick={() => window.open(comprehensiveUrl, '_blank', 'noopener,noreferrer')} className="mt-3 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white">Open Prefill</button>
+              <p className="text-xs font-bold text-blue-950">Comprehensive Admin Prefill Link</p>
+              <p className="mt-1 text-[11px] text-blue-800">Open the comprehensive cash flow form as admin to prefill what you already know.</p>
+              <button type="button" onClick={() => window.open(comprehensiveUrl, '_blank', 'noopener,noreferrer')} className="mt-3 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white">Open Comprehensive Prefill</button>
             </div>
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
               <p className="text-xs font-bold text-emerald-950">Lender Matching Signal</p>
@@ -2461,6 +2749,46 @@ function ClientDetailPanel({
             </LabeledField>
           </div>
 
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+              <SectionTitle title="Admin Document Checklist" subtitle="Control exactly which documents this client sees for this package." />
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-600">
+                {detail.packaging.documentChecklist.filter((item) => item.included).length} active
+              </span>
+            </div>
+            {documentActionError ? (
+              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{documentActionError}</div>
+            ) : null}
+            <div className="mt-3 grid gap-2 lg:grid-cols-2">
+              {detail.packaging.documentChecklist.map((item) => (
+                <label key={item.requirementKey} className={`flex gap-3 rounded-xl border px-3 py-3 ${item.included ? 'border-emerald-200 bg-white' : 'border-slate-200 bg-slate-100 opacity-75'}`}>
+                  <input
+                    type="checkbox"
+                    checked={item.included}
+                    disabled={savingDocumentKey === item.requirementKey}
+                    onChange={(event) => void updateDocumentInclusion(item.requirementKey, event.target.checked, item.custom)}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-900">
+                      {item.displayName}
+                      {item.custom ? <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">Custom</span> : null}
+                      {item.completed ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Complete</span> : null}
+                    </span>
+                    <span className="mt-1 block text-[11px] leading-5 text-slate-600">{item.description || item.category.replaceAll('_', ' ')}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="mt-4 grid gap-2 rounded-xl border border-dashed border-slate-300 bg-white p-3 md:grid-cols-[1fr_1fr_auto]">
+              <input value={customDocumentName} onChange={(event) => setCustomDocumentName(event.target.value)} placeholder="Custom document name" className="rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+              <input value={customDocumentDescription} onChange={(event) => setCustomDocumentDescription(event.target.value)} placeholder="Short instructions for client" className="rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+              <button type="button" disabled={!customDocumentName.trim() || savingDocumentKey === 'custom'} onClick={() => void addCustomDocument()} className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+                Add Custom
+              </button>
+            </div>
+          </div>
+
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             <div className="rounded-xl border border-slate-200 p-3">
               <h4 className="text-sm font-bold text-slate-900">Uploaded / Completed</h4>
@@ -2502,12 +2830,52 @@ function ClientDetailPanel({
   );
 }
 
-function MiniCard({ label, value }: { label: string; value: string }) {
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-      <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-900">{value}</p>
+    <div>
+      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">{title}</p>
+      <div className="grid gap-1.5">{children}</div>
     </div>
+  );
+}
+
+function CheckboxFilterOption({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold transition ${checked ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+    >
+      <span className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] ${checked ? 'border-sky-500 bg-sky-500 text-white' : 'border-slate-300 bg-white text-transparent'}`}>✓</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  sortConfig,
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sortConfig: { key: SortKey; direction: SortDirection };
+  onSort: (key: SortKey) => void;
+}) {
+  const active = sortConfig.key === sortKey;
+
+  return (
+    <th className="px-2 py-2">
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 rounded-md px-1 py-0.5 text-left transition hover:bg-slate-100 ${active ? 'text-slate-900' : 'text-slate-500'}`}
+      >
+        <span>{label}</span>
+        <span className="text-[10px]">{active ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span>
+      </button>
+    </th>
   );
 }
 
@@ -2528,16 +2896,6 @@ function ServiceBadge({ label }: { label: string }) {
     <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
       {label}
     </span>
-  );
-}
-
-function InfoCard({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-      <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-900">{value}</p>
-      <p className="mt-1 text-[11px] text-slate-600">{detail}</p>
-    </div>
   );
 }
 

@@ -19,7 +19,6 @@ import {
   buildIncomeStatementFormFromPreset,
   buildIncomeStatementPresets,
   type IncomeStatementRequirementKey,
-  type IncomeStatementPreset,
   INCOME_STATEMENT_REQUIREMENT_KEYS,
   matchesIncomeStatementPreset,
 } from '@/lib/templates/income-statement-presets';
@@ -108,6 +107,15 @@ const nullableNumberSchema = z.preprocess(
   z.number().finite().nonnegative().nullable(),
 );
 
+const useOfFundsLineItemSchema = z.object({
+  description: z.string().trim().max(300),
+  amount: nullableNumberSchema.optional(),
+});
+
+const coverLetterInputsSchema = z.object({
+  useOfFundsBreakdown: z.array(useOfFundsLineItemSchema).max(40).optional(),
+}).passthrough();
+
 const upsertLoanRequestSchema = z.object({
   loanRequestId: z.string().uuid().optional(),
   serviceType: z.enum(SERVICE_TYPES).default('loan_packaging'),
@@ -119,6 +127,7 @@ const upsertLoanRequestSchema = z.object({
   annualRevenue: nullableNumberSchema.optional(),
   yearsInBusiness: nullableNumberSchema.optional(),
   strengths: z.string().trim().max(5000).optional().nullable(),
+  coverLetterInputs: coverLetterInputsSchema.optional(),
 });
 
 const patchLoanRequestSchema = z.object({
@@ -342,10 +351,110 @@ async function ensureRequirementSeed(admin: ReturnType<typeof getSupabaseAdmin>)
   }
 }
 
+const USE_OF_FUNDS_PURPOSE_TRIGGERS: Array<{
+  loanPurpose: string;
+  reason: string;
+  patterns: RegExp[];
+}> = [
+  {
+    loanPurpose: 'Equipment Purchase',
+    reason: 'your use-of-funds breakdown includes equipment, machinery, fixtures, installation, delivery, commercial upfit, tools, technology, or vehicle-related costs',
+    patterns: [/\bequipment\b/i, /\bmachinery\b/i, /\bmachine\b/i, /\bfixture/i, /installation/i, /delivery/i, /freight/i, /upfit/i, /\btool/i, /technology/i, /computer/i, /software/i, /\bvehicle\b/i, /\btruck\b/i, /\bvan\b/i, /\bfleet\b/i],
+  },
+  {
+    loanPurpose: 'Inventory Purchase',
+    reason: 'your use-of-funds breakdown includes inventory, stock, supplies, materials, supplier, vendor, purchase order, freight, or warehousing costs',
+    patterns: [/\binventory\b/i, /\bstock\b/i, /\bsupplies\b/i, /materials/i, /raw materials/i, /supplier/i, /vendor/i, /purchase order/i, /\bpo\b/i, /warehouse/i, /warehousing/i, /merchandise/i, /\bproduct\b/i, /\bgoods\b/i],
+  },
+  {
+    loanPurpose: 'Debt Refinance / Consolidation',
+    reason: 'your use-of-funds breakdown includes debt payoff, refinance, consolidation, merchant cash advance, credit card payoff, existing loan payoff, or a prepayment penalty',
+    patterns: [/refinanc/i, /consolidat/i, /payoff/i, /pay off/i, /merchant cash advance/i, /\bmca\b/i, /credit card/i, /prepayment/i, /existing loan/i, /old loan/i, /current loan/i, /term loan/i, /note payoff/i, /lender payoff/i],
+  },
+  {
+    loanPurpose: 'Business Acquisition',
+    reason: 'your use-of-funds breakdown includes a business purchase, seller note, acquisition, buyout, closing, due diligence, or post-close working capital',
+    patterns: [/acquisition/i, /business purchase/i, /buy a business/i, /buying a business/i, /purchase price/i, /seller note/i, /due diligence/i, /post-close/i, /closing cost/i, /goodwill/i, /asset purchase/i],
+  },
+  {
+    loanPurpose: 'Commercial Real Estate Purchase',
+    reason: 'your use-of-funds breakdown includes a property purchase, real estate purchase price, building purchase, down payment, title, survey, appraisal, or environmental report',
+    patterns: [/real estate purchase/i, /property purchase/i, /building purchase/i, /buy.*property/i, /buy.*building/i, /purchase.*property/i, /purchase.*building/i, /commercial property/i, /commercial building/i, /owner[- ]occupied/i, /down payment/i, /title/i, /survey/i, /appraisal/i, /environmental/i, /phase i/i],
+  },
+  {
+    loanPurpose: 'Commercial Real Estate Refinance',
+    reason: 'your use-of-funds breakdown includes a commercial real estate refinance, mortgage payoff, property loan payoff, cash-out, escrow, or debt service reserve',
+    patterns: [/commercial real estate refinance/i, /property refinance/i, /real estate refinance/i, /mortgage payoff/i, /property loan payoff/i, /cash-out/i, /cash out/i, /escrow/i, /debt service reserve/i, /dsra/i],
+  },
+  {
+    loanPurpose: 'Business Expansion / New Location',
+    reason: 'your use-of-funds breakdown includes expansion, a new location, lease deposit, hiring, training, launch marketing, opening costs, or growth-related costs',
+    patterns: [/expansion/i, /expand/i, /growth/i, /new location/i, /second location/i, /additional location/i, /lease deposit/i, /security deposit/i, /hiring/i, /staffing/i, /training/i, /launch marketing/i, /grand opening/i, /opening/i],
+  },
+  {
+    loanPurpose: 'Tenant Improvements / Renovation',
+    reason: 'your use-of-funds breakdown includes renovation, tenant improvements, buildout, construction, permits, contractor, architect, furniture, signage, or leasehold improvement costs',
+    patterns: [/tenant improvement/i, /\bti\b/i, /renovation/i, /remodel/i, /buildout/i, /build out/i, /construction/i, /leasehold improvement/i, /permit/i, /contractor/i, /architect/i, /furniture/i, /signage/i, /plumbing/i, /electrical/i, /hvac/i],
+  },
+  {
+    loanPurpose: 'Franchise Purchase',
+    reason: 'your use-of-funds breakdown includes franchise fees, franchisor costs, franchise training, territory fees, or franchise startup working capital',
+    patterns: [/franchise/i, /franchisor/i, /fdd/i, /territory fee/i, /initial fee/i, /royalty/i],
+  },
+  {
+    loanPurpose: 'Bridge Financing',
+    reason: 'your use-of-funds breakdown includes bridge funding, a timing gap, temporary liquidity, pending sale, refinance takeout, short-term payoff, or interim financing need',
+    patterns: [/bridge/i, /timing gap/i, /temporary liquidity/i, /pending sale/i, /takeout/i, /take out/i, /short-term payoff/i, /interim/i, /short term/i, /short-term/i, /gap financing/i],
+  },
+  {
+    loanPurpose: 'Revolving Line of Credit',
+    reason: 'your use-of-funds breakdown includes line-of-credit draws, receivables timing, seasonal operating needs, payroll timing, vendor payments, or revolving working capital needs',
+    patterns: [/line of credit/i, /\bloc\b/i, /revolving/i, /draw/i, /receivable/i, /\bar\b/i, /seasonal/i, /payroll timing/i, /vendor payment/i, /cash cycle/i, /borrowing base/i],
+  },
+  {
+    loanPurpose: 'Working Capital',
+    reason: 'your use-of-funds breakdown includes working capital, payroll, rent, operating expenses, operating reserve, vendor payments, marketing, or a cash-flow cushion',
+    patterns: [/working capital/i, /payroll/i, /rent/i, /operating expense/i, /operating reserve/i, /cash[- ]?flow/i, /cushion/i, /vendor payment/i, /utilities/i, /insurance/i, /marketing/i, /advertising/i, /supplies/i],
+  },
+];
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function getUseOfFundsText(loanRequest: AnyRow | null): string {
+  const inputs = asRecord(loanRequest?.cover_letter_inputs);
+  const breakdown = Array.isArray(inputs.useOfFundsBreakdown) ? inputs.useOfFundsBreakdown : [];
+
+  return breakdown
+    .map((entry) => asRecord(entry).description)
+    .filter((description): description is string => typeof description === 'string')
+    .join(' ');
+}
+
+function inferSecondaryLoanPurposesFromUseOfFunds(
+  loanRequest: AnyRow | null,
+  primaryLoanPurpose: string | null | undefined,
+): Array<{ loanPurpose: string; reason: string }> {
+  const useOfFundsText = getUseOfFundsText(loanRequest);
+  const normalizedPrimary = normalizeLoanPurpose(primaryLoanPurpose);
+
+  if (!useOfFundsText.trim()) {
+    return [];
+  }
+
+  return USE_OF_FUNDS_PURPOSE_TRIGGERS.filter((trigger) => {
+    const normalizedTrigger = normalizeLoanPurpose(trigger.loanPurpose);
+    return normalizedTrigger && normalizedTrigger !== normalizedPrimary && trigger.patterns.some((pattern) => pattern.test(useOfFundsText));
+  }).map((trigger) => ({ loanPurpose: trigger.loanPurpose, reason: trigger.reason }));
+}
+
 async function fetchRequirements(
   admin: ReturnType<typeof getSupabaseAdmin>,
   serviceType: ServiceType,
   loanPurpose?: string | null,
+  additionalLoanPurposes: Array<{ loanPurpose: string; reason: string }> = [],
+  loanRequestId?: string | null,
 ): Promise<AnyRow[]> {
   await ensureRequirementSeed(admin);
 
@@ -372,14 +481,59 @@ async function fetchRequirements(
     requirements = retry.data as AnyRow[] | null;
   }
 
-  const filteredRequirements = ((requirements ?? []) as AnyRow[]).filter((requirement) =>
-    documentRequirementMatchesLoanPurpose(
-      typeof requirement.loan_purpose === 'string' ? requirement.loan_purpose : null,
-      loanPurpose,
-    ),
+  const triggerReasonByPurpose = new Map(
+    additionalLoanPurposes.map((entry) => [normalizeLoanPurpose(entry.loanPurpose), entry.reason] as const),
   );
 
-  return sortRequirementsByPriority(withSlotDisplay(filteredRequirements));
+  const filteredRequirements = ((requirements ?? []) as AnyRow[]).flatMap((requirement) => {
+    const requirementLoanPurpose = typeof requirement.loan_purpose === 'string' ? requirement.loan_purpose : null;
+
+    if (documentRequirementMatchesLoanPurpose(requirementLoanPurpose, loanPurpose)) {
+      return [{
+        ...requirement,
+        checklist_reason: requirementLoanPurpose
+          ? `Added because the primary loan purpose is ${requirementLoanPurpose}.`
+          : 'Standard document for most lender-ready loan packages.',
+      }];
+    }
+
+    const normalizedRequirementPurpose = normalizeLoanPurpose(requirementLoanPurpose);
+    const triggerReason = triggerReasonByPurpose.get(normalizedRequirementPurpose);
+
+    if (!triggerReason) {
+      return [];
+    }
+
+    return [{
+      ...requirement,
+      checklist_reason: `Added because ${triggerReason}.`,
+      secondary_requirement: true,
+    }];
+  });
+
+  if (!loanRequestId) {
+    return sortRequirementsByPriority(withSlotDisplay(filteredRequirements));
+  }
+
+  const { data: customRequirements } = await admin
+    .from('loan_request_document_customizations')
+    .select('*')
+    .eq('loan_request_id', loanRequestId)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+
+  const customRows = ((customRequirements ?? []) as AnyRow[]).map((requirement) => ({
+    ...requirement,
+    service_type: serviceType,
+    loan_purpose: loanPurpose ?? null,
+    template_key: null,
+    max_size_mb: 50,
+    allowed_mime_types: ['application/pdf', 'image/png', 'image/jpeg', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+    checklist_reason: 'Custom admin-added document for this client package.',
+    custom_requirement: true,
+  }));
+
+  return sortRequirementsByPriority(withSlotDisplay([...filteredRequirements, ...customRows]));
 }
 
 function isIncomeStatementRequirementKey(value: string): value is IncomeStatementRequirementKey {
@@ -512,11 +666,13 @@ async function ensureDocumentRows(
   loanRequestId: string,
   requirements: AnyRow[],
 ) {
-  if (requirements.length === 0) {
+  const canonicalRequirements = requirements.filter((requirement) => !requirement.custom_requirement);
+
+  if (canonicalRequirements.length === 0) {
     return;
   }
 
-  const rows = requirements.map((requirement) => ({
+  const rows = canonicalRequirements.map((requirement) => ({
     loan_request_id: loanRequestId,
     user_id: userId,
     requirement_key: String(requirement.requirement_key),
@@ -635,6 +791,11 @@ async function buildDashboardPayload(
     admin,
     serviceType,
     normalizeNullableText(normalizedLoanRequest?.loan_purpose),
+    inferSecondaryLoanPurposesFromUseOfFunds(
+      normalizedLoanRequest,
+      normalizeNullableText(normalizedLoanRequest?.loan_purpose),
+    ),
+    typeof normalizedLoanRequest?.id === 'string' ? normalizedLoanRequest.id : null,
   );
 
   const { data: cashFlowAnalysis } = await admin
@@ -816,10 +977,24 @@ export async function POST(req: NextRequest) {
     loan_amount: payload.loanAmount,
     annual_revenue: payload.annualRevenue,
   });
+  const coverLetterInputUpdates = payload.coverLetterInputs
+    ? normalizeTemplateContext(payload.coverLetterInputs)
+    : null;
 
   let loanRequest: AnyRow | null = null;
+  let existingCoverLetterInputs: Record<string, unknown> = {};
 
   if (payload.loanRequestId) {
+    const { data: existingLoanRequest } = await admin
+      .from('loan_requests')
+      .select('cover_letter_inputs')
+      .eq('id', payload.loanRequestId)
+      .eq('user_id', auth.user.id)
+      .maybeSingle();
+
+    existingCoverLetterInputs = normalizeTemplateContext(
+      (existingLoanRequest as AnyRow | null)?.cover_letter_inputs ?? {},
+    );
     const { data, error } = await admin
       .from('loan_requests')
       .update({
@@ -833,6 +1008,14 @@ export async function POST(req: NextRequest) {
         years_in_business: payload.yearsInBusiness ?? null,
         strengths: payload.strengths ?? null,
         template_shared_context: sharedContextUpdates,
+        ...(coverLetterInputUpdates
+          ? {
+              cover_letter_inputs: {
+                ...existingCoverLetterInputs,
+                ...coverLetterInputUpdates,
+              },
+            }
+          : {}),
         updated_at: nowIso,
       })
       .eq('id', payload.loanRequestId)
@@ -874,6 +1057,14 @@ export async function POST(req: NextRequest) {
             ...(normalizeTemplateContext(existing.template_shared_context ?? {})),
             ...sharedContextUpdates,
           },
+          ...(coverLetterInputUpdates
+            ? {
+                cover_letter_inputs: {
+                  ...normalizeTemplateContext(existing.cover_letter_inputs ?? {}),
+                  ...coverLetterInputUpdates,
+                },
+              }
+            : {}),
           updated_at: nowIso,
         })
         .eq('id', String(existing.id))
@@ -901,6 +1092,7 @@ export async function POST(req: NextRequest) {
           years_in_business: payload.yearsInBusiness ?? null,
           strengths: payload.strengths ?? null,
           template_shared_context: sharedContextUpdates,
+          ...(coverLetterInputUpdates ? { cover_letter_inputs: coverLetterInputUpdates } : {}),
         })
         .select('*')
         .single();

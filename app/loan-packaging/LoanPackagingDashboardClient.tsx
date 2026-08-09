@@ -73,6 +73,8 @@ interface DocumentRequirement {
   template_key: TemplateKey | null;
   sort_order: number;
   max_size_mb: number;
+  checklist_reason?: string;
+  secondary_requirement?: boolean;
   slot_context?: {
     slot_type: string | null;
     slot_label: string | null;
@@ -2409,6 +2411,12 @@ export default function LoanPackagingDashboardClient({
         annualRevenue: parseNullableNumber(loanForm.annualRevenue),
         yearsInBusiness: parseNullableNumber(loanForm.yearsInBusiness),
         businessDescription: loanForm.loanPurposeDescription,
+        coverLetterInputs: {
+          useOfFundsBreakdown: coverLetterForm.useOfFundsBreakdown.map((row) => ({
+            description: row.description,
+            amount: parseNullableNumber(row.amount),
+          })),
+        },
       }),
     });
 
@@ -2423,7 +2431,57 @@ export default function LoanPackagingDashboardClient({
     loanForm.loanPurpose,
     loanForm.loanPurposeDescription,
     loanForm.yearsInBusiness,
+    coverLetterForm.useOfFundsBreakdown,
     hydrateDashboardState,
+  ]);
+
+  const refreshChecklistFromLoanProfile = useCallback(async (statusMessageText: string) => {
+    if (!accessToken) {
+      return;
+    }
+
+    try {
+      setErrorMessage(null);
+
+      const payload = await apiFetch<DashboardPayload>('/api/loan-packaging/dashboard', {
+        method: 'POST',
+        body: JSON.stringify({
+          loanRequestId: dashboard?.loanRequest?.id,
+          serviceType: 'loan_packaging',
+          status: dashboard?.loanRequest?.status || 'in_progress',
+          businessName: loanForm.businessName,
+          loanPurpose: loanForm.loanPurpose,
+          loanAmount: parseNullableNumber(loanForm.loanAmount),
+          annualRevenue: parseNullableNumber(loanForm.annualRevenue),
+          yearsInBusiness: parseNullableNumber(loanForm.yearsInBusiness),
+          businessDescription: loanForm.loanPurposeDescription,
+          coverLetterInputs: {
+            useOfFundsBreakdown: coverLetterForm.useOfFundsBreakdown.map((row) => ({
+              description: row.description,
+              amount: parseNullableNumber(row.amount),
+            })),
+          },
+        }),
+      });
+
+      hydrateDashboardState(payload);
+      setStatusMessage(statusMessageText);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to refresh document checklist');
+    }
+  }, [
+    accessToken,
+    apiFetch,
+    coverLetterForm.useOfFundsBreakdown,
+    dashboard?.loanRequest?.id,
+    dashboard?.loanRequest?.status,
+    hydrateDashboardState,
+    loanForm.annualRevenue,
+    loanForm.businessName,
+    loanForm.loanAmount,
+    loanForm.loanPurpose,
+    loanForm.loanPurposeDescription,
+    loanForm.yearsInBusiness,
   ]);
 
   const handleLoanPurposeChange = useCallback(async (nextLoanPurpose: string) => {
@@ -2610,26 +2668,39 @@ export default function LoanPackagingDashboardClient({
     }));
   }, [currentFinancingDefaults.paymentMode, loanAmountValue]);
 
-  const handleUseOfFundsAmountBlur = useCallback(() => {
-    if (useOfFundsBreakdownTotal > loanAmountValue) {
-      setLoanForm((previous) => ({
-        ...previous,
-        loanAmount: formatCurrencyInput(String(useOfFundsBreakdownTotal)),
-      }));
-    }
-  }, [loanAmountValue, useOfFundsBreakdownTotal]);
-
   const handleTermYearsChange = useCallback((value: string) => {
-    const sanitized = value.replace(/[^\d]/g, '');
-    const numeric = parseNullableNumber(sanitized);
-    const nextTermYears =
-      numeric == null ? '' : String(clampNumber(Math.round(numeric), 1, 30));
+    const numeric = parseNullableNumber(sanitizeCurrencyInput(value));
+    const nextTermYears = numeric == null ? '' : String(clampNumber(Math.round(numeric), 1, 30));
 
     setFinancingEstimate((previous) => ({
       ...previous,
       termYears: nextTermYears,
     }));
   }, []);
+
+  const handleUseOfFundsAmountBlur = useCallback(() => {
+    setCoverLetterForm((previous) => {
+      const nextRows = previous.useOfFundsBreakdown.map((row) => ({
+        ...row,
+        amount: formatCurrencyInput(row.amount),
+      }));
+      const total = nextRows.reduce((sum, row) => sum + (parseNullableNumber(row.amount) ?? 0), 0);
+
+      if (total > 0 && total > loanAmountValue) {
+        setLoanForm((loanPrevious) => ({
+          ...loanPrevious,
+          loanAmount: formatCurrencyInput(String(total)),
+        }));
+      }
+
+      return {
+        ...previous,
+        useOfFundsBreakdown: nextRows,
+      };
+    });
+
+    void refreshChecklistFromLoanProfile('Checklist updated based on your loan purpose and use of funds.');
+  }, [loanAmountValue, refreshChecklistFromLoanProfile]);
 
   const formatStatusLabel = useCallback((status: string) => {
     if (status === 'skipped') {
@@ -3304,7 +3375,7 @@ export default function LoanPackagingDashboardClient({
                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">Use of Funds</p>
                     <h3 className={`${headingClassName} mt-0.5 text-[1.35rem] leading-tight`}>Tell lenders exactly where the money is going</h3>
                     <p className="mt-1 text-sm leading-6 text-slate-600">
-                      Break the request into plain-English line items. Include the main purchase or need, plus normal loan-related costs such as closing costs, appraisal or inspection costs, reserves, delivery, installation, and professional fees when they apply. If the total goes above the loan amount, the loan amount updates so the request stays consistent.
+                      Break the request into plain-English line items. This does more than explain the loan: it also helps the checklist catch secondary needs like equipment, inventory, refinance, renovation, acquisition, expansion, franchise, bridge, or line-of-credit documents. If the total goes above the loan amount, the loan amount updates so the request stays consistent.
                     </p>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm">
@@ -3317,7 +3388,7 @@ export default function LoanPackagingDashboardClient({
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3">
                   <p className="text-sm font-semibold text-slate-800">Suggested line items for {loanForm.loanPurpose || 'this loan purpose'}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    The first options are tailored to the selected purpose. The rest are common loan package costs that may apply to many requests.
+                    The first options are tailored to the selected purpose. Add every meaningful use of funds, even if it feels like a secondary purpose, so the document checklist can add the right supporting items.
                   </p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {useOfFundsStarterRows.map((label) => (
@@ -3366,6 +3437,7 @@ export default function LoanPackagingDashboardClient({
                               ),
                             }))
                           }
+                          onBlur={() => void refreshChecklistFromLoanProfile('Checklist updated based on your loan purpose and use of funds.')}
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder={index === 0 ? 'Property purchase price, equipment, inventory, working capital...' : 'Describe this use of funds'}
                         />
@@ -3424,6 +3496,13 @@ export default function LoanPackagingDashboardClient({
                   >
                     Add line
                   </button>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                  <p className="font-semibold">Document review note</p>
+                  <p className="mt-1">
+                    The checklist updates when we recognize common uses of funds. If you have anything else a lender should see, upload it under Additional Supporting Documents.
+                  </p>
                 </div>
               </div>
 
@@ -3564,7 +3643,7 @@ export default function LoanPackagingDashboardClient({
                 'documents',
                 2,
                 'Document Checklist',
-                'Upload what you already have, use guided templates where available, and complete generated items directly inside the platform.',
+                'Upload what you already have, use guided templates where available, and complete generated items directly inside the platform. This checklist updates from your primary purpose and use-of-funds breakdown.',
                 documentsComplete,
                 `${dashboard?.progress.completedRequired ?? 0} of ${dashboard?.progress.totalRequired ?? 0} required documents complete`,
               )}
@@ -3628,6 +3707,11 @@ export default function LoanPackagingDashboardClient({
                         <div>
                           <h3 className="font-semibold text-slate-900">{requirement.display_name}</h3>
                           <p className="text-xs text-slate-600 mt-1">{requirement.description}</p>
+                          {requirement.checklist_reason ? (
+                            <p className={`mt-2 rounded-lg border px-2.5 py-1.5 text-[11px] leading-4 ${requirement.secondary_requirement ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 bg-white text-slate-600'}`}>
+                              {requirement.checklist_reason}
+                            </p>
+                          ) : null}
                         </div>
                         <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${mapStatusColor(displayStatus)}`}>
                           {formatStatusLabel(displayStatus)}

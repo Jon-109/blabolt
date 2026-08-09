@@ -352,6 +352,7 @@ async function buildClientDetailPayload(
   let signedBrokerAgreement = false;
   let documentRows: AnyRow[] = [];
   let requirementRows: AnyRow[] = [];
+  let customRequirementRows: AnyRow[] = [];
 
   if (userId) {
     const [
@@ -405,7 +406,8 @@ async function buildClientDetailPayload(
     signedBrokerAgreement = Boolean(brokerAgreementResult.data?.id);
 
     if (latestLoanRequest?.id) {
-      const [documentsResult, requirementsResult] = await Promise.all([
+      const activeLoanRequest = latestLoanRequest;
+      const [documentsResult, requirementsResult, customRequirementsResult] = await Promise.all([
         admin
           .from('loan_request_documents')
           .select('*')
@@ -417,14 +419,30 @@ async function buildClientDetailPayload(
           .select('requirement_key,service_type,loan_purpose,display_name,description,required,sort_order,is_active')
           .eq('is_active', true)
           .limit(500),
+        admin
+          .from('loan_request_document_customizations')
+          .select('*')
+          .eq('loan_request_id', String(latestLoanRequest.id))
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true }),
       ]);
 
       documentRows = (documentsResult.data ?? []) as AnyRow[];
-      requirementRows = filterApplicableRequirements(
-        (requirementsResult.data ?? []) as AnyRow[],
-        String(latestLoanRequest.service_type ?? 'loan_packaging'),
-        coerceString(latestLoanRequest.loan_purpose),
-      );
+      customRequirementRows = ((customRequirementsResult.data ?? []) as AnyRow[]).map((requirement) => ({
+        ...requirement,
+        service_type: String(activeLoanRequest.service_type ?? 'loan_packaging'),
+        loan_purpose: coerceString(activeLoanRequest.loan_purpose),
+        custom_requirement: true,
+      }));
+      requirementRows = [
+        ...filterApplicableRequirements(
+          (requirementsResult.data ?? []) as AnyRow[],
+          String(latestLoanRequest.service_type ?? 'loan_packaging'),
+          coerceString(latestLoanRequest.loan_purpose),
+        ),
+        ...customRequirementRows,
+      ];
     }
   }
 
@@ -581,6 +599,24 @@ async function buildClientDetailPayload(
           progress: packagingProgress,
           uploadedDocuments,
           nextRequired,
+          documentChecklist: requirementRows.map((requirement) => {
+            const requirementKey = String(requirement.requirement_key ?? '');
+            const document = documentByRequirement.get(requirementKey);
+            const isExcluded = isDocumentExcludedFromPackage(document) || Boolean(requirement.custom_requirement) === true && requirement.required === false;
+            const isComplete = Boolean(document && ['uploaded', 'generated', 'approved'].includes(String(document.status ?? '')));
+
+            return {
+              requirementKey,
+              displayName: formatRequirementDisplayName(requirementKey, coerceString(requirement.display_name)),
+              description: String(requirement.description ?? ''),
+              category: String(requirement.category ?? 'other'),
+              required: Boolean(requirement.required),
+              included: !isExcluded,
+              completed: isComplete,
+              custom: Boolean(requirement.custom_requirement),
+              status: String(document?.status ?? 'not_started'),
+            };
+          }),
         }
       : null,
     cashFlowAnalysis: latestCashFlowAnalysis
