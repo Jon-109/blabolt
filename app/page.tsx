@@ -6,15 +6,18 @@ const homePageUrl = 'https://www.businesslendingadvocate.com/';
 const homeOgImage = 'https://www.businesslendingadvocate.com/images/hero.png';
 
 export const metadata: Metadata = {
-  title: 'Business Lending Advocate | Free DSCR Calculator, Loan Packaging, and Funding Guidance',
+  title: 'Business Loan Readiness, Free Cash Flow Analysis, and Loan Packaging',
   description:
-    'Check business loan readiness with a free DSCR calculator, understand repayment strength, and move into lender-ready loan packaging and funding support.',
+    'Analyze business loan repayment strength for free, create lender-ready financial documents including SBA Form 413, and build one organized loan package.',
   keywords: [
     'free DSCR calculator',
     'business loan calculator',
     'debt service coverage ratio',
     'business loan packaging',
-    'cash flow analysis',
+    'free cash flow analysis',
+    'SBA Form 413',
+    'SBA 7a loan packaging',
+    'lender ready financial templates',
     'small business funding',
     'loan readiness',
   ],
@@ -24,9 +27,9 @@ export const metadata: Metadata = {
   category: 'finance',
   openGraph: {
     siteName: 'Business Lending Advocate',
-    title: 'Free DSCR Calculator and Business Loan Packaging Guidance',
+    title: 'Know What Lenders Will See Before You Apply',
     description:
-      'Start with a free DSCR check, then move into deeper cash flow analysis, loan packaging, and lender-facing guidance.',
+      'Run a free bank-level cash flow analysis, create SBA and lender-ready documents, and build one organized business loan package.',
     url: homePageUrl,
     type: 'website',
     images: [
@@ -40,9 +43,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free DSCR Calculator and Business Loan Packaging Guidance',
+    title: 'Know What Lenders Will See Before You Apply',
     description:
-      'Start with a free DSCR check, then move into deeper cash flow analysis, loan packaging, and lender-facing guidance.',
+      'Run a free bank-level cash flow analysis, create SBA and lender-ready documents, and build one organized business loan package.',
     images: [homeOgImage],
   },
   robots: {
@@ -84,9 +87,9 @@ const homePageSchema = {
       '@type': 'WebPage',
       '@id': `${homePageUrl}#webpage`,
       url: homePageUrl,
-      name: 'Business Lending Advocate | Free DSCR Calculator, Loan Packaging, and Funding Guidance',
+      name: 'Business Loan Readiness, Free Cash Flow Analysis, and Loan Packaging',
       description:
-        'Check business loan readiness with a free DSCR calculator, understand repayment strength, and move into lender-ready loan packaging and funding support.',
+        'Analyze repayment strength for free, create lender-ready financial documents including SBA Form 413, and build one organized business loan package.',
       inLanguage: 'en-US',
       isPartOf: {
         '@id': `${homePageUrl}#website`,
@@ -108,10 +111,10 @@ const homePageSchema = {
           {
             '@type': 'Service',
             position: 2,
-            name: 'Comprehensive Cash Flow Review',
+            name: 'Free Bank-Level Cash Flow Analysis',
             serviceType: 'Business cash flow analysis',
             url: 'https://www.businesslendingadvocate.com/comprehensive-cash-flow-analysis',
-            description: 'Deeper lender-style cash flow review with DSCR context and repayment analysis.',
+            description: 'Free lender-style cash flow review with historical context, DSCR analysis, debt summary, and downloadable PDF reports.',
           },
           {
             '@type': 'Service',

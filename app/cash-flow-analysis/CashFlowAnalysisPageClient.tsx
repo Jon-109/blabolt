@@ -111,7 +111,7 @@ const comparisonRows: ComparisonRow[] = [
   {
     feature: 'Cost',
     quick: 'Free',
-    comprehensive: '$49.99 one-time',
+    comprehensive: 'Free with an account',
   },
   {
     feature: 'Time to complete',
@@ -170,8 +170,8 @@ const closingSteps = [
   },
   {
     label: '02',
-    title: 'Upgrade to the deeper review if needed',
-    description: 'Use the full analysis when you need more accuracy, more context, and a better lender-facing read.',
+    title: 'Run the deeper review when needed',
+    description: 'Use the free full analysis when you need more accuracy, more context, and a better lender-facing read.',
   },
   {
     label: '03',
@@ -251,7 +251,7 @@ function CashFlowAnalysisInner() {
   const seenSectionsRef = useRef<Set<string>>(new Set());
   const searchParams = useSearchParams();
   const router = useRouter();
-  const comprehensiveCheckoutPath = '/checkout/cash_flow_analysis';
+  const comprehensiveAnalysisPath = '/comprehensive-cash-flow-analysis?new=1';
 
   const trackCashFlowCta = (sectionId: string, ctaId: string, ctaLabel: string, destinationUrl: string) => {
     trackCtaClick({
@@ -396,9 +396,9 @@ function CashFlowAnalysisInner() {
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.delete('comprehensive');
       window.history.replaceState({}, '', nextUrl.toString());
-      router.push(comprehensiveCheckoutPath);
+      router.push(comprehensiveAnalysisPath);
     }
-  }, [comprehensiveCheckoutPath, searchParams, router]);
+  }, [comprehensiveAnalysisPath, searchParams, router]);
 
   const handleScrollToCalculator = (sectionId: string, ctaId: string, ctaLabel: string) => {
     trackCashFlowCta(sectionId, ctaId, ctaLabel, '#dscr-calculator');
@@ -406,8 +406,8 @@ function CashFlowAnalysisInner() {
   };
 
   const handleStartComprehensiveAnalysis = (sectionId: string, ctaId: string, ctaLabel: string) => {
-    trackCashFlowCta(sectionId, ctaId, ctaLabel, comprehensiveCheckoutPath);
-    router.push(comprehensiveCheckoutPath);
+    trackCashFlowCta(sectionId, ctaId, ctaLabel, comprehensiveAnalysisPath);
+    router.push(comprehensiveAnalysisPath);
   };
 
   return (
@@ -460,14 +460,14 @@ function CashFlowAnalysisInner() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleStartComprehensiveAnalysis('hero', 'cashflow_page_hero_full_analysis', 'Start Comprehensive Analysis')}
+                  onClick={() => handleStartComprehensiveAnalysis('hero', 'cashflow_page_hero_full_analysis', 'Start Free Bank-Level Analysis')}
                   className="home-magnetic inline-flex w-full flex-col items-center justify-center rounded-2xl border border-white/[0.18] bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/[0.16] sm:w-auto sm:px-6"
                   id="cashflow-page-hero-cta-comprehensive"
                   data-cashflow-magnetic
                 >
-                  <span className="text-sm font-semibold sm:text-base">Start Comprehensive Analysis</span>
+                  <span className="text-sm font-semibold sm:text-base">Start Free Bank-Level Analysis</span>
                   <span className="mt-0.5 text-[11px] font-medium text-cyan-200 sm:text-xs">
-                    One-time $49.99 • PDF report included
+                    Free account • Two PDF reports included
                   </span>
                 </button>
               </div>
@@ -594,7 +594,7 @@ function CashFlowAnalysisInner() {
 
             <article className="home-stagger relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-emerald-300/25 bg-[linear-gradient(135deg,rgba(16,185,129,0.18)_0%,rgba(255,255,255,0.06)_42%,rgba(14,165,233,0.08)_100%)] p-4 shadow-[0_30px_80px_-44px_rgba(16,185,129,0.4)] backdrop-blur sm:p-5">
               <div className="absolute right-4 top-4 rounded-full bg-emerald-300 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-950">
-                $49.99 One-Time
+                Free With Account
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
@@ -612,12 +612,12 @@ function CashFlowAnalysisInner() {
               <div className="mt-3 rounded-[1.5rem] border border-emerald-300/20 bg-black/15 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-200">Current price</p>
-                    <p className="mt-1 text-3xl font-black tracking-[-0.05em] text-white">$49.99</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-200">Complete analysis</p>
+                    <p className="mt-1 text-3xl font-black tracking-[-0.05em] text-white">Free</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-200">One-time purchase</p>
-                    <p className="mt-1 text-sm font-semibold text-emerald-100">Includes debt summary PDF</p>
+                    <p className="text-sm font-semibold text-slate-200">Free account required</p>
+                    <p className="mt-1 text-sm font-semibold text-emerald-100">Includes both PDF reports</p>
                   </div>
                 </div>
               </div>
@@ -643,11 +643,11 @@ function CashFlowAnalysisInner() {
 
               <button
                 type="button"
-                onClick={() => handleStartComprehensiveAnalysis('two_paths', 'cashflow_page_two_paths_full_analysis', 'Start Comprehensive Analysis')}
+                onClick={() => handleStartComprehensiveAnalysis('two_paths', 'cashflow_page_two_paths_full_analysis', 'Start Free Bank-Level Analysis')}
                 className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 sm:text-base"
                 id="cashflow-page-full-path-cta"
               >
-                Start Comprehensive Analysis
+                Start Free Bank-Level Analysis
                 <ArrowUpRight className="h-4 w-4" />
               </button>
             </article>
@@ -872,7 +872,7 @@ function CashFlowAnalysisInner() {
                   <p className="mt-2 text-sm font-semibold text-white">Run the free calculator now</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Best upgrade</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Deepest review</p>
                   <p className="mt-2 text-sm font-semibold text-white">Use the full analysis for deeper clarity</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
@@ -894,7 +894,7 @@ function CashFlowAnalysisInner() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleStartComprehensiveAnalysis('next_move', 'cashflow_page_bottom_full_analysis', 'Start Comprehensive Analysis')}
+                  onClick={() => handleStartComprehensiveAnalysis('next_move', 'cashflow_page_bottom_full_analysis', 'Start Free Bank-Level Analysis')}
                   className="home-magnetic inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3.5 text-sm font-bold text-slate-950 shadow-[0_18px_50px_-30px_rgba(52,211,153,0.9)] transition hover:bg-emerald-300 sm:text-base"
                   id="cashflow-page-bottom-cta-full-analysis"
                   data-cashflow-magnetic

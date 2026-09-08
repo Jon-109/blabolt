@@ -22,6 +22,10 @@ export default function CheckoutRedirectPage() {
       setMessage('That checkout link is not valid.');
       return;
     }
+    if (productType === 'cash_flow_analysis') {
+      router.replace('/comprehensive-cash-flow-analysis');
+      return;
+    }
 
     const startCheckout = async () => {
       const {

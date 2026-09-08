@@ -366,6 +366,18 @@ export function ReviewSubmitStep({
                   <td className="px-4 py-2 text-center border-b">{formatCurrency(financials.year2026YTD.input.operatingExpenses)}</td>
                 </tr>
                 <tr className="even:bg-gray-50 hover:bg-blue-50 transition-colors">
+                  <td className="px-4 py-2 font-medium text-gray-700 border-b">Other Operating Income</td>
+                  <td className="px-4 py-2 text-center border-b">{formatCurrency(financials.year2024.input.otherIncome)}</td>
+                  <td className="px-4 py-2 text-center border-b">{formatCurrency(financials.year2025.input.otherIncome)}</td>
+                  <td className="px-4 py-2 text-center border-b">{formatCurrency(financials.year2026YTD.input.otherIncome)}</td>
+                </tr>
+                <tr className="even:bg-gray-50 hover:bg-blue-50 transition-colors">
+                  <td className="px-4 py-2 font-medium text-gray-700 border-b">Interest Income</td>
+                  <td className="px-4 py-2 text-center border-b">{formatCurrency(financials.year2024.input.interestIncome)}</td>
+                  <td className="px-4 py-2 text-center border-b">{formatCurrency(financials.year2025.input.interestIncome)}</td>
+                  <td className="px-4 py-2 text-center border-b">{formatCurrency(financials.year2026YTD.input.interestIncome)}</td>
+                </tr>
+                <tr className="even:bg-gray-50 hover:bg-blue-50 transition-colors">
                   <td className="px-4 py-2 font-medium text-gray-700 border-b">Non-Recurring Income</td>
                   <td className="px-4 py-2 text-center border-b">{formatCurrency(financials.year2024.input.nonRecurringIncome)}</td>
                   <td className="px-4 py-2 text-center border-b">{formatCurrency(financials.year2025.input.nonRecurringIncome)}</td>

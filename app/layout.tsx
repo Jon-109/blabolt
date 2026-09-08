@@ -6,6 +6,7 @@ import Header from '@/app/(components)/shared/Header';
 import Footer from '@/app/(components)/shared/Footer';
 import AnalyticsWrapper from '@/app/(components)/AnalyticsWrapper';
 import AnalyticsProvider from '@/app/(components)/AnalyticsProvider';
+import GlobalLendingAssistant from '@/app/(components)/ai/GlobalLendingAssistant';
 import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -142,6 +143,7 @@ export default function RootLayout({
               {children}
             </main>
             <Footer />
+            <GlobalLendingAssistant />
             <AnalyticsWrapper />
           </AnalyticsProvider>
         </Suspense>

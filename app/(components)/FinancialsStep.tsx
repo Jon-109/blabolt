@@ -283,6 +283,8 @@ const getFieldDescription = (key: keyof FullFinancialData) => {
 const FINANCIAL_FIELD_ORDER: Array<keyof FullFinancialData> = [
   'revenue',
   'operatingExpenses',
+  'otherIncome',
+  'interestIncome',
   'nonRecurringIncome',
   'nonRecurringExpenses',
   'cogs',

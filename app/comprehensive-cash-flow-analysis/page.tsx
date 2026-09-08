@@ -251,11 +251,14 @@ export default function Page() {
   const adminClientId = searchParams.get('adminClientId');
   const pendingCheckoutSessionId = searchParams.get('session_id');
   const isEditingExistingAnalysis = searchParams.get('edit') === '1' && Boolean(requestedAnalysisId);
+  const isStartingNewAnalysis = searchParams.get('new') === '1';
   const comprehensiveRedirectPath = adminClientId
     ? `${comprehensivePagePath}?adminClientId=${encodeURIComponent(adminClientId)}`
     : isEditingExistingAnalysis && requestedAnalysisId
       ? `${comprehensivePagePath}?analysisId=${encodeURIComponent(requestedAnalysisId)}&edit=1`
-      : comprehensivePagePath;
+      : isStartingNewAnalysis
+        ? `${comprehensivePagePath}?new=1`
+        : comprehensivePagePath;
 
   // --- Protect route: redirect to login if not authenticated ---
   // --- Also redirect to report-preview if user already has a submitted analysis ---
@@ -335,7 +338,7 @@ export default function Page() {
         window.history.replaceState({}, '', nextUrl.toString());
       }
 
-      if (!adminClientId && !isEditingExistingAnalysis) {
+      if (!adminClientId && !isEditingExistingAnalysis && !isStartingNewAnalysis) {
         const { data: submittedAnalyses, error: analysesError } = await supabase
           .from('cash_flow_analyses')
           .select('id')
@@ -353,7 +356,7 @@ export default function Page() {
       }
     }
     checkAuthAndPurchase();
-  }, [adminClientId, comprehensiveRedirectPath, isEditingExistingAnalysis, pendingCheckoutSessionId, router]);
+  }, [adminClientId, comprehensiveRedirectPath, isEditingExistingAnalysis, isStartingNewAnalysis, pendingCheckoutSessionId, router]);
 
   // --- Listen for auth state changes: redirect to login on SIGNED_OUT, reset to step 1 on SIGNED_IN ---
   useEffect(() => {
@@ -1261,9 +1264,9 @@ export default function Page() {
         </div>
       ) : (
         <TemplatePageShell
-          title="Comprehensive Cash Flow Analysis"
-          subtitle="This guided workflow helps you complete a bank-level cash flow analysis."
-          description="You’ll enter your business details, financials over multiple years, and debt information step by step, then review everything before submitting and getting report instantly."
+          title="Free Bank-Level Cash Flow Analysis"
+          subtitle="A guided lender-style review of repayment strength, historical performance, and business debt."
+          description="Enter your business details, multi-period financials, and debt information step by step, then download your cash-flow analysis and debt-summary reports instantly."
           metricLabel="Key Metrics"
           metricValue=""
           metricContent={

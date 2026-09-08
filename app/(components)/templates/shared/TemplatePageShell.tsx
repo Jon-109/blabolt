@@ -2,9 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
-import ContextAssistant from '@/app/(components)/ai/ContextAssistant';
-import { TEMPLATE_KEYS, type TemplateKey } from '@/lib/loan-packaging/constants';
+import { useSearchParams } from 'next/navigation';
 
 type StatusTone = 'neutral' | 'saving' | 'saved' | 'error';
 
@@ -52,18 +50,10 @@ export default function TemplatePageShell({
   fullWidthBelowHero,
   children,
 }: TemplatePageShellProps) {
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const source = searchParams.get('source');
   const returnTo = searchParams.get('returnTo');
   const loanRequestId = searchParams.get('loanRequestId');
-  const submissionId = searchParams.get('submissionId');
-  const pathSegments = pathname.split('/').filter(Boolean);
-  const lastSegment = pathSegments[pathSegments.length - 1];
-  const templateKey =
-    typeof lastSegment === 'string' && (TEMPLATE_KEYS as readonly string[]).includes(lastSegment)
-      ? (lastSegment as TemplateKey)
-      : null;
   const showLoanPackageReturn = source === 'loan-packaging' || returnTo === 'loan-package';
 
   return (
@@ -121,15 +111,6 @@ export default function TemplatePageShell({
           </div>
         </div>
       ) : null}
-      {templateKey ? (
-        <ContextAssistant
-          scope="template"
-          templateKey={templateKey}
-          loanRequestId={loanRequestId}
-          submissionId={submissionId}
-        />
-      ) : null}
-
       <main className="mx-auto max-w-7xl space-y-5 px-4 py-5 sm:px-6 sm:py-6">{children}</main>
     </div>
   );

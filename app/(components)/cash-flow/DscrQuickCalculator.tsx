@@ -449,7 +449,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
 }) => {
   const [, setError] = React.useState<string>('');
   const router = useRouter();
-  const comprehensiveCheckoutPath = '/checkout/cash_flow_analysis';
+  const comprehensiveAnalysisPath = '/comprehensive-cash-flow-analysis?new=1';
   
   const [values, setValues] = useState<DscrFormValues>(() => ({
     monthlyNetIncome: 0,
@@ -715,7 +715,6 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
   const isBelowOneDscr = dscr !== null && dscr < 1;
   const shouldShowIncomeAdjustmentCallout = isBelowBenchmark && !isBelowOneDscr;
   const shouldShowBenchmarkTargetBox = isBelowBenchmark && !isBelowOneDscr;
-  const shouldShowCashFlowAnalysisUpsell = dscrBand?.showExpandedAnalysisUpsell ?? false;
   const defaultPurposeMeta = loanPurposeMeta['Working Capital']!;
   const selectedPurposeMeta = loanPurposeMeta[loanPurpose] ?? defaultPurposeMeta;
   const selectedPurposeTitle = selectedPurpose?.title ?? 'Choose Loan Purpose';
@@ -790,10 +789,10 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
       page_template: analyticsPageTemplate,
       section_id: sectionId,
       cta_id: 'start_comprehensive_analysis',
-      cta_label: 'Start Comprehensive Analysis',
-      destination_url: comprehensiveCheckoutPath,
+      cta_label: 'Start Free Bank-Level Analysis',
+      destination_url: comprehensiveAnalysisPath,
     });
-    router.push(comprehensiveCheckoutPath);
+    router.push(comprehensiveAnalysisPath);
   };
 
   React.useEffect(() => {
@@ -1172,7 +1171,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                               onClick={() => handleStartComprehensiveAnalysis('calculator_below_benchmark_callout')}
                               className="mt-3 h-10 w-full rounded-xl bg-slate-900 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
                             >
-                              Start Comprehensive Analysis
+                              Start Free Bank-Level Analysis
                             </Button>
                           </div>
                         )}
@@ -1658,7 +1657,7 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                           onClick={() => handleStartComprehensiveAnalysis('calculator_full_analysis_upsell')}
                           id="dscr-calc-cta-cash-flow-analysis"
                         >
-                          Start Comprehensive Analysis
+                          Start Free Bank-Level Analysis
                         </Button>
                         <Button
                           className="mt-2.5 h-10 w-full rounded-2xl border border-white/15 bg-white/5 text-sm font-semibold text-white transition-colors hover:bg-white/10"

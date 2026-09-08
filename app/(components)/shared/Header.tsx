@@ -99,7 +99,7 @@ const TEMPLATE_NAV_ITEMS: TemplateNavItem[] = [
   },
   {
     href: '/services/templates/personal-financial-statement',
-    label: 'Personal Financial Statement',
+    label: 'SBA Form 413 / Personal Financial Statement',
     id: 'header-link-template-personal-financial-statement',
     mobileId: 'header-mobile-link-template-personal-financial-statement',
     matches: (pathname) => matchesPath(pathname, '/services/templates/personal-financial-statement'),
@@ -288,11 +288,10 @@ const Header = () => {
     return `Hi, ${displayName}`;
   }, [displayName]);
 
-  const comprehensiveNavHref =
-    isLoggedIn && canAccessComprehensive
-      ? '/comprehensive-cash-flow-analysis'
-      : '/cash-flow-analysis';
-  const comprehensiveNavLabel = hasPaidComprehensiveAccess ? 'My Cash Flow' : 'Cash Flow Analysis';
+  const comprehensiveNavHref = isLoggedIn && canAccessComprehensive
+    ? '/comprehensive-cash-flow-analysis'
+    : '/cash-flow-analysis';
+  const comprehensiveNavLabel = isLoggedIn && canAccessComprehensive ? 'My Analysis' : 'Cash Flow Analysis';
   const templatesNavHref = '/templates';
   const templatesNavLabel = 'My Templates';
   const loanPackagingNavHref = '/loan-packaging';
@@ -317,7 +316,7 @@ const Header = () => {
         </div>
 
         <button
-          className="md:hidden flex items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+          className="lg:hidden flex items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
           aria-label="Open navigation menu"
           id="header-mobile-menu-open"
           onClick={() => setIsMobileMenuOpen(true)}
@@ -328,7 +327,7 @@ const Header = () => {
           </svg>
         </button>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-1.5 lg:flex">
           {isPackagingWorkspace ? (
             <>
               {isLoggedIn && isAdmin ? (
@@ -426,6 +425,13 @@ const Header = () => {
                   variant="text"
                 />
               )}
+              <Link
+                href="/sba-7a-loans"
+                className="rounded-full px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                id="header-link-sba-loans"
+              >
+                SBA 7(a)
+              </Link>
               {hasLoanPackagingAccess ? (
                 <Link
                   href={loanPackagingNavHref}
@@ -440,7 +446,7 @@ const Header = () => {
                   className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
                   id="header-link-loan-services"
                 >
-                  Loan Services
+                  Loan Packaging
                 </Link>
               )}
               {isLoggedIn && isAdmin ? (
@@ -482,7 +488,7 @@ const Header = () => {
         </div>
 
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm md:hidden" aria-modal="true" role="dialog">
+          <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm lg:hidden" aria-modal="true" role="dialog">
             <div className="relative flex h-full w-4/5 max-w-xs flex-col overflow-y-auto rounded-l-2xl bg-white shadow-2xl">
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/90 px-4 py-4 backdrop-blur">
                 <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center" id="header-mobile-logo-link">
@@ -577,6 +583,12 @@ const Header = () => {
                         onToggle={() => setIsMobileTemplatesMenuOpen((open) => !open)}
                       />
                     )}
+                    <MenuItem
+                      href="/sba-7a-loans"
+                      label="SBA 7(a) Loans"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      id="header-mobile-link-sba-loans"
+                    />
                     {hasLoanPackagingAccess ? (
                       <MenuItem
                         href={loanPackagingNavHref}
@@ -585,7 +597,7 @@ const Header = () => {
                         id="header-mobile-link-loan-packaging"
                       />
                     ) : (
-                      <MenuItem href="/loan-services" label="Loan Services" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-services" />
+                      <MenuItem href="/loan-services" label="Loan Packaging" onClick={() => setIsMobileMenuOpen(false)} id="header-mobile-link-loan-services" />
                     )}
                   </>
                 )}

@@ -23,9 +23,9 @@ const faqSchemaItems = [
 ];
 
 export const metadata: Metadata = {
-  title: 'Free DSCR Calculator | Business Cash Flow Analysis and Loan Readiness Check',
+  title: 'Free DSCR Calculator and Bank-Level Cash Flow Analysis',
   description:
-    'Use our free DSCR calculator to estimate business loan repayment strength, understand debt service coverage, and decide whether to move into a deeper lender-style cash flow review.',
+    'Check DSCR in about a minute or complete a free bank-level cash flow analysis with historical financials, business debt review, and downloadable PDF reports.',
   keywords: [
     'free DSCR calculator',
     'business DSCR calculator',
@@ -41,9 +41,9 @@ export const metadata: Metadata = {
   category: 'finance',
   openGraph: {
     siteName: 'Business Lending Advocate',
-    title: 'Free DSCR Calculator and Business Cash Flow Analysis',
+    title: 'Free DSCR Calculator and Bank-Level Cash Flow Analysis',
     description:
-      'Check your debt service coverage ratio fast, understand how lenders may read the request, and decide whether to go deeper.',
+      'Start with a quick DSCR estimate or complete the full lender-style cash flow and business debt analysis for free.',
     url: cashFlowPageUrl,
     type: 'website',
     images: [
@@ -57,9 +57,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free DSCR Calculator and Business Cash Flow Analysis',
+    title: 'Free DSCR Calculator and Bank-Level Cash Flow Analysis',
     description:
-      'Check your debt service coverage ratio fast, understand how lenders may read the request, and decide whether to go deeper.',
+      'Start with a quick DSCR estimate or complete the full lender-style cash flow and business debt analysis for free.',
     images: [cashFlowOgImage],
   },
   robots: {
@@ -99,9 +99,9 @@ const cashFlowPageSchema = {
       '@type': 'WebPage',
       '@id': `${cashFlowPageUrl}#webpage`,
       url: cashFlowPageUrl,
-      name: 'Free DSCR Calculator | Business Cash Flow Analysis and Loan Readiness Check',
+      name: 'Free DSCR Calculator and Bank-Level Cash Flow Analysis',
       description:
-        'Use our free DSCR calculator to estimate business loan repayment strength, understand debt service coverage, and decide whether to move into a deeper lender-style cash flow review.',
+        'Check DSCR quickly or complete a free bank-level cash flow analysis with historical financials, business debts, and downloadable reports.',
       inLanguage: 'en-US',
       isPartOf: {
         '@id': 'https://www.businesslendingadvocate.com/#website',

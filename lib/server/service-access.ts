@@ -24,10 +24,6 @@ export type ServiceAccess = {
 
 const FULL_ACCESS_PRODUCT_TYPES = new Set(['loan_packaging', 'loan_brokering']);
 
-function freeComprehensiveEnabled(): boolean {
-  return process.env.FREE_COMPREHENSIVE_ACCESS === 'true';
-}
-
 function baseAnonymousAccess(): ServiceAccess {
   return {
     availableTemplates: [],
@@ -202,9 +198,7 @@ export async function resolveServiceAccessForUser(user: Pick<User, 'id' | 'email
           (templateType) => purchasedTemplateTypes.has(templateType) || grantedTemplateTypes.has(templateType),
         );
   const canAccessTemplates = availableTemplates.length > 0;
-  const canAccessComprehensive =
-    hasPaidComprehensiveAccess ||
-    freeComprehensiveEnabled();
+  const canAccessComprehensive = true;
 
   let role: ServiceAccess['role'] = 'basic';
   if (isAdmin) {

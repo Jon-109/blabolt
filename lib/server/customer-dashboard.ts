@@ -241,10 +241,10 @@ export async function buildCustomerDashboardPayload(args: {
       title: 'Comprehensive Cash Flow Analysis',
       description: 'Complete your DSCR analysis and review your lender-facing cash flow score.',
       href: latestReportId ? `/report-preview?id=${encodeURIComponent(latestReportId)}` : '/comprehensive-cash-flow-analysis',
-      status: latestReportId ? 'Report Ready' : latestCashFlowAnalysis ? 'In Progress' : access.hasComprehensiveAccess ? 'Ready to Start' : 'Not Available',
+      status: latestReportId ? 'Report Ready' : latestCashFlowAnalysis ? 'In Progress' : 'Ready to Start',
       progressPct: latestReportId ? 100 : latestCashFlowAnalysis ? 60 : 0,
-      nextStep: latestReportId ? 'View your completed report' : 'Complete your cash flow analysis',
-      enabled: access.hasComprehensiveAccess,
+      nextStep: latestReportId ? 'View your completed report' : 'Complete your free cash flow analysis',
+      enabled: true,
       accent: 'blue',
     },
     {

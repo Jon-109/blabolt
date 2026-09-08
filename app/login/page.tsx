@@ -84,15 +84,11 @@ function getLoginFlow(redirectTo: string | null): LoginFlow {
     checkoutProductType === 'cash_flow_analysis' ||
     pathWithoutQuery.startsWith('/comprehensive-cash-flow-analysis')
   ) {
-    const isPaymentFlow = checkoutProductType === 'cash_flow_analysis';
-
     return {
-      badge: 'Comprehensive Analysis',
-      title: isPaymentFlow ? 'Sign in before payment' : 'Sign in to continue',
-      subtitle: isPaymentFlow ? 'Login first, then complete payment for access.' : 'Resume your analysis workspace.',
-      steps: isPaymentFlow
-        ? ['Sign in', 'Complete payment', 'Open analysis']
-        : ['Sign in', 'Return to analysis', 'Continue'],
+      badge: 'Free Bank-Level Analysis',
+      title: 'Create your free workspace',
+      subtitle: 'Sign in to save your progress and generate both lender-ready PDF reports.',
+      steps: ['Sign in', 'Complete analysis', 'Download reports'],
     };
   }
 

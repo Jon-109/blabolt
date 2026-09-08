@@ -15,14 +15,14 @@ type AuthAwareCheckoutButtonProps = Omit<ButtonProps, 'asChild'> & {
 };
 
 const checkoutEventMeta: Record<StripeCheckoutProductType, { itemName: string; value: number }> = {
-  balance_sheet: { itemName: 'Balance Sheet Template', value: 19.99 },
-  income_statement: { itemName: 'Profit and Loss Statement Template', value: 19.99 },
-  business_debt_summary: { itemName: 'Business Debt Summary Template', value: 19.99 },
-  personal_financial_statement: { itemName: 'Personal Financial Statement Template', value: 19.99 },
-  personal_debt_summary: { itemName: 'Personal Debt Summary Template', value: 19.99 },
-  templates_bundle: { itemName: 'Loan Document Templates Bundle', value: 49.99 },
+  balance_sheet: { itemName: 'Balance Sheet Template', value: 9.99 },
+  income_statement: { itemName: 'Profit and Loss Statement Template', value: 9.99 },
+  business_debt_summary: { itemName: 'Business Debt Summary Template', value: 9.99 },
+  personal_financial_statement: { itemName: 'Personal Financial Statement Template', value: 9.99 },
+  personal_debt_summary: { itemName: 'Personal Debt Summary Template', value: 9.99 },
+  templates_bundle: { itemName: 'Loan Document Templates Bundle', value: 29.99 },
   loan_packaging: { itemName: 'Loan Packaging', value: 499 },
-  cash_flow_analysis: { itemName: 'Cash Flow Analysis', value: 49.99 },
+  cash_flow_analysis: { itemName: 'Free Bank-Level Cash Flow Analysis', value: 0 },
 };
 
 export default function AuthAwareCheckoutButton({

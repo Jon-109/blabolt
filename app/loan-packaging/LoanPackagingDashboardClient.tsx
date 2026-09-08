@@ -32,7 +32,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/app/(components)/ui/dialog';
-import ContextAssistant from '@/app/(components)/ai/ContextAssistant';
 import { LOAN_PURPOSE_OPTIONS, type TemplateKey } from '@/lib/loan-packaging/constants';
 import { loanPurposes as calculatorLoanPurposes } from '@/lib/loanPurposes';
 import { isDocumentExcludedFromPackage } from '@/lib/loan-packaging/document-state';
@@ -3250,16 +3249,6 @@ export default function LoanPackagingDashboardClient({
             {errorMessage}
           </div>
         )}
-
-        <ContextAssistant
-          scope="loan_packaging_dashboard"
-          loanRequestId={dashboard?.loanRequest?.id ?? null}
-          suggestions={[
-            'What should I do next based on my current package?',
-            'Which required documents are still missing?',
-            'How can I make this package stronger before I send it out?',
-          ]}
-        />
 
         <div className="grid gap-6 xl:grid-cols-[224px,minmax(0,1fr)]">
           <aside className="space-y-4 lg:sticky lg:top-24 self-start">
