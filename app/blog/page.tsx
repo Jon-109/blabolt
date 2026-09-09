@@ -27,7 +27,7 @@ const blogs = [
   {
     slug: 'how-to-make-your-business-loan-ready-5-mistakes',
     title: 'How to Make Your Business Loan-Ready: 5 Mistakes That Get Applications Rejected',
-    description: 'Avoid the hidden red flags that sink small-business loan requests—and learn the simple fixes that turn lenders into eager partners.',
+    description: 'Avoid the hidden red flags that sink small-business loan requests, and learn the simple fixes that turn lenders into eager partners.',
     coverImage: '/images/business-loan-readiness-cover.png',
     tags: ['LoanReadiness', 'Mistakes', 'SmallBusiness'],
   },

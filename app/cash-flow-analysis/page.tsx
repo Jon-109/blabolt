@@ -7,25 +7,30 @@ const cashFlowOgImage = 'https://www.businesslendingadvocate.com/images/business
 
 const faqSchemaItems = [
   {
-    question: 'Will this affect my credit?',
-    answer: 'No. The quick DSCR check is only a financial estimate and does not trigger a credit pull.',
+    question: 'Is the comprehensive analysis really free?',
+    answer: 'Yes. The complete bank-level workflow and both PDF reports are free with an account. There is no credit pull.',
   },
   {
-    question: 'When should I use the full analysis?',
+    question: 'What does bank-level mean?',
     answer:
-      'Use it when the request looks close, when you want a more lender-like read, or when you need a stronger report before packaging or applying.',
+      'The workflow uses the deeper inputs and repayment concepts commonly reviewed in business lending. It is not a loan approval or a substitute for a lender’s underwriting.',
   },
   {
-    question: 'What happens after the analysis?',
+    question: 'Why is the comprehensive analysis better than the quick check?',
     answer:
-      'If the numbers support it, the next smart move is usually organizing the file, tightening the story, and preparing the package lenders expect.',
+      'The quick check uses a current snapshot and does not evaluate add-backs. The comprehensive analysis reviews multiple historical periods and year-to-date results, considers supported add-backs that may improve lender-adjusted cash flow and DSCR, and includes existing debts.',
+  },
+  {
+    question: 'Can I submit the reports with a loan application?',
+    answer:
+      'Yes. The cash-flow analysis and business debt summary can be included with a loan package to give the lender an organized repayment picture upfront. The lender will still verify the information and complete its own underwriting.',
   },
 ];
 
 export const metadata: Metadata = {
   title: 'Free DSCR Calculator and Bank-Level Cash Flow Analysis',
   description:
-    'Check DSCR in about a minute or complete a free bank-level cash flow analysis with historical financials, business debt review, and downloadable PDF reports.',
+    'Check DSCR quickly or complete a free bank-level cash flow analysis with multi-period financials, supported add-backs, business debt review, and downloadable loan-package reports.',
   keywords: [
     'free DSCR calculator',
     'business DSCR calculator',
@@ -101,7 +106,7 @@ const cashFlowPageSchema = {
       url: cashFlowPageUrl,
       name: 'Free DSCR Calculator and Bank-Level Cash Flow Analysis',
       description:
-        'Check DSCR quickly or complete a free bank-level cash flow analysis with historical financials, business debts, and downloadable reports.',
+        'Check DSCR quickly or complete a free bank-level cash flow analysis with multi-period financials, supported add-backs, business debts, and downloadable loan-package reports.',
       inLanguage: 'en-US',
       isPartOf: {
         '@id': 'https://www.businesslendingadvocate.com/#website',

@@ -1,10 +1,10 @@
 export const metadata = {
   title: "How to Make Your Business Loan-Ready: 5 Mistakes That Get Applications Rejected | Business Lending Advocate",
   description:
-    "Discover the top 5 mistakes that get business loan applications rejected—and how to fix them fast. Boost approval odds and get lender-ready with expert tips.",
+    "Discover the top 5 mistakes that get business loan applications rejected, and how to fix them fast. Boost approval odds and get lender-ready with expert tips.",
   openGraph: {
     title: "How to Make Your Business Loan-Ready: 5 Mistakes That Get Applications Rejected",
-    description: "Discover the top 5 mistakes that get business loan applications rejected—and how to fix them fast. Boost approval odds and get lender-ready with expert tips.",
+    description: "Discover the top 5 mistakes that get business loan applications rejected, and how to fix them fast. Boost approval odds and get lender-ready with expert tips.",
     url: "https://businesslendingadvocate.com/blog/how-to-make-your-business-loan-ready-5-mistakes",
     type: "article",
     images: [
@@ -39,7 +39,7 @@ export default function BlogPost() {
           "image": [
             "https://businesslendingadvocate.com/images/business-loan-readiness-cover.png"
           ],
-          "description": "Discover the top 5 mistakes that get business loan applications rejected—and how to fix them fast. Boost approval odds and get lender-ready with expert tips.",
+          "description": "Discover the top 5 mistakes that get business loan applications rejected, and how to fix them fast. Boost approval odds and get lender-ready with expert tips.",
           "author": {
             "@type": "Organization",
             "name": "Business Lending Advocate"
@@ -60,7 +60,7 @@ export default function BlogPost() {
             How to Make Your Business Loan-Ready: <span className="text-[#ffe066]">5 Mistakes</span> That Get Applications Rejected
           </h1>
           <p className="text-base md:text-lg font-medium text-[#e0e8ff] mb-4 italic">
-            Avoid the common financial red flags that turn lenders away — and learn what you can do today to improve your chances of approval.
+            Avoid the common financial red flags that turn lenders away, and learn what you can do today to improve your chances of approval.
           </p>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none" />
@@ -72,7 +72,7 @@ export default function BlogPost() {
           <div className="flex-1">
             <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-6">Introduction</h2>
             <p className="text-lg text-slate-700 mb-8">
-              Most denials happen for painfully predictable reasons. The good news? Each one is <span className="font-bold text-blue-700">100% fixable</span>—often in a week or less—once you know where lenders see risk. Below are the five deal-breaking mistakes we see every day in Main-Street businesses, plus quick actions that move you from “maybe later” to “approved.”
+              Most denials happen for painfully predictable reasons. The good news? Each one is <span className="font-bold text-blue-700">100% fixable</span>, often in a week or less, once you know where lenders see risk. Below are the five deal-breaking mistakes we see every day in Main-Street businesses, plus quick actions that move you from “maybe later” to “approved.”
             </p>
             <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-xl shadow-sm">
               <p className="mb-2 font-semibold text-blue-900">Need a shortcut?</p>
@@ -97,8 +97,8 @@ export default function BlogPost() {
 
         {/* Mistake 1 */}
         <section className="mb-10">
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 1 — Mixing Business and Personal Money <span className="font-normal">(Capital)</span></h3>
-          <div className="mb-1 text-slate-700"> <span className="font-semibold text-red-600">Why lenders reject:</span> If rent, groceries, and supplier invoices all clear the same personal checking account, underwriters can’t tell how much cash the business really controls. It raises doubts about your financial discipline—and whether loan proceeds would stay in the company.</div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 1: Mixing Business and Personal Money <span className="font-normal">(Capital)</span></h3>
+          <div className="mb-1 text-slate-700"> <span className="font-semibold text-red-600">Why lenders reject:</span> If rent, groceries, and supplier invoices all clear the same personal checking account, underwriters can’t tell how much cash the business really controls. It raises doubts about your financial discipline and whether loan proceeds would stay in the company.</div>
           <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 mt-2">
             <span className="font-semibold text-yellow-900">Quick fix (small-business friendly):</span>
             <ul className="list-disc pl-6 mt-1 text-yellow-800">
@@ -113,7 +113,7 @@ export default function BlogPost() {
 
         {/* Mistake 2 */}
         <section className="mb-10">
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 2 — Misreading Your DSCR <span className="font-normal">(Capacity)</span></h3>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 2: Misreading Your DSCR <span className="font-normal">(Capacity)</span></h3>
           <div className="mb-1 text-slate-700"><span className="font-semibold text-red-600">Debt Service Coverage Ratio = Net Operating Income ÷ Annual Debt Payments</span></div>
           <ul className="mb-2 pl-6 list-disc text-slate-700">
             <li><span className="font-semibold">1.25+</span> = lenders breathe easy</li>
@@ -123,17 +123,17 @@ export default function BlogPost() {
           <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-4 mt-2">
             <span className="font-semibold text-blue-900">Quick fix:</span>
             <ul className="list-disc pl-6 mt-1 text-blue-800">
-              <li>Run the numbers today—use our <a href="/cash-flow-analysis" className="underline hover:text-blue-600 font-medium">free online DSCR Calculator</a> (no email required).</li>
+              <li>Run the numbers today with our <a href="/cash-flow-analysis" className="underline hover:text-blue-600 font-medium">free online DSCR Calculator</a> (no email required).</li>
               <li>Boost the numerator: raise prices a few dollars, upsell add-ons, or trim low-margin services.</li>
               <li>Shrink the denominator: refinance high-interest cards or stretch short-term notes to longer terms.</li>
-              <li>Get a <a href="/cash-flow-analysis" className="underline hover:text-blue-600 font-medium">Comprehensive Cash-Flow</a>—we routinely lift DSCR from 0.95 to 1.30 in 60 days for mom-and-pop shops.</li>
+              <li>Get a <a href="/cash-flow-analysis" className="underline hover:text-blue-600 font-medium">Comprehensive Cash-Flow</a>. We routinely lift DSCR from 0.95 to 1.30 in 60 days for mom-and-pop shops.</li>
             </ul>
           </div>
         </section>
 
         {/* Mistake 3 */}
         <section className="mb-10">
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 3 — Sloppy or Missing Documents <span className="font-normal">(Character)</span></h3>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 3: Sloppy or Missing Documents <span className="font-normal">(Character)</span></h3>
           <div className="mb-1 text-slate-700">Messy PDFs, unsigned tax returns, or a debt schedule scribbled in cell AA42 scream “disorganized.” Underwriters pass because they fear hidden surprises.</div>
           <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 mt-2">
             <span className="font-semibold text-yellow-900">Quick fix:</span>
@@ -147,13 +147,13 @@ export default function BlogPost() {
 
         {/* Mistake 4 */}
         <section className="mb-10">
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 4 — Going It Alone Instead of Using a Loan Broker <span className="font-normal">(Conditions)</span></h3>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 4: Going It Alone Instead of Using a Loan Broker <span className="font-normal">(Conditions)</span></h3>
           <div className="mb-1 text-slate-700"><span className="font-semibold text-red-600">Why lenders reject:</span> Small-business owners often apply to the first bank on the corner, not realizing each lender has a different appetite for industries, loan sizes, and collateral. One mismatch can mean a quick “no,” even if five other lenders would say “yes.”</div>
           <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-4 mt-2">
             <span className="font-semibold text-blue-900">Quick fix:</span>
             <ul className="list-disc pl-6 mt-1 text-blue-800">
               <li>Leverage a broker who already knows which lenders love your industry and loan size.</li>
-              <li>Submit one master package—your broker shops it quietly, protecting your credit score.</li>
+              <li>Submit one master package. Your broker shops it quietly, protecting your credit score.</li>
               <li>Compare term sheets side-by-side and negotiate from a position of strength.</li>
             </ul>
             <p className="mt-2 text-blue-900 text-sm">We recently placed a $75k working-capital line for a three-employee café that two big banks had declined. By sending the same file to a community lender that prefers food-service deals under $100k, we secured approval in eight business days.</p>
@@ -162,7 +162,7 @@ export default function BlogPost() {
 
         {/* Mistake 5 */}
         <section className="mb-10">
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 5 — Guessing Your Numbers <span className="font-normal">(Confidence)</span></h3>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Mistake 5: Guessing Your Numbers <span className="font-normal">(Confidence)</span></h3>
           <div className="mb-1 text-slate-700">If you hesitate when asked, “What’s your average monthly net profit?” the lender assumes every other figure is a guess.</div>
           <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-4 mt-2">
             <span className="font-semibold text-yellow-900">Quick fix:</span>
@@ -175,7 +175,7 @@ export default function BlogPost() {
 
         {/* 5 C's Table */}
         <section className="mb-10">
-          <h2 className="text-2xl font-bold text-slate-800 mb-4">The 5 C’s of Credit—Your Final Checkpoint</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-4">The 5 C’s of Credit: Your Final Checkpoint</h2>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm border border-slate-200 rounded-xl overflow-hidden">
               <thead>
@@ -188,7 +188,7 @@ export default function BlogPost() {
               <tbody>
                 <tr className="border-t border-slate-200">
                   <td className="py-2 px-3">Capacity</td>
-                  <td className="py-2 px-3">Cash flow &amp; DSCR—ability to repay</td>
+                  <td className="py-2 px-3">Cash flow &amp; DSCR: ability to repay</td>
                   <td className="py-2 px-3">Mistake 2</td>
                 </tr>
                 <tr className="border-t border-slate-200">

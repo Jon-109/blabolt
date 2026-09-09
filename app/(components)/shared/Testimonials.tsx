@@ -65,7 +65,7 @@ const testimonials: Testimonial[] = [
     role: 'Sales Executive',
     company: 'SWBC PEO',
     content:
-      "Most business owners don't know what lenders are actually looking for. Business Lending Advocate helps bridge that gap by preparing entrepreneurs to apply with confidence—and to receive the best offers with favorable terms. They're a valuable ally to have on your side.",
+      "Most business owners don't know what lenders are actually looking for. Business Lending Advocate helps bridge that gap by preparing entrepreneurs to apply with confidence and receive the best offers with favorable terms. They're a valuable ally to have on your side.",
     image: '/images/robert-stockhousen.png',
   },
 ];

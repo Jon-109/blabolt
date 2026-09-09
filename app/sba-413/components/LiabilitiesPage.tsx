@@ -36,7 +36,7 @@ export default function LiabilitiesPage({ data, assets, smartGate, onChange, onN
           <div className="flex-1">
             <div className="font-bold text-amber-900 mb-1.5 text-sm sm:text-base">💡 Pro Tip</div>
             <p className="text-sm sm:text-base text-amber-800 leading-relaxed">
-              Include all debts—even small ones. Lenders want the complete picture for accurate assessment.
+              Include all debts, even small ones. Lenders want the complete picture for accurate assessment.
             </p>
           </div>
         </div>

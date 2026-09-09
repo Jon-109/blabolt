@@ -1,33 +1,28 @@
 "use client";
 
-import React, { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sora } from 'next/font/google';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
-  ArrowUpRight,
-  BadgeDollarSign,
   BarChart3,
+  Check,
   CheckCircle2,
   Clock3,
-  FileSearch,
   FileText,
-  HandCoins,
   HelpCircle,
+  Landmark,
   Layers3,
   LineChart,
-  Rocket,
   ShieldCheck,
   TrendingUp,
-  Wallet,
+  Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import DscrQuickCalculator from '@/app/(components)/cash-flow/DscrQuickCalculator';
 import ContactFormModal from '@/app/(components)/shared/ContactFormModal';
-import LeadInterestForm from '@/app/(components)/shared/LeadInterestForm';
-import Testimonials from '@/app/(components)/shared/Testimonials';
 import { trackCtaClick, trackSectionView } from '@/lib/analytics';
 
 const headingFont = Sora({
@@ -36,211 +31,60 @@ const headingFont = Sora({
   display: 'swap',
 });
 
-type IconCard = {
+type Feature = {
   title: string;
   description: string;
   icon: LucideIcon;
 };
 
-type ComparisonRow = {
-  feature: string;
-  quick: string;
-  comprehensive: string;
-};
-
-const marqueeItems = [
-  'Free DSCR Check',
-  'Bank-Level Cash Flow Review',
-  'EBITDA Adjustments',
-  'Debt Summary PDF',
-  'Lender-Facing Guidance',
-  'No Credit Impact',
-  'Fast Qualification Read',
-  'Clear Next-Step Direction',
-];
-
-const whyItMatters: IconCard[] = [
+const bankLevelFeatures: Feature[] = [
   {
-    title: 'See the ratio lenders look at first',
-    description:
-      'Debt Service Coverage Ratio is often one of the first numbers a lender uses to decide whether a payment looks supportable.',
+    title: 'Multi-period financial review',
+    description: 'Review historical and year-to-date performance instead of relying on one current-month snapshot.',
     icon: BarChart3,
   },
   {
-    title: 'Avoid wasting time on the wrong structure',
-    description:
-      'A fast read helps you spot when the request size, payment, or timing probably needs work before you start applying.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Move forward with sharper lender-facing support',
-    description:
-      'When the deal looks promising, the deeper review gives you cleaner numbers, better context, and a stronger story.',
-    icon: FileSearch,
-  },
-];
-
-const fullAnalysisDetails: IconCard[] = [
-  {
-    title: 'Adjusted EBITDA review',
-    description:
-      'We look beyond a simple quick estimate and review the income picture the way lenders usually discuss repayment strength.',
+    title: 'Adjusted cash flow',
+    description: 'Review supported add-backs—such as certain owner compensation, one-time costs, and non-cash expenses—that may increase qualifying cash flow when a lender accepts them.',
     icon: TrendingUp,
   },
   {
-    title: 'Detailed debt breakdown',
-    description:
-      'Current obligations are organized into a clearer business debt summary so the repayment picture is easier to explain.',
+    title: 'Complete debt picture',
+    description: 'Organize existing obligations and the proposed loan payment into one repayment view.',
     icon: Layers3,
   },
   {
-    title: 'Lender-ready PDF output',
-    description:
-      'You leave with a polished report that is easier to share, reference, and build around if you keep moving toward financing.',
+    title: 'Two downloadable reports',
+    description: 'Generate a cash-flow analysis and business debt summary you can include with a loan package to give the lender a clearer starting point.',
     icon: FileText,
-  },
-  {
-    title: 'Better next-step clarity',
-    description:
-      'You can decide whether to move forward, lower the request, change structure, or package the deal more carefully.',
-    icon: HandCoins,
-  },
-];
-
-const comparisonRows: ComparisonRow[] = [
-  {
-    feature: 'Cost',
-    quick: 'Free',
-    comprehensive: 'Free with an account',
-  },
-  {
-    feature: 'Time to complete',
-    quick: 'About 1 minute',
-    comprehensive: 'About 30 minutes',
-  },
-  {
-    feature: 'Depth of review',
-    quick: 'Fast first-pass estimate',
-    comprehensive: 'Much deeper bank-style review',
-  },
-  {
-    feature: 'Periods reviewed',
-    quick: 'Current monthly snapshot',
-    comprehensive: 'Historical + year-to-date context',
-  },
-  {
-    feature: 'Report output',
-    quick: 'On-screen result only',
-    comprehensive: 'Downloadable PDF report',
-  },
-  {
-    feature: 'Debt summary',
-    quick: 'Not included',
-    comprehensive: 'Included as a clean PDF summary',
-  },
-  {
-    feature: 'Best for',
-    quick: 'Checking whether the request feels close',
-    comprehensive: 'Pressure-testing a real funding plan',
   },
 ];
 
 const faqItems = [
   {
-    question: 'Will this affect my credit?',
-    answer: 'No. The quick DSCR check is only a financial estimate and does not trigger a credit pull.',
+    question: 'Is the comprehensive analysis really free?',
+    answer: 'Yes. The complete bank-level workflow and both PDF reports are free with an account. There is no credit pull.',
   },
   {
-    question: 'When should I use the full analysis?',
-    answer:
-      'Use it when the request looks close, when you want a more lender-like read, or when you need a stronger report before packaging or applying.',
+    question: 'What does “bank-level” mean?',
+    answer: 'It means the workflow uses the deeper inputs and repayment concepts commonly reviewed in business lending. It is not a loan approval or a substitute for a lender’s underwriting.',
   },
   {
-    question: 'What happens after the analysis?',
-    answer:
-      'If the numbers support it, the next smart move is usually organizing the file, tightening the story, and preparing the package lenders expect.',
+    question: 'Why is the comprehensive analysis better than the quick check?',
+    answer: 'The quick check uses a current snapshot and does not evaluate add-backs. The comprehensive analysis reviews multiple historical periods and year-to-date results, considers supported add-backs that may improve lender-adjusted cash flow and DSCR, and includes existing debts. That produces a more realistic lender-style view for a real loan request.',
+  },
+  {
+    question: 'Can I submit the reports with a loan application?',
+    answer: 'Yes. The cash-flow analysis and business debt summary can be included with your loan package. They help present the lender with an organized repayment picture upfront, although the lender will still verify the information and complete its own underwriting.',
   },
 ];
 
-const closingSteps = [
-  {
-    label: '01',
-    title: 'Run the quick DSCR check',
-    description: 'Start with the fast estimate to see whether the request looks weak, borderline, or strong.',
-  },
-  {
-    label: '02',
-    title: 'Run the deeper review when needed',
-    description: 'Use the free full analysis when you need more accuracy, more context, and a better lender-facing read.',
-  },
-  {
-    label: '03',
-    title: 'Move into packaging with more confidence',
-    description: 'Once the deal looks supportable, you can package it more cleanly and approach financing strategically.',
-  },
-];
-
-function userPrefersReducedMotion() {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function supportsInteractiveMotion() {
-  if (typeof window === 'undefined') return false;
+function SectionHeading({ eyebrow, title, description, light = false }: { eyebrow: string; title: string; description: string; light?: boolean }) {
   return (
-    window.matchMedia('(hover:hover) and (pointer:fine)').matches &&
-    !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
-}
-
-function ComparisonTable() {
-  return (
-    <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_28px_70px_-44px_rgba(15,23,42,0.28)]">
-      <div className="grid gap-3 border-b border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,1)_0%,rgba(255,255,255,1)_100%)] px-5 py-5 sm:grid-cols-2 sm:px-6">
-        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Quick Check</p>
-          <h3 className="mt-2 text-xl font-black tracking-[-0.03em] text-slate-950">Fast and free first pass</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Best when you want to know whether a deal feels obviously weak, close, or worth investigating further.
-          </p>
-        </div>
-        <div className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50/70 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Full Analysis</p>
-          <h3 className="mt-2 text-xl font-black tracking-[-0.03em] text-slate-950">More depth, cleaner lender context</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-700">
-            Best when you need a more complete repayment read, better structure guidance, and a report you can actually use.
-          </p>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-950 text-left text-white">
-              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-[0.16em] sm:px-6">Feature</th>
-              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-[0.16em] sm:px-6">Quick</th>
-              <th className="px-5 py-4 text-xs font-semibold uppercase tracking-[0.16em] sm:px-6">Comprehensive</th>
-            </tr>
-          </thead>
-          <tbody>
-            {comparisonRows.map((row, index) => (
-              <tr
-                key={row.feature}
-                className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/65'}
-              >
-                <td className="border-b border-slate-200 px-5 py-4 text-sm font-semibold text-slate-950 sm:px-6">
-                  {row.feature}
-                </td>
-                <td className="border-b border-slate-200 px-5 py-4 text-sm leading-6 text-slate-600 sm:px-6">
-                  {row.quick}
-                </td>
-                <td className="border-b border-slate-200 px-5 py-4 text-sm leading-6 text-slate-700 sm:px-6">
-                  <span className="font-semibold text-slate-950">{row.comprehensive}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="w-full">
+      <p className={`text-xs font-black uppercase tracking-[0.2em] ${light ? 'text-amber-300' : 'text-cyan-800'}`}>{eyebrow}</p>
+      <h2 className={`${headingFont.className} mt-2 text-2xl font-extrabold leading-[1.08] tracking-[-0.04em] sm:text-3xl ${light ? 'text-white' : 'text-slate-950'}`}>{title}</h2>
+      <p className={`mt-3 text-sm leading-6 sm:text-base ${light ? 'text-slate-300' : 'text-slate-600'}`}>{description}</p>
     </div>
   );
 }
@@ -264,690 +108,206 @@ function CashFlowAnalysisInner() {
   };
 
   useEffect(() => {
-    if (!seenSectionsRef.current.has('hero')) {
-      seenSectionsRef.current.add('hero');
-      trackSectionView({
-        page_template: 'cash_flow_analysis',
-        section_id: 'hero',
-        section_label: 'Hero',
-      });
-    }
+    trackSectionView({ page_template: 'cash_flow_analysis', section_id: 'hero', section_label: 'Hero' });
+    seenSectionsRef.current.add('hero');
   }, []);
 
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-cashflow-reveal]'));
-    if (!sections.length) return;
-
-    const reveal = (root: HTMLElement) => {
-      root.classList.add('home-reveal-visible');
-      const sectionId = root.dataset.analyticsSection;
-      const sectionLabel = root.dataset.analyticsLabel;
+    const reveal = (section: HTMLElement) => {
+      section.classList.add('home-reveal-visible');
+      const sectionId = section.dataset.analyticsSection;
       if (sectionId && !seenSectionsRef.current.has(sectionId)) {
         seenSectionsRef.current.add(sectionId);
         trackSectionView({
           page_template: 'cash_flow_analysis',
           section_id: sectionId,
-          section_label: sectionLabel,
+          section_label: section.dataset.analyticsLabel,
         });
       }
-
-      const revealNodes = Array.from(root.querySelectorAll<HTMLElement>('.home-reveal'));
-      revealNodes.forEach((node, index) => {
-        node.style.transitionDelay = `${Math.min(index * 65, 320)}ms`;
-        node.classList.add('home-reveal-visible');
-      });
-
-      const staggerNodes = Array.from(root.querySelectorAll<HTMLElement>('.home-stagger'));
-      staggerNodes.forEach((node, index) => {
-        node.style.transitionDelay = `${Math.min(index * 80, 420)}ms`;
+      section.querySelectorAll<HTMLElement>('.home-stagger').forEach((node, index) => {
+        node.style.transitionDelay = `${Math.min(index * 70, 280)}ms`;
         node.classList.add('home-reveal-visible');
       });
     };
 
-    if (userPrefersReducedMotion() || !('IntersectionObserver' in window)) {
+    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       sections.forEach(reveal);
       return;
     }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            reveal(entry.target as HTMLElement);
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' },
-    );
-
+    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      reveal(entry.target as HTMLElement);
+      observer.unobserve(entry.target);
+    }), { threshold: 0.1, rootMargin: '0px 0px -6% 0px' });
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
-    if (!supportsInteractiveMotion()) return;
-    const magnets = Array.from(document.querySelectorAll<HTMLElement>('[data-cashflow-magnetic]'));
-    if (!magnets.length) return;
-
-    const cleanups = magnets.map((element) => {
-      const handleMove = (event: MouseEvent) => {
-        const rect = element.getBoundingClientRect();
-        const x = event.clientX - rect.left - rect.width / 2;
-        const y = event.clientY - rect.top - rect.height / 2;
-        const moveX = (x / rect.width) * 12;
-        const moveY = (y / rect.height) * 9;
-        element.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
-      };
-
-      const handleLeave = () => {
-        element.style.transform = 'translate3d(0, 0, 0)';
-      };
-
-      element.addEventListener('mousemove', handleMove);
-      element.addEventListener('mouseleave', handleLeave);
-
-      return () => {
-        element.removeEventListener('mousemove', handleMove);
-        element.removeEventListener('mouseleave', handleLeave);
-      };
-    });
-
-    return () => cleanups.forEach((cleanup) => cleanup());
-  }, []);
-
-  useEffect(() => {
-    if (!supportsInteractiveMotion()) return;
-    const hero = document.querySelector<HTMLElement>('[data-cashflow-hero]');
-    if (!hero) return;
-
-    const handleMove = (event: MouseEvent) => {
-      const rect = hero.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width - 0.5) * 28;
-      const y = ((event.clientY - rect.top) / rect.height - 0.5) * 20;
-      hero.style.setProperty('--hero-mx', `${x.toFixed(2)}px`);
-      hero.style.setProperty('--hero-my', `${y.toFixed(2)}px`);
-    };
-
-    const handleLeave = () => {
-      hero.style.setProperty('--hero-mx', '0px');
-      hero.style.setProperty('--hero-my', '0px');
-    };
-
-    hero.addEventListener('mousemove', handleMove);
-    hero.addEventListener('mouseleave', handleLeave);
-
-    return () => {
-      hero.removeEventListener('mousemove', handleMove);
-      hero.removeEventListener('mouseleave', handleLeave);
-    };
-  }, []);
-
-  useEffect(() => {
-    const shouldScrollToCalculator = searchParams.get('showCalculator') === 'true';
-    if (shouldScrollToCalculator) {
-      window.setTimeout(() => {
-        calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 140);
+    if (searchParams.get('showCalculator') === 'true') {
+      window.setTimeout(() => calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 140);
     }
-
-    const shouldStartComprehensive = searchParams.get('comprehensive') === 'true';
-    if (shouldStartComprehensive) {
+    if (searchParams.get('comprehensive') === 'true') {
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.delete('comprehensive');
       window.history.replaceState({}, '', nextUrl.toString());
       router.push(comprehensiveAnalysisPath);
     }
-  }, [comprehensiveAnalysisPath, searchParams, router]);
+  }, [comprehensiveAnalysisPath, router, searchParams]);
 
-  const handleScrollToCalculator = (sectionId: string, ctaId: string, ctaLabel: string) => {
-    trackCashFlowCta(sectionId, ctaId, ctaLabel, '#dscr-calculator');
-    calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleStartComprehensiveAnalysis = (sectionId: string, ctaId: string, ctaLabel: string) => {
-    trackCashFlowCta(sectionId, ctaId, ctaLabel, comprehensiveAnalysisPath);
+  const startComprehensive = (sectionId: string, ctaId: string) => {
+    trackCashFlowCta(sectionId, ctaId, 'Start Free Bank-Level Analysis', comprehensiveAnalysisPath);
     router.push(comprehensiveAnalysisPath);
   };
 
+  const showCalculator = (sectionId: string, ctaId: string) => {
+    trackCashFlowCta(sectionId, ctaId, 'Use Quick DSCR Check', '#dscr-calculator');
+    calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <section
-        data-cashflow-hero
-        className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,#155e75_0%,#0b2640_32%,#07111d_74%,#020617_100%)] text-white"
-      >
-        <div className="home-hero-mesh pointer-events-none absolute inset-0" />
-        <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(to_right,rgba(148,163,184,0.10)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.10)_1px,transparent_1px)] [background-size:68px_68px]" />
-        <div className="home-parallax-soft pointer-events-none absolute -left-20 top-12 h-72 w-72 rounded-full bg-cyan-400/18 blur-3xl" />
-        <div className="home-parallax-soft-reverse pointer-events-none absolute right-[-6rem] top-10 h-80 w-80 rounded-full bg-amber-300/[0.14] blur-3xl" />
-        <div className="home-float pointer-events-none absolute left-1/2 top-1/3 h-56 w-56 -translate-x-1/2 rounded-full bg-sky-400/12 blur-3xl" />
-
-        <div className="relative mx-auto max-w-7xl px-4 pb-8 pt-8 sm:px-6 sm:pb-12 sm:pt-10 lg:pb-16 lg:pt-16">
-          <div className="home-reveal home-reveal-visible mx-auto max-w-6xl text-center">
-            <div className="mx-auto max-w-5xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.16] bg-white/[0.08] px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-slate-100 backdrop-blur-sm sm:px-4 sm:py-2 sm:text-xs">
-                <ShieldCheck className="h-4 w-4 text-cyan-200" />
-                Funding-readiness cash flow review
-              </div>
-
-              <h1
-                className={`${headingFont.className} mx-auto mt-4 max-w-[18ch] text-[2.2rem] font-extrabold leading-[1.02] text-white sm:max-w-[19ch] sm:text-[2.75rem] lg:max-w-[19ch] lg:text-[3.35rem]`}
-              >
-                Know your DSCR before a lender does.
-              </h1>
-
-              <p className="mx-auto mt-3 max-w-4xl text-sm leading-6 text-slate-200 sm:text-base sm:leading-7">
-                DSCR stands for Debt Service Coverage Ratio. It shows whether your business cash flow can comfortably
-                cover its debt payments, and it is one of the first things lenders look at when deciding if a request
-                feels financeable.
-              </p>
-
-              <p className="mx-auto mt-3 max-w-4xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
-                Start with a free DSCR calculator to find your number fast. If the deal looks close, you can go deeper
-                with a more complete lender-style cash flow review and business debt analysis.
-              </p>
-
-              <div className="mx-auto mt-5 flex w-full max-w-4xl flex-col gap-2.5 sm:w-auto sm:flex-row sm:justify-center">
-                <button
-                  type="button"
-                  onClick={() => handleScrollToCalculator('hero', 'cashflow_page_hero_free_dscr', 'Start Free DSCR Check')}
-                  className="home-magnetic group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_20px_45px_-28px_rgba(255,255,255,0.85)] transition hover:-translate-y-0.5 hover:bg-slate-100 sm:w-auto sm:px-6 sm:py-3.5 sm:text-base"
-                  id="cashflow-page-hero-cta-dscr"
-                  data-cashflow-magnetic
-                >
-                  Start Free DSCR Check
-                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStartComprehensiveAnalysis('hero', 'cashflow_page_hero_full_analysis', 'Start Free Bank-Level Analysis')}
-                  className="home-magnetic inline-flex w-full flex-col items-center justify-center rounded-2xl border border-white/[0.18] bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/[0.16] sm:w-auto sm:px-6"
-                  id="cashflow-page-hero-cta-comprehensive"
-                  data-cashflow-magnetic
-                >
-                  <span className="text-sm font-semibold sm:text-base">Start Free Bank-Level Analysis</span>
-                  <span className="mt-0.5 text-[11px] font-medium text-cyan-200 sm:text-xs">
-                    Free account • Two PDF reports included
-                  </span>
-                </button>
-              </div>
-
-              <div className="mx-auto mt-4 flex max-w-4xl flex-wrap items-center justify-center gap-x-3 gap-y-2 text-[13px] text-slate-200 sm:text-sm">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                  Free first-pass read
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                  No credit pull
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                  Lender-focused ratio
-                </span>
-              </div>
+    <div className="overflow-hidden bg-[#f7f8f6] text-slate-950">
+      <section className="home-dossier-bg relative isolate overflow-hidden bg-[#071824] text-white">
+        <div className="home-noise pointer-events-none absolute inset-0 opacity-[0.12]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/70 to-transparent" />
+        <div className="relative mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-11 lg:px-8 lg:py-12">
+          <div className="mx-auto max-w-6xl text-center">
+            <div className="inline-flex items-center gap-2 border-x-2 border-amber-300 px-3 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-100 sm:text-xs">
+              <Landmark className="h-4 w-4" />Free bank-level cash-flow analysis
+            </div>
+            <h1 className={`${headingFont.className} mx-auto mt-4 max-w-[27ch] text-[2.25rem] font-extrabold leading-[1] tracking-[-0.045em] text-balance sm:text-5xl lg:text-[3.35rem]`}>
+              See how a lender may evaluate your ability to repay.
+            </h1>
+            <p className="mx-auto mt-4 max-w-4xl text-[15px] leading-6 text-slate-300 sm:text-lg sm:leading-7">
+              Complete a deeper analysis using multi-period financials, adjusted cash flow, existing debts, and the proposed loan payment—then generate two lender-ready PDF reports.
+            </p>
+            <div className="mx-auto mt-5 grid max-w-2xl gap-2.5 sm:grid-cols-[1.15fr_0.85fr]">
+              <button type="button" onClick={() => startComprehensive('hero', 'cashflow_hero_comprehensive')} className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f5c86a] px-5 py-3 text-sm font-extrabold text-[#071824] shadow-[0_16px_35px_-18px_rgba(245,200,106,0.8)] transition hover:-translate-y-0.5 hover:bg-[#ffda88] sm:text-base">
+                Start Free Bank-Level Analysis <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+              </button>
+              <button type="button" onClick={() => showCalculator('hero', 'cashflow_hero_quick')} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] px-5 py-3 text-sm font-bold text-white transition hover:border-white/35 hover:bg-white/[0.1] sm:text-base">
+                Use Quick DSCR Check
+              </button>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-300 sm:text-sm">
+              <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-emerald-300" />Comprehensive analysis is free</span>
+              <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-emerald-300" />Two PDF reports included</span>
+              <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-emerald-300" />No credit pull</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="border-y border-slate-200 bg-white py-3" data-cashflow-reveal data-analytics-section="marquee" data-analytics-label="Marquee">
-        <div className="home-marquee home-reveal">
-          <div className="home-marquee-track">
-            {[...marqueeItems, ...marqueeItems].map((item, index) => (
-              <span key={`${item}-${index}`} className="home-marquee-item">
-                <ShieldCheck className="h-4 w-4" />
-                {item}
-              </span>
-            ))}
+      <section className="border-b border-slate-200 bg-white" aria-label="Analysis capabilities">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-y divide-slate-200 px-4 sm:grid-cols-4 sm:divide-y-0 sm:px-6 lg:px-8">
+          {[
+            ['Multi-period review', BarChart3],
+            ['Adjusted cash flow', TrendingUp],
+            ['Business debt analysis', Layers3],
+            ['Downloadable reports', FileText],
+          ].map(([label, icon]) => {
+            const Icon = icon as LucideIcon;
+            return <div key={label as string} className="flex min-h-14 items-center justify-center gap-2 px-2 py-3 text-center text-[11px] font-bold text-slate-700 sm:text-xs"><Icon className="h-4 w-4 shrink-0 text-cyan-800" />{label as string}</div>;
+          })}
+        </div>
+      </section>
+
+      <section className="bg-[#f7f8f6] py-9 sm:py-11" data-cashflow-reveal data-analytics-section="choose_analysis" data-analytics-label="Choose Analysis">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionHeading eyebrow="Choose the right depth" title="A quick estimate is useful. A real funding decision deserves the full picture." description="Both tools are free. Choose based on how much confidence and detail you need—not based on price." />
+          <div className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <article className="home-stagger relative overflow-hidden rounded-2xl border border-cyan-300 bg-[#0b3345] p-5 text-white shadow-[0_20px_55px_-35px_rgba(8,145,178,0.75)] sm:p-6">
+              <span className="absolute right-4 top-4 rounded-full bg-emerald-300 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-950">Recommended</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10"><LineChart className="h-5 w-5 text-amber-300" /></div>
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-cyan-200">Comprehensive analysis</p>
+              <h3 className={`${headingFont.className} mt-1.5 pr-24 text-xl font-extrabold tracking-[-0.03em] sm:text-2xl`}>Bank-level depth, free with an account.</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-200">Best for a real loan request. It follows the deeper cash-flow process a bank would use by reviewing multiple periods, year-to-date performance, existing debts, and supported adjustments—not just one current snapshot.</p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {['Historical + year-to-date review', 'Supported add-backs and adjusted cash flow', 'Existing and proposed debt', 'Two downloadable loan-package reports'].map((item) => <span key={item} className="inline-flex items-start gap-2 text-sm font-semibold text-slate-100"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />{item}</span>)}
+              </div>
+              <button type="button" onClick={() => startComprehensive('choose_analysis', 'cashflow_choose_comprehensive')} className="group mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#f5c86a] px-5 py-3 text-sm font-extrabold text-[#071824] transition hover:bg-[#ffda88] sm:w-auto">
+                Start Comprehensive Analysis <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+              </button>
+            </article>
+
+            <article className="home-stagger rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_14px_35px_-30px_rgba(15,23,42,0.5)] sm:p-6">
+              <div className="flex items-center justify-between gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-cyan-800"><Clock3 className="h-5 w-5" /></div><span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">About 60 seconds</span></div>
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-cyan-800">Quick DSCR check</p>
+              <h3 className={`${headingFont.className} mt-1.5 text-xl font-extrabold tracking-[-0.03em] sm:text-2xl`}>A directional first pass.</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Best when you want to test a rough request quickly using current income, debt payments, and estimated new loan terms.</p>
+              <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-600"><strong className="text-slate-950">Output:</strong> an on-screen estimate—not a full lender-style review or approval.</div>
+              <button type="button" onClick={() => showCalculator('choose_analysis', 'cashflow_choose_quick')} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-extrabold text-slate-900 transition hover:border-cyan-500 hover:bg-cyan-50">
+                Open Quick Calculator <ArrowRight className="h-4 w-4" />
+              </button>
+            </article>
           </div>
         </div>
       </section>
 
-      <section className="bg-slate-50 py-8 sm:py-12" data-cashflow-reveal data-analytics-section="why_it_matters" data-analytics-label="Why It Matters">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="home-reveal max-w-4xl">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">Why It Matters</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-4xl">
-              Cash flow analysis is not just about revenue. It is about repayment comfort.
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
-              Lenders care about whether your business can actually carry the requested payment while still leaving room
-              for normal operating pressure. That is why DSCR matters so much up front.
-            </p>
+      <section id="dscr-calculator" ref={calculatorRef} className="scroll-mt-20 bg-white pb-9 pt-6 sm:pb-11 sm:pt-8" data-cashflow-reveal data-analytics-section="quick_calculator" data-analytics-label="Quick Calculator">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-800">Free directional tool</p>
+            <h2 className={`${headingFont.className} mt-2 text-2xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-3xl`}>Run a quick high-level DSCR check.</h2>
+            <p className="mx-auto mt-2 max-w-3xl text-sm leading-6 text-slate-600">Get an immediate estimate with no documents and no credit impact. For a real funding plan, use the comprehensive analysis above.</p>
           </div>
+          <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-[#f8faf9] shadow-[0_24px_70px_-45px_rgba(15,23,42,0.35)] sm:rounded-[1.75rem]">
+            <div className="border-b border-slate-200 bg-[#0a2231] px-4 py-3 text-white sm:flex sm:items-center sm:justify-between sm:px-5"><div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-amber-300" /><p className="text-sm font-extrabold">Test a loan request</p></div><p className="mt-1 text-xs text-slate-300 sm:mt-0">Free • No credit pull • No documents</p></div>
+            <div className="p-1.5 sm:p-3"><DscrQuickCalculator embedded compactMobileLayout analyticsPageTemplate="cash_flow_analysis" analyticsPlacement="cash_flow_embedded_calculator" /></div>
+          </div>
+        </div>
+      </section>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-3">
-            {whyItMatters.map((item) => {
+      <section className="home-ink-panel relative overflow-hidden bg-[#081b28] py-9 text-white sm:py-11" data-cashflow-reveal data-analytics-section="bank_level_detail" data-analytics-label="Bank-Level Detail">
+        <div className="home-noise pointer-events-none absolute inset-0 opacity-[0.08]" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <SectionHeading light eyebrow="What bank-level means" title="The kind of cash-flow analysis a bank would run for a business loan." description="Banks do not evaluate repayment strength from one month or one unadjusted number. They review historical and year-to-date performance, verify existing debt, calculate the proposed payment, and consider documented add-backs to arrive at lender-adjusted cash flow and DSCR. Our comprehensive workflow guides you through that same type of analysis and organizes the results before you apply. It does not guarantee approval, but it helps you present a much clearer starting picture." />
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {bankLevelFeatures.map((item) => {
               const Icon = item.icon;
-              return (
-                <article
-                  key={item.title}
-                  className="home-tilt home-stagger group flex h-full flex-col rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-lg sm:p-5"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 transition group-hover:bg-cyan-100">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="mt-3 text-lg font-extrabold tracking-[-0.03em] text-slate-950 sm:text-xl">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
-                </article>
-              );
+              return <article key={item.title} className="home-stagger rounded-2xl border border-white/10 bg-white/[0.05] p-4"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-amber-300"><Icon className="h-4 w-4" /></div><h3 className="mt-3 text-base font-extrabold text-white">{item.title}</h3><p className="mt-1.5 text-sm leading-5 text-slate-300">{item.description}</p></article>;
             })}
           </div>
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden bg-slate-950 py-8 text-white sm:py-12" data-cashflow-reveal data-analytics-section="two_paths" data-analytics-label="Two Paths">
-        <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_16%_18%,rgba(6,182,212,0.18),transparent_24%),radial-gradient(circle_at_82%_14%,rgba(14,165,233,0.16),transparent_22%),radial-gradient(circle_at_76%_82%,rgba(251,191,36,0.12),transparent_26%)]" />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="home-reveal max-w-4xl">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Two Paths</p>
-            <h2 className="mt-2 text-2xl font-black sm:text-4xl">Start with the fast read, then go deeper when the deal deserves it.</h2>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
-              Start with the quick first-pass qualification check, then move into the deeper lender-facing review when
-              the deal looks worth pursuing.
-            </p>
-          </div>
-
-          <div className="mt-5 grid gap-4 xl:grid-cols-2">
-            <article className="home-stagger group flex h-full flex-col rounded-[2rem] border border-white/10 bg-white/[0.04] p-4 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.8)] backdrop-blur sm:p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
-                  Free Start
-                </span>
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white">
-                  <Clock3 className="h-5 w-5" />
-                </div>
-              </div>
-              <h3 className="mt-3 text-xl font-black tracking-[-0.04em] text-white sm:text-2xl">Quick DSCR Check</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                Best for getting a clean answer fast on whether the request looks weak, tight, or reasonably supportable.
-              </p>
-              <div className="mt-3 grid gap-2.5">
-                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <p className="text-sm font-semibold text-white">What it does</p>
-                  <p className="mt-1.5 text-sm leading-6 text-slate-300">
-                    Estimates DSCR using your monthly income, current debt payments, and the loan request you want to test.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <p className="text-sm font-semibold text-white">Best when</p>
-                  <p className="mt-1.5 text-sm leading-6 text-slate-300">
-                    You want to know whether it is worth spending more time on this deal before doing deeper work.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <p className="text-sm font-semibold text-white">What you need</p>
-                  <p className="mt-1.5 text-sm leading-6 text-slate-300">Just your monthly net income, debt payments, and loan request. No documents.</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleScrollToCalculator('two_paths', 'cashflow_page_two_paths_quick_check', 'Run The Free Check')}
-                className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 sm:text-base"
-                id="cashflow-page-quick-path-cta"
-              >
-                Run The Free Check
-                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-              </button>
-            </article>
-
-            <article className="home-stagger relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-emerald-300/25 bg-[linear-gradient(135deg,rgba(16,185,129,0.18)_0%,rgba(255,255,255,0.06)_42%,rgba(14,165,233,0.08)_100%)] p-4 shadow-[0_30px_80px_-44px_rgba(16,185,129,0.4)] backdrop-blur sm:p-5">
-              <div className="absolute right-4 top-4 rounded-full bg-emerald-300 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-950">
-                Free With Account
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
-                  Full Review
-                </span>
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white">
-                  <LineChart className="h-5 w-5" />
-                </div>
-              </div>
-              <h3 className="mt-3 text-xl font-black tracking-[-0.04em] text-white sm:text-2xl">Comprehensive Cash Flow Analysis</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-200">
-                Best for borrowers who want a stronger lender-style read, more context around repayment strength, and a report they can actually build around.
-              </p>
-
-              <div className="mt-3 rounded-[1.5rem] border border-emerald-300/20 bg-black/15 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-200">Complete analysis</p>
-                    <p className="mt-1 text-3xl font-black tracking-[-0.05em] text-white">Free</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-slate-200">Free account required</p>
-                    <p className="mt-1 text-sm font-semibold text-emerald-100">Includes both PDF reports</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-3 grid gap-2.5">
-                {fullAnalysisDetails.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.title} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-emerald-200">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-white">{item.title}</p>
-                          <p className="mt-1.5 text-sm leading-6 text-slate-200">{item.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleStartComprehensiveAnalysis('two_paths', 'cashflow_page_two_paths_full_analysis', 'Start Free Bank-Level Analysis')}
-                className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 sm:text-base"
-                id="cashflow-page-full-path-cta"
-              >
-                Start Free Bank-Level Analysis
-                <ArrowUpRight className="h-4 w-4" />
-              </button>
-            </article>
+          <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.08] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="text-sm font-extrabold text-white">The full analysis is free.</p><p className="mt-1 text-sm text-slate-300">Create an account, complete the guided inputs, and download both reports.</p></div>
+            <button type="button" onClick={() => startComprehensive('bank_level_detail', 'cashflow_detail_comprehensive')} className="group inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#f5c86a] px-5 py-3 text-sm font-extrabold text-[#071824] transition hover:bg-[#ffda88]">Start Free Analysis <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></button>
           </div>
         </div>
       </section>
 
-      <section
-        id="dscr-calculator"
-        ref={calculatorRef}
-        className="scroll-mt-24 bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_50%,#f8fafc_100%)] py-6 sm:py-9"
-        data-cashflow-reveal
-        data-analytics-section="free_dscr_calculator"
-        data-analytics-label="Free DSCR Calculator"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="home-reveal relative overflow-hidden rounded-[2rem] border border-cyan-100 bg-white shadow-[0_32px_90px_-46px_rgba(14,116,144,0.35)]">
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
-            <div className="pointer-events-none absolute -left-12 top-8 h-40 w-40 rounded-full bg-cyan-200/45 blur-3xl" />
-            <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-amber-100/60 blur-3xl" />
-
-            <div className="relative border-b border-cyan-100 bg-[linear-gradient(180deg,rgba(236,254,255,0.95)_0%,rgba(255,255,255,0.98)_100%)] px-2 py-2 sm:px-6 sm:py-4">
-              <div className="mx-auto max-w-6xl text-center">
-                <p className="hidden text-xs font-bold uppercase tracking-[0.2em] text-cyan-700 sm:block">Free Tool</p>
-                <h2 className="mt-1.5 whitespace-nowrap text-2xl font-black text-slate-900 sm:text-[2rem] lg:text-[2.2rem]">Free High-Level DSCR Calculator</h2>
-                <p className="mx-auto mt-1.5 hidden max-w-4xl text-base leading-6 text-slate-600 sm:block">
-                  This is the clean first move. Test the request quickly, see the ratio lenders care about most, and get
-                  an immediate sense of whether the deal looks weak, tight, or comfortably supportable.
-                </p>
-                <p className="mx-auto mt-1 text-xs leading-4 text-slate-500 sm:hidden">
-                  See what loan you may qualify for in 30 seconds.
-                </p>
-                <div className="mt-2 flex flex-wrap justify-center gap-2">
-                  <div className="rounded-xl bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-lg sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm">
-                    100% Free • No Credit Impact • No Docs Needed
-                  </div>
-                  <div className="hidden rounded-2xl border border-cyan-200 bg-white/80 px-4 py-2.5 text-xs font-semibold text-cyan-800 sm:block sm:text-sm">
-                    Designed for a fast first-pass qualification check
-                  </div>
-                  <div className="hidden sm:inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-700">
-                    <Clock3 className="h-4 w-4 text-cyan-700" />
-                    Usually takes under a minute
-                  </div>
-                </div>
-              </div>
+      <section className="bg-[#f7f8f6] py-9 sm:py-11" data-cashflow-reveal data-analytics-section="faq" data-analytics-label="FAQ">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr] lg:items-start">
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-800"><HelpCircle className="h-4 w-4" />Clear answers</div>
+              <h2 className={`${headingFont.className} mt-2 text-2xl font-extrabold tracking-[-0.04em] text-slate-950 sm:text-3xl`}>Know what you are getting before you begin.</h2>
+              <Link href="/faq" onClick={() => trackCashFlowCta('faq', 'cashflow_full_faq', 'View All FAQs', '/faq')} className="mt-4 inline-flex items-center gap-2 text-sm font-extrabold text-cyan-800 hover:text-cyan-950">View all FAQs <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+            <div className="grid gap-3">
+              {faqItems.map((item) => <article key={item.question} className="home-stagger rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_14px_35px_-30px_rgba(15,23,42,0.5)]"><h3 className="text-sm font-extrabold text-slate-950 sm:text-base">{item.question}</h3><p className="mt-1.5 text-sm leading-6 text-slate-600">{item.answer}</p></article>)}
             </div>
           </div>
 
-          <div className="relative px-1.5 py-1.5 sm:px-5 sm:py-3">
-            <DscrQuickCalculator embedded analyticsPageTemplate="cash_flow_analysis" analyticsPlacement="cash_flow_embedded_calculator" />
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white py-8 sm:py-12" data-cashflow-reveal data-analytics-section="full_review_value" data-analytics-label="Full Review Value">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="home-reveal grid gap-5 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
-            <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">What Changes In The Full Review</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-4xl">
-                The deeper analysis gives you more than a score.
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
-                If the deal is close or worth pursuing, the comprehensive version helps you understand the repayment story
-                more like a lender would and gives you something more usable than a single on-screen number.
-              </p>
-              <div className="mt-4 rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 sm:p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Best Use Cases</p>
-                <div className="mt-3 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <p className="text-sm leading-6 text-slate-700">Your quick result is close enough that structure and detail may change the read.</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <p className="text-sm leading-6 text-slate-700">You want clearer guidance before spending time packaging or approaching lenders.</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <p className="text-sm leading-6 text-slate-700">You need a more polished output that is easier to reference and share internally.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              {fullAnalysisDetails.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <article
-                    key={item.title}
-                    className="home-tilt home-stagger group rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-sm transition hover:border-slate-300 hover:shadow-lg sm:p-5"
-                  >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 transition group-hover:bg-cyan-100">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <h3 className="mt-3 text-base font-extrabold tracking-[-0.03em] text-slate-950 sm:text-lg">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
-                  </article>
-                );
-              })}
+          <div className="mt-7 grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_55px_-42px_rgba(15,23,42,0.4)] sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div><p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-800">Ready for a clearer answer?</p><h2 className={`${headingFont.className} mt-2 text-xl font-extrabold tracking-[-0.03em] text-slate-950 sm:text-2xl`}>Run the free bank-level analysis or talk through your next step.</h2></div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button type="button" onClick={() => startComprehensive('faq', 'cashflow_bottom_comprehensive')} className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0b3345] px-5 py-3 text-sm font-extrabold text-white transition hover:bg-[#0d4056]">Start Free Analysis <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></button>
+              <button type="button" onClick={() => { trackCashFlowCta('faq', 'cashflow_contact', 'Talk With Our Team', '#contact-modal'); setIsContactModalOpen(true); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 px-5 py-3 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50"><Users className="h-4 w-4" />Talk With Our Team</button>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="bg-slate-50 py-8 sm:py-12" data-cashflow-reveal data-analytics-section="comparison_table" data-analytics-label="Comparison Table">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="home-reveal max-w-4xl">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-700">Compare The Paths</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-4xl">Quick estimate versus full lender-facing review.</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
-              Both matter, but they solve different problems. One tells you whether the deal feels close. The other helps
-              you decide what to actually do next.
-            </p>
-          </div>
-
-          <div className="mt-5 home-stagger">
-            <ComparisonTable />
-          </div>
-        </div>
-      </section>
-
-      <div data-cashflow-reveal data-analytics-section="testimonials" data-analytics-label="Testimonials" className="home-reveal">
-        <Testimonials />
-      </div>
-
-      <section className="bg-[linear-gradient(180deg,#ffffff_0%,#eff6ff_100%)] py-8 sm:py-12" data-cashflow-reveal data-analytics-section="faq_preview" data-analytics-label="FAQ Preview">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="home-reveal flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/80 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-800 shadow-sm backdrop-blur">
-                <HelpCircle className="h-4 w-4" />
-                Common Questions
-              </p>
-              <h2 className="mt-3 text-2xl font-black text-slate-900 sm:text-4xl">A few fast answers before you move forward.</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
-                Here are the practical questions most borrowers ask before they move from a quick DSCR check into a
-                deeper cash flow review.
-              </p>
-            </div>
-
-            <Link
-              href="/faq"
-              onClick={() => trackCashFlowCta('faq_preview', 'cashflow_page_visit_full_faq', 'Visit Full FAQ', '/faq')}
-              className="home-magnetic inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 sm:w-fit sm:text-base"
-              data-cashflow-magnetic
-            >
-              Visit Full FAQ
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="mt-5 grid gap-3 lg:grid-cols-3">
-            {faqItems.map((item) => (
-              <article
-                key={item.question}
-                className="home-tilt home-stagger rounded-[1.75rem] border border-slate-200 bg-white/92 p-4 shadow-sm backdrop-blur transition hover:border-slate-300 hover:shadow-lg sm:p-5"
-              >
-                <h3 className="text-base font-extrabold tracking-[-0.03em] text-slate-950 sm:text-lg">{item.question}</h3>
-                <p className="mt-2.5 text-sm leading-6 text-slate-600">{item.answer}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[linear-gradient(180deg,#ffffff_0%,#eff6ff_100%)] py-8 sm:py-12" data-cashflow-reveal data-analytics-section="lead_interest_form" data-analytics-label="Lead Interest Form">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="home-reveal mx-auto max-w-5xl">
-            <LeadInterestForm source="cash-flow-analysis-embedded" />
-          </div>
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden bg-slate-950 py-8 text-white sm:py-12" data-cashflow-reveal data-analytics-section="next_move" data-analytics-label="Next Move">
-        <div className="pointer-events-none absolute inset-0 opacity-55 [background-image:radial-gradient(circle_at_16%_20%,rgba(6,182,212,0.18),transparent_24%),radial-gradient(circle_at_82%_16%,rgba(251,191,36,0.14),transparent_22%),radial-gradient(circle_at_72%_84%,rgba(16,185,129,0.14),transparent_28%)]" />
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
-            <div className="home-reveal">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Next Move</p>
-              <h2 className="mt-2 text-2xl font-black sm:text-4xl">Turn the analysis into momentum.</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
-                The goal is not just to calculate a number. It is to understand the request, decide whether it works, and
-                take the smartest next step toward financing.
-              </p>
-
-              <div className="mt-5 grid gap-2.5">
-                {closingSteps.map((step) => (
-                  <div
-                    key={step.label}
-                    className="home-stagger rounded-[1.5rem] border border-white/10 bg-white/[0.04] px-4 py-3.5 backdrop-blur-sm"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-sm font-bold text-cyan-200">
-                        {step.label}
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-white">{step.title}</h3>
-                        <p className="mt-1.5 text-sm leading-6 text-slate-300">{step.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="home-reveal rounded-[2rem] border border-white/10 bg-white/[0.05] p-4 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.82)] backdrop-blur-md sm:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Ready To Move?</p>
-                  <h3 className="mt-2 text-xl font-black tracking-[-0.04em] text-white sm:text-2xl">Pick the next step that matches your situation.</h3>
-                </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
-                  <Rocket className="h-5 w-5" />
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Fastest move</p>
-                  <p className="mt-2 text-sm font-semibold text-white">Run the free calculator now</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Deepest review</p>
-                  <p className="mt-2 text-sm font-semibold text-white">Use the full analysis for deeper clarity</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300">Human help</p>
-                  <p className="mt-2 text-sm font-semibold text-white">Talk with us if you want support navigating it</p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => handleScrollToCalculator('next_move', 'cashflow_page_bottom_quick_analysis', 'Start Quick Analysis')}
-                  className="home-magnetic inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-slate-100 sm:text-base"
-                  id="cashflow-page-bottom-cta-calculator"
-                  data-cashflow-magnetic
-                >
-                  Start Quick Analysis
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStartComprehensiveAnalysis('next_move', 'cashflow_page_bottom_full_analysis', 'Start Free Bank-Level Analysis')}
-                  className="home-magnetic inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3.5 text-sm font-bold text-slate-950 shadow-[0_18px_50px_-30px_rgba(52,211,153,0.9)] transition hover:bg-emerald-300 sm:text-base"
-                  id="cashflow-page-bottom-cta-full-analysis"
-                  data-cashflow-magnetic
-                >
-                  Start Comprehensive Analysis
-                  <BadgeDollarSign className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row">
-                <Link
-                  href="/loan-services"
-                  onClick={() => trackCashFlowCta('next_move', 'cashflow_page_explore_packaging', 'Explore Loan Packaging', '/loan-services')}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 sm:text-base"
-                >
-                  Explore Loan Packaging
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    trackCashFlowCta('next_move', 'cashflow_page_talk_with_team', 'Talk With Our Team', '#contact-modal');
-                    setIsContactModalOpen(true);
-                  }}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/15 sm:text-base"
-                >
-                  Talk With Our Team
-                  <Wallet className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <ContactFormModal
-        isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
-        source="cash-flow-analysis-modal"
-      />
+      <ContactFormModal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} source="cash-flow-analysis-modal" />
     </div>
   );
 }
 
 export default function CashFlowAnalysisPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-slate-50 px-4 py-20 text-center text-slate-600">
-          Loading cash flow analysis...
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="min-h-screen bg-[#f7f8f6] px-4 py-20 text-center text-slate-600">Loading cash flow analysis...</div>}>
       <CashFlowAnalysisInner />
     </Suspense>
   );

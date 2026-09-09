@@ -146,9 +146,6 @@ const Header = () => {
     pathname === '/loan-packaging' ||
     pathname.startsWith('/loan-packaging/');
 
-  const hideAffordabilityCta =
-    isPackagingWorkspace || pathname.startsWith('/comprehensive-cash-flow-analysis');
-
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [canAccessComprehensive, setCanAccessComprehensive] = useState(false);
@@ -386,15 +383,6 @@ const Header = () => {
             </>
           ) : (
             <>
-              {!hideAffordabilityCta && !hasPaidComprehensiveAccess ? (
-                <Link
-                  href="/cash-flow-analysis?showCalculator=true"
-                  className="rounded-full bg-gradient-to-r from-slate-900 to-sky-900 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:from-slate-800 hover:to-sky-800"
-                  id="header-cta-find-out-free"
-                >
-                  Free DSCR Check
-                </Link>
-              ) : null}
               <Link
                 href={comprehensiveNavHref}
                 className={
@@ -514,17 +502,6 @@ const Header = () => {
               </div>
 
               <nav className="flex flex-col gap-2 px-4 py-4">
-                {!isPackagingWorkspace && !hideAffordabilityCta && !hasPaidComprehensiveAccess ? (
-                  <Link
-                    href="/cash-flow-analysis?showCalculator=true"
-                    className="mb-2 rounded-xl bg-gradient-to-r from-slate-900 to-sky-900 px-4 py-3 text-center text-base font-bold text-white"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    id="header-mobile-cta-find-out-free"
-                  >
-                    Free DSCR Check
-                  </Link>
-                ) : null}
-
                 {isPackagingWorkspace ? (
                   <>
                     {isLoggedIn && isAdmin ? (

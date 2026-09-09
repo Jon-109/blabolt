@@ -2,8 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+
+import ContactFormModal from '@/app/(components)/shared/ContactFormModal';
 
 const Footer = () => {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const pathname = usePathname();
 
   if (pathname.startsWith('/report/print/') || pathname.startsWith('/report/template/')) return null;
@@ -71,6 +75,11 @@ const Footer = () => {
             <ul className="space-y-2 text-gray-400">
               <li>Email: jonathan@businesslendingadvocate.com</li>
               <li>Phone: <a href="tel:210-370-7402" className="hover:underline">210-370-7402</a></li>
+              <li>
+                <button type="button" onClick={() => setIsContactModalOpen(true)} className="text-gray-400 transition-colors hover:text-white hover:underline">
+                  Contact Form
+                </button>
+              </li>
             </ul>
           </div>
         </div>
@@ -79,6 +88,7 @@ const Footer = () => {
           <p>&copy; {new Date().getFullYear()} Business Lending Advocate. All rights reserved.</p>
         </div>
       </div>
+      <ContactFormModal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} source="footer-funding-interest" />
     </footer>
   );
 };

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Sora } from 'next/font/google';
+import { useState } from 'react';
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -11,6 +12,7 @@ import {
   FileStack,
   FolderCheck,
   Handshake,
+  Info,
   LayoutDashboard,
   PenLine,
   Send,
@@ -18,9 +20,11 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 import GuidedTemplateDemo from '@/app/(components)/GuidedTemplateDemo';
+import ContactFormModal from '@/app/(components)/shared/ContactFormModal';
 import LoanPackagingDemo from '@/app/(components)/LoanPackagingDemo';
 import TemplateLinkGrid from '@/app/(components)/TemplateLinkGrid';
 import LoanServiceReadinessModal from '@/app/(components)/LoanServiceReadinessModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/(components)/ui/tooltip';
 
 const headingFont = Sora({ subsets: ['latin'], weight: ['600', '700', '800'], display: 'swap' });
 
@@ -43,6 +47,8 @@ function SectionHeading({ eyebrow, title, description, light = false, centered =
 }
 
 export default function LoanServicesPageClient() {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
   return (
     <div className="overflow-hidden bg-[#f7f8f6] text-slate-950">
       <section className="home-dossier-bg relative overflow-hidden bg-[#071824] text-white">
@@ -51,7 +57,7 @@ export default function LoanServicesPageClient() {
           <div className="mx-auto max-w-6xl text-center">
             <div className="inline-flex items-center gap-2 border-x-2 border-amber-300 px-3 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-100"><BriefcaseBusiness className="h-4 w-4" />Loan packaging and lender support</div>
             <h1 className={`${headingFont.className} mx-auto mt-4 max-w-[28ch] text-[2.35rem] font-extrabold leading-[0.98] tracking-[-0.045em] text-balance sm:text-5xl lg:text-[3.45rem]`}>Build the lender file before you ask a lender to believe the deal.</h1>
-            <p className="mx-auto mt-4 max-w-5xl text-[15px] leading-6 text-slate-300 sm:text-lg sm:leading-7">Organize the request, complete the financial documents lenders expect, and turn your business details, use of funds, strengths, and repayment plan into a polished lender cover letter—then deliver one coherent package with optional lender matching and follow-up.</p>
+            <p className="mx-auto mt-4 max-w-5xl text-[15px] leading-6 text-slate-300 sm:text-lg sm:leading-7">Organize the request, complete the financial documents lenders expect, and turn your business details, use of funds, strengths, and repayment plan into a polished lender cover letter, and then deliver one coherent package with optional lender matching and follow-up.</p>
             <div className="mx-auto mt-6 grid max-w-2xl gap-2.5 sm:grid-cols-2">
               <LoanServiceReadinessModal className="group inline-flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-[#f5c86a] px-5 text-sm font-extrabold text-[#071824] hover:bg-[#ffda88]">Begin Loan Packaging <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></LoanServiceReadinessModal>
               <LoanServiceReadinessModal initialIntent="brokering" className="group inline-flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-white/20 bg-white/[0.06] px-5 text-sm font-bold text-white hover:bg-white/[0.1]">Explore Loan Brokering <Handshake className="h-4 w-4" /></LoanServiceReadinessModal>
@@ -99,12 +105,12 @@ export default function LoanServicesPageClient() {
         </div>
       </section>
 
-      <section className="bg-[#f7f8f6] py-9 sm:py-11">
+      <section id="support-levels" className="scroll-mt-20 bg-[#f7f8f6] py-9 sm:py-11">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionHeading centered eyebrow="Choose your support level" title="Use the dashboard yourself—or add lender outreach." description="Both paths begin with the same organized package. The difference is whether you want to take that file forward yourself or have us help manage lender conversations." />
+          <SectionHeading centered eyebrow="Choose your support level" title="Use the dashboard yourself, or let us manage lender outreach." description="Both paths include the same organized package. Choose Loan Packaging to contact lenders yourself, or Loan Brokering for hands-on lender matching, outreach, and follow-up through the financing process." />
           <div className="mx-auto mt-6 grid max-w-5xl gap-4 lg:grid-cols-2">
             <article className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-800">Done with you</p><h3 className="mt-2 text-2xl font-black text-slate-950">Loan Packaging</h3></div><div className="text-right"><p className="text-3xl font-black text-slate-950">$499</p><p className="text-xs text-slate-500">One-time fee</p></div></div><p className="mt-3 text-sm leading-6 text-slate-600">For owners who want the complete software workflow and plan to handle lender outreach themselves.</p><ul className="mt-4 flex-1 space-y-2">{['Full loan-packaging dashboard', 'All five guided templates', 'Purpose-specific document checklist', 'Guided lender cover-letter generator', 'Package ZIP and secure lender links'].map((item) => <li key={item} className="flex items-start gap-2 text-sm text-slate-700"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{item}</li>)}</ul><LoanServiceReadinessModal className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 text-sm font-extrabold text-white hover:bg-slate-700">Begin Loan Packaging <ArrowRight className="h-4 w-4" /></LoanServiceReadinessModal></article>
-            <article className="relative flex flex-col overflow-hidden rounded-2xl border border-emerald-300 bg-emerald-50/60 p-5 shadow-sm sm:p-6"><div className="absolute right-0 top-0 rounded-bl-xl bg-emerald-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-white">No upfront packaging fee</div><div className="flex items-start justify-between gap-3 pt-4"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-800">Done with you + us</p><h3 className="mt-2 text-2xl font-black text-slate-950">Loan Brokering</h3></div><div className="text-right"><p className="text-3xl font-black text-slate-950">1%</p><p className="max-w-[130px] text-xs leading-4 text-slate-500">Of funded amount, at closing only</p></div></div><p className="mt-3 text-sm leading-6 text-slate-600">For owners who want the full package plus lender matching, outreach, and support through the deal process.</p><ul className="mt-4 flex-1 space-y-2">{['Everything included in Loan Packaging', 'No separate $499 upfront charge', 'Lender matching for the request', 'Outreach and underwriting follow-up', 'Fee due only if the loan closes'].map((item) => <li key={item} className="flex items-start gap-2 text-sm text-slate-700"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{item}</li>)}</ul><LoanServiceReadinessModal initialIntent="brokering" className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 text-sm font-extrabold text-white hover:bg-emerald-600">Begin Loan Brokering <Handshake className="h-4 w-4" /></LoanServiceReadinessModal></article>
+            <article className="relative flex flex-col rounded-2xl border border-emerald-300 bg-emerald-50/60 p-5 shadow-sm sm:p-6"><div className="absolute right-0 top-0 rounded-bl-xl rounded-tr-2xl bg-emerald-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-white">No upfront broker fee</div><div className="flex items-start justify-between gap-3 pt-4"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-800">Done with you + us</p><h3 className="mt-2 text-2xl font-black text-slate-950">Loan Brokering</h3></div><div className="text-right"><div className="flex items-center justify-end gap-1.5"><p className="text-3xl font-black text-slate-950">1%</p><TooltipProvider delayDuration={100}><Tooltip><TooltipTrigger asChild><button type="button" aria-label="How the 1% broker fee works" className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-white text-emerald-800 transition hover:border-emerald-500 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2"><Info className="h-3 w-3" /></button></TooltipTrigger><TooltipContent side="top" className="max-w-[300px] border-emerald-200 bg-slate-950 p-3 text-left text-xs leading-5 text-white shadow-xl"><p><strong>It is a success fee, not an upfront charge.</strong> You owe the 1% only if financing closes through a lender we introduce. We include the estimated fee in your requested use of funds so it can generally be paid from closing proceeds; final treatment depends on the lender.</p></TooltipContent></Tooltip></TooltipProvider></div><p className="max-w-[190px] text-xs leading-4 text-slate-500">Of the funded amount, due only when funding closes</p></div></div><p className="mt-3 text-sm leading-6 text-slate-600">For owners who want us to help carry the process from a lender-ready package through matching, outreach, and lender follow-up.</p><ul className="mt-4 flex-1 space-y-2">{['Everything included in Loan Packaging', 'No separate $499 upfront charge', 'Lenders matched to your request', 'Outreach and lender communication managed', 'Underwriting follow-up and deal support', '1% fee due only if financing closes'].map((item) => <li key={item} className="flex items-start gap-2 text-sm text-slate-700"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{item}</li>)}</ul><LoanServiceReadinessModal initialIntent="brokering" className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 text-sm font-extrabold text-white hover:bg-emerald-600">Begin Loan Brokering <Handshake className="h-4 w-4" /></LoanServiceReadinessModal></article>
           </div>
         </div>
       </section>
@@ -118,8 +124,9 @@ export default function LoanServicesPageClient() {
 
       <section className="relative overflow-hidden bg-[#071824] py-9 text-white sm:py-11">
         <div className="home-noise pointer-events-none absolute inset-0 opacity-[0.1]" />
-        <div className="relative mx-auto max-w-5xl px-4 text-center sm:px-6"><p className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">Start with a cleaner file</p><h2 className={`${headingFont.className} mx-auto mt-2 max-w-[24ch] text-3xl font-extrabold leading-[1.04] tracking-[-0.04em] text-balance sm:text-4xl`}>Give lenders one organized request instead of a trail of attachments.</h2><p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">Choose the dashboard if you want to manage outreach yourself, or choose brokering if you want lender matching and follow-up added to the same package.</p><div className="mx-auto mt-5 grid max-w-2xl gap-2 sm:grid-cols-2"><LoanServiceReadinessModal className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#f5c86a] px-4 text-sm font-extrabold text-[#071824] hover:bg-[#ffda88]">Start Packaging <FolderCheck className="h-4 w-4" /></LoanServiceReadinessModal><Link href="/loan-packaging-demo" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] px-4 text-sm font-bold text-white hover:bg-white/[0.1]">Explore Interactive Demo <ArrowRight className="h-4 w-4" /></Link></div></div>
+        <div className="relative mx-auto max-w-5xl px-4 text-center sm:px-6"><p className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">Start with a cleaner file</p><h2 className={`${headingFont.className} mx-auto mt-2 max-w-[24ch] text-3xl font-extrabold leading-[1.04] tracking-[-0.04em] text-balance sm:text-4xl`}>Give lenders one organized request instead of a trail of attachments.</h2><p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">Choose the dashboard, explore the workflow, or tell us about your request if you want help deciding between packaging and lender support.</p><div className="mx-auto mt-5 grid max-w-4xl gap-2 sm:grid-cols-3"><LoanServiceReadinessModal className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#f5c86a] px-4 text-sm font-extrabold text-[#071824] hover:bg-[#ffda88]">Start Packaging <FolderCheck className="h-4 w-4" /></LoanServiceReadinessModal><Link href="/loan-packaging-demo" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] px-4 text-sm font-bold text-white hover:bg-white/[0.1]">Explore Interactive Demo <ArrowRight className="h-4 w-4" /></Link><button type="button" onClick={() => setIsContactModalOpen(true)} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-cyan-200/25 bg-cyan-200/[0.09] px-4 text-sm font-bold text-white hover:bg-cyan-200/[0.15]">Discuss My Loan Request <Handshake className="h-4 w-4" /></button></div></div>
       </section>
+      <ContactFormModal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} source="loan-services-funding-interest" />
     </div>
   );
 }

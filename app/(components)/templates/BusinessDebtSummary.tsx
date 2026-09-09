@@ -67,7 +67,7 @@ export default function BusinessDebtSummary({ data }: { data: BusinessDebtSummar
   });
 
   return (
-    <PrintShell title={`Business Debt Summary — As of ${data.asOfDate}`}>
+    <PrintShell title={`Business Debt Summary as of ${data.asOfDate}`}>
       <section style={{ marginBottom: 16 }}>
         <h2 style={{ fontSize: 14, marginBottom: 8, marginTop: 0 }}>Business Information</h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, fontSize: 11 }}>

@@ -765,7 +765,7 @@ const CashFlowReport: React.FC<CashFlowReportProps> = ({ loanInfo, financials, d
                 <span className="text-sm font-bold text-blue-900 leading-tight">Net Income</span>
               </div>
               <div className="text-gray-700 text-sm md:text-base leading-snug">
-                Money left after all regular costs—COGS, expenses, interest, and taxes. Shows what you truly earn from your business after everything is paid.
+                Money left after all regular costs: COGS, expenses, interest, and taxes. Shows what you truly earn from your business after everything is paid.
               </div>
             </div>
             {/* EBITDA Box */}

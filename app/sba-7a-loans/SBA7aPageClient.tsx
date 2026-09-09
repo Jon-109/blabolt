@@ -29,6 +29,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 import GuidedTemplateDemo from '@/app/(components)/GuidedTemplateDemo';
+import ContactFormModal from '@/app/(components)/shared/ContactFormModal';
 import LoanPackagingDemo from '@/app/(components)/LoanPackagingDemo';
 import LoanServiceReadinessModal from '@/app/(components)/LoanServiceReadinessModal';
 import TemplateLinkGrid from '@/app/(components)/TemplateLinkGrid';
@@ -46,7 +47,7 @@ const uses: Array<{ title: string; text: string; icon: LucideIcon }> = [
 
 const benefits = [
   ['Longer repayment terms', 'Up to 10 years for many business purposes and up to 25 years for qualifying real estate can reduce the monthly payment compared with shorter-term financing.'],
-  ['Lender risk sharing', 'The SBA guarantee covers part of the lender’s loss—not the borrower’s obligation—which can give participating lenders more flexibility on an otherwise sound request.'],
+  ['Lender risk sharing', 'The SBA guarantee covers part of the lender’s loss, not the borrower’s obligation, which can give participating lenders more flexibility on an otherwise sound request.'],
   ['Broad use of proceeds', 'One program can support working capital, equipment, real estate, refinancing, ownership changes, or a combination of eligible purposes.'],
   ['Negotiated, capped rates', 'Rates are negotiated with the lender and may be fixed or variable, but SBA rules establish maximums.'],
   ['Equity flexibility', 'There is no universal 10% down rule for every 7(a) request. The required injection depends on the transaction and lender policy.'],
@@ -67,7 +68,7 @@ const processSteps = [
   ['Test repayment capacity', 'Review historical and year-to-date cash flow, existing debt, and the proposed payment before approaching lenders.'],
   ['Build the borrower file', 'Prepare business financials, tax returns, ownership records, debt schedules, and supporting transaction documents.'],
   ['Prepare guarantor information', 'Owners commonly provide personal tax returns, a personal debt summary, and SBA Form 413 or equivalent financial information.'],
-  ['Choose a participating lender', 'You apply through an SBA-approved lender—not directly to SBA. Lender fit matters because credit standards and preferred industries differ.'],
+  ['Choose a participating lender', 'You apply through an SBA-approved lender, not directly to SBA. Lender fit matters because credit standards and preferred industries differ.'],
   ['Underwriting, approval, and closing', 'The lender verifies eligibility, repayment, management, collateral, and documentation before approval and disbursement.'],
 ];
 
@@ -95,6 +96,7 @@ function SectionHeading({ eyebrow, title, description, light = false }: { eyebro
 }
 
 export default function SBA7aPageClient() {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [eligibilityOpen, setEligibilityOpen] = useState(false);
   const [checkedEligibility, setCheckedEligibility] = useState<boolean[]>(Array(eligibilityItems.length).fill(false));
@@ -130,7 +132,7 @@ export default function SBA7aPageClient() {
             {[
               ['1', 'You apply to a lender', 'The lender evaluates the request, credit, cash flow, owners, and documents.', Building2],
               ['2', 'SBA provides a guaranty', 'If program rules are met, SBA guarantees an eligible portion of the lender’s exposure.', ShieldCheck],
-              ['3', 'You owe the full loan', 'The guarantee protects the lender—not the borrower. Repayment and guarantees still apply.', Handshake],
+              ['3', 'You owe the full loan', 'The guarantee protects the lender, not the borrower. Repayment and guarantees still apply.', Handshake],
             ].map(([number, title, text, icon], index) => {
               const Icon = icon as LucideIcon;
               return <div key={number as string} className="contents"><article className="rounded-2xl border border-slate-200 bg-[#f8faf9] p-4"><div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0b3345] text-white"><Icon className="h-4 w-4" /></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-800">Step {number as string}</p><h3 className="mt-0.5 text-base font-extrabold text-slate-950">{title as string}</h3></div></div><p className="mt-2 text-sm leading-6 text-slate-600">{text as string}</p></article>{index < 2 ? <ArrowRight className="mx-auto hidden h-5 w-5 text-slate-300 lg:block" /> : null}</div>;
@@ -149,7 +151,7 @@ export default function SBA7aPageClient() {
 
       <section className="bg-white py-9 sm:py-11">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionHeading eyebrow="The honest comparison" title="Why borrowers choose 7(a)—and what they accept in return." description="The program can improve structure and access, but the trade is a more documented, rules-driven underwriting process." />
+          <SectionHeading eyebrow="The honest comparison" title="Why borrowers choose 7(a) and what they accept in return." description="The program can improve structure and access, but the trade is a more documented, rules-driven underwriting process." />
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/45"><div className="flex items-center gap-2 border-b border-emerald-200 bg-emerald-50 px-4 py-3"><CheckCircle2 className="h-5 w-5 text-emerald-700" /><h3 className="font-extrabold text-emerald-950">Potential advantages</h3></div><div className="grid gap-px bg-emerald-100 sm:grid-cols-2">{benefits.map(([title, text]) => <div key={title} className="bg-white p-4"><p className="text-sm font-extrabold text-slate-950">{title}</p><p className="mt-1 text-xs leading-5 text-slate-600">{text}</p></div>)}</div></div>
             <div className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/45"><div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-3"><Scale className="h-5 w-5 text-amber-800" /><h3 className="font-extrabold text-amber-950">Practical tradeoffs</h3></div><div className="grid gap-px bg-amber-100 sm:grid-cols-2">{tradeoffs.map(([title, text]) => <div key={title} className="bg-white p-4"><p className="text-sm font-extrabold text-slate-950">{title}</p><p className="mt-1 text-xs leading-5 text-slate-600">{text}</p></div>)}</div></div>
@@ -202,7 +204,7 @@ export default function SBA7aPageClient() {
 
       <section id="eligibility" className="scroll-mt-20 bg-[#f3f1ea] py-9 sm:py-11">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <button type="button" onClick={() => setEligibilityOpen((current) => !current)} aria-expanded={eligibilityOpen} className="flex w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm sm:p-5"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-800">SBA 7(a) eligibility check</p><h2 className={`${headingFont.className} mt-1 text-2xl font-extrabold tracking-[-0.035em] text-slate-950 sm:text-3xl`}>Could your business be eligible for an SBA 7(a) loan?</h2><p className="mt-1 text-sm text-slate-600">Answer six quick questions to identify whether the basic program requirements appear to fit. This is educational—not a lender decision or approval.</p></div><ChevronDown className={`h-5 w-5 shrink-0 text-slate-500 transition ${eligibilityOpen ? 'rotate-180' : ''}`} /></button>
+          <button type="button" onClick={() => setEligibilityOpen((current) => !current)} aria-expanded={eligibilityOpen} className="flex w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm sm:p-5"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-800">SBA 7(a) eligibility check</p><h2 className={`${headingFont.className} mt-1 text-2xl font-extrabold tracking-[-0.035em] text-slate-950 sm:text-3xl`}>Could your business be eligible for an SBA 7(a) loan?</h2><p className="mt-1 text-sm text-slate-600">Answer six quick questions to identify whether the basic program requirements appear to fit. This is educational, not a lender decision or approval.</p></div><ChevronDown className={`h-5 w-5 shrink-0 text-slate-500 transition ${eligibilityOpen ? 'rotate-180' : ''}`} /></button>
           {eligibilityOpen ? <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="grid gap-2 sm:grid-cols-2">{eligibilityItems.map((item, index) => <button key={item} type="button" onClick={() => setCheckedEligibility((current) => current.map((checked, itemIndex) => itemIndex === index ? !checked : checked))} aria-pressed={checkedEligibility[index]} className={`flex items-start gap-3 rounded-xl border p-3 text-left text-xs font-semibold leading-5 transition ${checkedEligibility[index] ? 'border-emerald-200 bg-emerald-50 text-emerald-950' : 'border-slate-200 bg-slate-50 text-slate-700'}`}><span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checkedEligibility[index] ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-white'}`}>{checkedEligibility[index] ? <Check className="h-3 w-3" /> : null}</span>{item}</button>)}</div><div className={`mt-4 rounded-xl border p-3 text-sm leading-6 ${eligibilityCount === eligibilityItems.length ? 'border-emerald-200 bg-emerald-50 text-emerald-950' : 'border-amber-200 bg-amber-50 text-amber-950'}`}><strong>{eligibilityCount} of {eligibilityItems.length} fundamentals selected.</strong> {eligibilityMessage}</div></div> : null}
         </div>
       </section>
@@ -217,8 +219,9 @@ export default function SBA7aPageClient() {
 
       <section className="relative overflow-hidden bg-[#071824] py-9 text-white sm:py-11">
         <div className="home-noise pointer-events-none absolute inset-0 opacity-[0.1]" />
-        <div className="relative mx-auto max-w-5xl px-4 text-center sm:px-6"><p className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">Prepare before you apply</p><h2 className={`${headingFont.className} mx-auto mt-2 max-w-[22ch] text-3xl font-extrabold leading-[1.04] tracking-[-0.04em] sm:text-4xl`}>A stronger SBA request starts with repayment and documentation.</h2><p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">Check the proposed payment for free, then use the readiness screen to decide whether self-directed packaging or no-upfront brokering is the better next step.</p><div className="mx-auto mt-5 grid max-w-2xl gap-2 sm:grid-cols-2"><Link href="/#loan-readiness-check" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f5c86a] px-4 py-3 text-sm font-extrabold text-[#071824]">Run Free DSCR Check <LineChart className="h-4 w-4" /></Link><LoanServiceReadinessModal className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-3 text-sm font-bold text-white hover:bg-white/[0.1]">Begin Loan Process <ArrowRight className="h-4 w-4" /></LoanServiceReadinessModal></div></div>
+        <div className="relative mx-auto max-w-5xl px-4 text-center sm:px-6"><p className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">Prepare before you apply</p><h2 className={`${headingFont.className} mx-auto mt-2 max-w-[22ch] text-3xl font-extrabold leading-[1.04] tracking-[-0.04em] sm:text-4xl`}>A stronger SBA request starts with repayment and documentation.</h2><p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">Check the proposed payment, choose a preparation path, or tell us about the request if you want help identifying the best next step.</p><div className="mx-auto mt-5 grid max-w-4xl gap-2 sm:grid-cols-3"><Link href="/#loan-readiness-check" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#f5c86a] px-4 py-3 text-sm font-extrabold text-[#071824]">Run Free DSCR Check <LineChart className="h-4 w-4" /></Link><LoanServiceReadinessModal className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-3 text-sm font-bold text-white hover:bg-white/[0.1]">Begin Loan Process <ArrowRight className="h-4 w-4" /></LoanServiceReadinessModal><button type="button" onClick={() => setIsContactModalOpen(true)} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-cyan-200/25 bg-cyan-200/[0.09] px-4 py-3 text-sm font-bold text-white hover:bg-cyan-200/[0.15]">Discuss My SBA Request <Handshake className="h-4 w-4" /></button></div></div>
       </section>
+      <ContactFormModal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} source="sba-7a-funding-interest" />
     </div>
   );
 }

@@ -6,7 +6,7 @@ const steps = [
   {
     icon: FileSearch,
     title: "Identify Your Business Need",
-    description: "Your business needs funding—whether for growth, expansion, or new opportunities."
+    description: "Your business needs funding, whether for growth, expansion, or new opportunities."
   },
   {
     icon: LineChart,
@@ -16,7 +16,7 @@ const steps = [
   {
     icon: ClipboardCheck,
     title: "Application Preparation",
-    description: "We build the documents underwriters look for—no paperwork stress."
+    description: "We build the documents underwriters look for, so there’s no paperwork stress."
   },
   {
     icon: HandshakeIcon,

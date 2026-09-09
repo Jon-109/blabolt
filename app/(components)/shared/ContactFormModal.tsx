@@ -35,7 +35,7 @@ export default function ContactFormModal({ isOpen, onClose, source }: ContactFor
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 backdrop-blur-sm sm:p-3"
           onClick={handleBackdropClick}
         >
           <motion.div
@@ -43,7 +43,7 @@ export default function ContactFormModal({ isOpen, onClose, source }: ContactFor
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden"
+            className="relative max-h-[calc(100dvh-1rem)] w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-h-[calc(100dvh-1.5rem)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
@@ -55,7 +55,7 @@ export default function ContactFormModal({ isOpen, onClose, source }: ContactFor
               <X className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
             </button>
 
-            <div className="max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="custom-scrollbar max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-1.5rem)]">
               <LeadInterestForm variant="modal" source={source} />
             </div>
           </motion.div>

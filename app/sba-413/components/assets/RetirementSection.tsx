@@ -54,7 +54,7 @@ export default function RetirementSection({ data, onChange }: RetirementSectionP
     <SectionCard
       icon="🏦"
       title="Retirement Accounts"
-      description="401(k), IRA, SEP—what's the current balance?"
+      description="401(k), IRA, SEP: what's the current balance?"
     >
       <div className="space-y-4">
         {data.retirement_accounts.length === 0 ? (

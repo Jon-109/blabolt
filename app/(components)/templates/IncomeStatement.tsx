@@ -17,7 +17,7 @@ export default function IncomeStatement({ data }: { data: IncomeStatementData })
   } = getIncomeStatementTotals(data);
 
   return (
-    <PrintShell title={`Income Statement — ${data.periodStart} to ${data.periodEnd}`}>
+    <PrintShell title={`Income Statement for ${data.periodStart} to ${data.periodEnd}`}>
       {(data.statementLabel || data.statementType) ? (
         <section style={{ marginBottom: 12, fontSize: 11 }}>
           {data.statementLabel ? <div><strong>Statement Label:</strong> {data.statementLabel}</div> : null}

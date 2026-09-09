@@ -34,12 +34,12 @@ export const LEVEL2_OPTIONS: Record<string, { key: string; label: string; descri
   ],
   refinance: [
     { key: 'debt-consolidation', label: 'Debt Consolidation', description: 'Combining multiple business debts into a single loan with better terms and one monthly payment.', term: '3 years', amortization: '3 years', downPayment: '0%', interestRate: '8%' },
-    { key: 'vehicle-refinance', label: 'Vehicle Refinance', description: 'Replacing your current business vehicle loan with a new one—typically to lower interest rates or monthly payments.', term: '5 years', amortization: '5 years', downPayment: '10%', interestRate: '7%' },
+    { key: 'vehicle-refinance', label: 'Vehicle Refinance', description: 'Replacing your current business vehicle loan with a new one, typically to lower interest rates or monthly payments.', term: '5 years', amortization: '5 years', downPayment: '10%', interestRate: '7%' },
     { key: 'equipment-refinance', label: 'Equipment Refinance', description: 'Refinancing existing equipment loans to improve cash flow or obtain better repayment terms.', term: '5 years', amortization: '5 years', downPayment: '0%', interestRate: '6%' },
     { key: 'real-estate-refinance', label: 'Real Estate Refinance', description: 'Refinancing a commercial property loan to reduce payments, secure a fixed rate, or access equity.', term: '25 years', amortization: '25 years', downPayment: '20%', interestRate: '5%' },
   ],
   'working-capital': [
-    { key: 'working-capital-loan', label: 'Working Capital Loan', description: 'Short-term funding to cover daily business expenses like payroll, rent, or utilities—ideal for managing cash flow.', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '9%' },
+    { key: 'working-capital-loan', label: 'Working Capital Loan', description: 'Short-term funding to cover daily business expenses like payroll, rent, or utilities. It is ideal for managing cash flow.', term: '1 year', amortization: '1 year', downPayment: '0%', interestRate: '9%' },
     { key: 'line-of-credit', label: 'Line of Credit', description: 'Flexible access to funds with interest-only payments. Draw from as needed to manage expenses or seize business opportunities.', term: '1 year', amortization: 'Interest Only', downPayment: '0%', interestRate: '10%' },
   ],
 };

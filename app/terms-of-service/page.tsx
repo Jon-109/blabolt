@@ -63,7 +63,7 @@ export default function TermsOfServicePage() {
                   </tbody>
                 </table>
               </div>
-              <p className="text-gray-700">Promo codes may reduce the price—including to $0—at BLA’s discretion. Prices are shown inclusive of any applicable taxes.</p>
+              <p className="text-gray-700">Promo codes may reduce the price, including to $0, at BLA’s discretion. Prices are shown inclusive of any applicable taxes.</p>
             </section>
 
             <section>
@@ -131,7 +131,7 @@ export default function TermsOfServicePage() {
 
             <section>
               <h2 className="text-xl font-bold text-gray-800 mb-2 mt-6">12. Termination</h2>
-              <p className="text-gray-700">You may stop using the Services at any time. We may suspend or terminate access immediately if you breach these Terms or engage in unlawful conduct. Sections that by their nature should survive—ownership, disclaimers, limitation of liability, dispute resolution—will survive termination.</p>
+              <p className="text-gray-700">You may stop using the Services at any time. We may suspend or terminate access immediately if you breach these Terms or engage in unlawful conduct. Sections that by their nature should survive (ownership, disclaimers, limitation of liability, and dispute resolution) will survive termination.</p>
             </section>
 
             <section>
@@ -149,7 +149,7 @@ export default function TermsOfServicePage() {
               </address>
             </section>
 
-            <div className="pt-6 text-center text-gray-500 text-sm">Thank you for choosing Business Lending Advocate—your trusted partner in preparing lender-ready financial insights.</div>
+            <div className="pt-6 text-center text-gray-500 text-sm">Thank you for choosing Business Lending Advocate as your trusted partner in preparing lender-ready financial insights.</div>
           </div>
         </section>
       </main>

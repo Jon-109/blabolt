@@ -15,7 +15,7 @@ const brokeringChecklist = [
   'Full Loan Packaging service included',
   'We match you with lenders who fit your needs',
   'We negotiate rates & terms and guide you through underwriting',
-  'We only get paid if you get funded (via closing costs—no upfront fees)',
+  'We only get paid if you get funded (via closing costs, with no upfront fees)',
   'We help speed up the process so you get funded faster.',
 ];
 
@@ -29,7 +29,7 @@ const ServiceCard = () => (
           For business owners who need a loan but don’t know where to start.
         </p>
         <p className="text-gray-600 mb-4">
-          We’ll guide you step-by-step to build a professional, lender-ready loan application package—so you don’t have to figure it out alone.
+          We’ll guide you step-by-step to build a professional, lender-ready loan application package, so you don’t have to figure it out alone.
         </p>
         <ul className="mb-4 space-y-2">
           {checklist.map((item, i) => (
@@ -69,7 +69,7 @@ const ServiceCard = () => (
         </p>
 
         <p className="text-gray-600 mb-4">
-          This includes everything in our Loan Packaging service—for free—plus we actively reach out to our lender network and negotiate on your behalf.
+          This includes everything in our Loan Packaging service at no cost, plus we actively reach out to our lender network and negotiate on your behalf.
         </p>
         <ul className="mb-4 space-y-2">
           {brokeringChecklist.map((item, i) => (

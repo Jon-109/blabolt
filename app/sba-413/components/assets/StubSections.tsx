@@ -119,7 +119,7 @@ export function LifeInsuranceSection({ data, onChange }: { data: AssetsData; onC
                       className="mt-2"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      The total coverage amount — the amount paid out by the insurer
+                      The total coverage amount: the amount paid out by the insurer
                     </p>
                   </div>
                   <div>
@@ -236,7 +236,7 @@ export function OtherPropertySection({ data, onChange }: { data: AssetsData; onC
   const totalValue = data.other_personal_property.reduce((sum, prop) => sum + (prop.value || 0), 0);
 
   return (
-    <SectionCard icon="⚓" title="Other Personal Property" description="Boats, RVs, equipment, jewelry—any physical items over ~$2,500">
+    <SectionCard icon="⚓" title="Other Personal Property" description="Boats, RVs, equipment, jewelry, and other physical items worth more than about $2,500">
       <div className="space-y-4">
         {data.other_personal_property.length === 0 ? (
           <div className="text-center py-8 bg-gray-50 rounded-lg">

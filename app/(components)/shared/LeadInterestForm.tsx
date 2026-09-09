@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, ClipboardCheck, Clock3, Loader2, Mail, Phone, Send, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, ClipboardCheck, Loader2, Mail, Phone, Send } from 'lucide-react';
 import { track, trackLeadConversion, getLeadSource } from '@/lib/analytics';
 
 type LeadInterestFormProps = {
@@ -31,7 +31,7 @@ const SERVICE_INTERESTS = [
   'Can I afford this loan? / cash flow clarity',
   'Put together a complete loan package',
   'Find lenders interested in my loan request',
-  'Not sure yet — help me choose',
+  'Not sure yet (help me choose)',
 ];
 
 const LOAN_PURPOSES = [
@@ -284,14 +284,14 @@ export default function LeadInterestForm({
 
   return (
     <div className={isModal ? 'bg-white' : 'overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_32px_90px_-48px_rgba(15,23,42,0.35)]'}>
-      <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,#155e75_0%,#0b2640_42%,#020617_100%)] px-5 py-6 text-white sm:px-7 sm:py-8">
+      <div className={`relative overflow-hidden bg-[radial-gradient(circle_at_top_left,#155e75_0%,#0b2640_42%,#020617_100%)] px-5 text-white sm:px-7 ${isModal ? 'sticky top-0 z-[1] py-3 sm:py-4' : 'py-6 sm:py-8'}`}>
         <div className="pointer-events-none absolute right-[-4rem] top-[-4rem] h-40 w-40 rounded-full bg-cyan-300/20 blur-3xl" />
         <div className="relative">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-100">
+          <div className={`inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-cyan-100 ${isModal ? '' : 'rounded-full border border-white/15 bg-white/10 px-3 py-1.5'}`}>
             <ClipboardCheck className="h-4 w-4" />
             Funding Interest Form
           </div>
-          <h2 className="mt-4 max-w-none text-[1.65rem] font-black leading-tight tracking-[-0.04em] sm:text-[1.75rem] lg:whitespace-nowrap lg:text-[1.72rem] xl:text-[1.82rem]">
+          <h2 className={`max-w-none font-black leading-tight tracking-[-0.04em] ${isModal ? 'mt-1.5 pr-12 text-xl sm:text-2xl lg:whitespace-nowrap' : 'mt-4 text-[1.65rem] sm:text-[1.75rem] lg:whitespace-nowrap lg:text-[1.72rem] xl:text-[1.82rem]'}`}>
             {headline}
           </h2>
           {subheadline ? (
@@ -299,20 +299,15 @@ export default function LeadInterestForm({
               {subheadline}
             </p>
           ) : null}
-          <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-100 sm:text-sm">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
-              <Clock3 className="h-4 w-4 text-cyan-200" />
-              Usually takes 2 minutes
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
-              <ShieldCheck className="h-4 w-4 text-emerald-200" />
-              No credit pull
-            </span>
-          </div>
+          {!isModal ? (
+            <div className="mt-4 text-xs font-semibold text-slate-100 sm:text-sm">
+              Usually takes 2 minutes • No credit pull
+            </div>
+          ) : null}
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5 px-5 py-6 sm:px-7 sm:py-7">
+      <form onSubmit={handleSubmit} className={`px-5 sm:px-7 ${isModal ? 'space-y-3 py-3 sm:py-4 [&_input:not([type=checkbox])]:py-2 [&_select]:py-2 [&_textarea]:h-14 [&_textarea]:py-2' : 'space-y-5 py-6 sm:py-7'}`}>
         {error && (
           <div ref={errorRef} tabIndex={-1} className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 outline-none">
             {error}
@@ -351,15 +346,15 @@ export default function LeadInterestForm({
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-sm font-bold text-slate-800">What are you interested in? <span className="text-red-500">*</span></p>
-              <p className="mt-1 text-xs text-slate-500">Select all that apply.</p>
+              {!isModal ? <p className="mt-1 text-xs text-slate-500">Select all that apply.</p> : null}
             </div>
             <p className="text-xs font-semibold text-cyan-800">{formData.services.length} selected</p>
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className={`grid sm:grid-cols-2 ${isModal ? 'mt-2 gap-1.5 lg:grid-cols-4' : 'mt-3 gap-2'}`}>
             {SERVICE_INTERESTS.map((service) => {
               const checked = formData.services.includes(service);
               return (
-                <label key={service} className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 text-sm font-semibold transition ${checked ? 'border-cyan-300 bg-cyan-50 text-cyan-950 shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white'}`}>
+                <label key={service} className={`flex cursor-pointer items-start rounded-2xl border px-3 text-sm font-semibold transition ${isModal ? 'gap-2 py-2 leading-5' : 'gap-3 py-3'} ${checked ? 'border-cyan-300 bg-cyan-50 text-cyan-950 shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white'}`}>
                   <input type="checkbox" checked={checked} onChange={() => updateField('services', toggleValue(formData.services, service))} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-600" />
                   {service}
                 </label>
@@ -396,15 +391,15 @@ export default function LeadInterestForm({
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-sm font-bold text-slate-800">What are your biggest concerns? <span className="text-red-500">*</span></p>
-              <p className="mt-1 text-xs text-slate-500">This helps us understand what may slow the deal down.</p>
+              {!isModal ? <p className="mt-1 text-xs text-slate-500">This helps us understand what may slow the deal down.</p> : null}
             </div>
             <p className="text-xs font-semibold text-cyan-800">{formData.concerns.length} selected</p>
           </div>
-          <div className="mt-2 grid gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-2 sm:grid-cols-2 lg:grid-cols-2">
+          <div className={`mt-2 grid gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 p-2 sm:grid-cols-2 ${isModal ? 'lg:grid-cols-5' : 'lg:grid-cols-2'}`}>
             {LOAN_CONCERNS.map((concern) => {
               const checked = formData.concerns.includes(concern);
               return (
-                <label key={concern} className={`flex cursor-pointer items-start gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold leading-5 transition sm:text-sm ${checked ? 'bg-white text-cyan-950 shadow-sm ring-1 ring-cyan-200' : 'text-slate-700 hover:bg-white'}`}>
+                <label key={concern} className={`flex cursor-pointer items-start gap-2 rounded-xl px-2.5 text-xs font-semibold transition ${isModal ? 'py-1 leading-4' : 'py-1.5 leading-5 sm:text-sm'} ${checked ? 'bg-white text-cyan-950 shadow-sm ring-1 ring-cyan-200' : 'text-slate-700 hover:bg-white'}`}>
                   <input type="checkbox" checked={checked} onChange={() => updateField('concerns', toggleValue(formData.concerns, concern))} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-600" />
                   {concern}
                 </label>
@@ -415,16 +410,16 @@ export default function LeadInterestForm({
 
         <div>
           <label htmlFor={`${variant}-message`} className="block text-sm font-bold text-slate-800">Anything else we should know?</label>
-          <p className="mt-1 text-xs text-slate-500">Example: what the funds are for, how long you have been in business, revenue range, or what happened with a prior lender.</p>
+          {!isModal ? <p className="mt-1 text-xs text-slate-500">Example: what the funds are for, how long you have been in business, revenue range, or what happened with a prior lender.</p> : null}
           <textarea id={`${variant}-message`} value={formData.message} onChange={(event) => updateField('message', event.target.value)} rows={4} className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" placeholder="Tell us a little about the loan, the business, and what you are trying to figure out." />
         </div>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3 text-sm font-semibold text-slate-700">
+        <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 text-sm font-semibold text-slate-700 ${isModal ? 'py-2' : 'py-3'}`}>
           <input type="checkbox" checked={formData.prefersPhoneCall} onChange={(event) => updateField('prefersPhoneCall', event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-600" />
           <span>I prefer a quick phone call to talk through this.</span>
         </label>
 
-        <button type="submit" disabled={isSubmitting} className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white shadow-[0_20px_55px_-34px_rgba(15,23,42,0.9)] transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base">
+        <button type="submit" disabled={isSubmitting} className={`group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-bold text-white shadow-[0_20px_55px_-34px_rgba(15,23,42,0.9)] transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:text-base ${isModal ? 'py-2.5' : 'py-3.5'}`}>
           {isSubmitting ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -438,9 +433,11 @@ export default function LeadInterestForm({
           )}
         </button>
 
-        <p className="text-center text-xs leading-5 text-slate-500">
-          We usually respond within 24 hours. Prefer direct contact? Email <a href="mailto:jonathan@businesslendingadvocate.com" className="font-semibold text-cyan-800 hover:text-cyan-600">jonathan@businesslendingadvocate.com</a> or call <a href="tel:210-370-7402" className="font-semibold text-cyan-800 hover:text-cyan-600">210-370-7402</a>.
-        </p>
+        {!isModal ? (
+          <p className="text-center text-xs leading-5 text-slate-500">
+            We usually respond within 24 hours. Prefer direct contact? Email <a href="mailto:jonathan@businesslendingadvocate.com" className="font-semibold text-cyan-800 hover:text-cyan-600">jonathan@businesslendingadvocate.com</a> or call <a href="tel:210-370-7402" className="font-semibold text-cyan-800 hover:text-cyan-600">210-370-7402</a>.
+          </p>
+        ) : null}
       </form>
     </div>
   );

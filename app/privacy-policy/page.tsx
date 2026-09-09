@@ -56,20 +56,20 @@ export default function PrivacyPolicyPage() {
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">We do not collect Social Security numbers, phone numbers, or tax IDs.</p>
             <h2 className="text-2xl font-bold mt-16">3. How We Use Your Information</h2>
             <ul className="list-disc pl-6">
-              <li><b>Service Delivery</b> — create your account, authenticate, generate reports, and email PDFs you request.</li>
-              <li><b>Transactional Communications</b> — send receipts, account alerts, or service-related updates.</li>
-              <li><b>Marketing (Opt-In Only)</b> — if you subscribe to our newsletter, email product updates or educational content. Unsubscribe any time.</li>
-              <li><b>Analytics & Improvements</b> — analyze aggregated, de-identified usage data to enhance the Services.</li>
+              <li><b>Service Delivery</b>: create your account, authenticate, generate reports, and email PDFs you request.</li>
+              <li><b>Transactional Communications</b>: send receipts, account alerts, or service-related updates.</li>
+              <li><b>Marketing (Opt-In Only)</b>: if you subscribe to our newsletter, email product updates or educational content. Unsubscribe any time.</li>
+              <li><b>Analytics & Improvements</b>: analyze aggregated, de-identified usage data to enhance the Services.</li>
             </ul>
             <h2 className="text-2xl font-bold mt-16">4. Legal Basis & Geographic Scope</h2>
-            <p>BLA serves businesses located in the United States only. We process data with your consent and to fulfill our contract—providing the Services you request.</p>
+            <p>BLA serves businesses located in the United States only. We process data with your consent and to fulfill our contract by providing the Services you request.</p>
             <h2 className="text-2xl font-bold mt-16">5. Cookies & Tracking</h2>
             <p>We use first-party cookies for session management and Google Analytics cookies for usage statistics. Analytics cookies do not reveal personal identities. You can disable cookies in your browser, but parts of the site may not function.</p>
             <h2 className="text-2xl font-bold mt-16">6. Payment Processing</h2>
             <p>Payments are handled by Stripe, Inc. Stripe stores your card information on its PCI-DSS-compliant servers. BLA never sees or stores full card numbers, CVV codes, or Social Security numbers.</p>
             <h2 className="text-2xl font-bold mt-16">7. Data Storage & Security</h2>
             <ul className="list-disc pl-6">
-              <li>All user data—account, financial inputs, and generated reports—is stored in Supabase (hosted on AWS).</li>
+              <li>All user data, including account information, financial inputs, and generated reports, is stored in Supabase (hosted on AWS).</li>
               <li>Data is encrypted in transit (HTTPS/TLS) and at rest.</li>
               <li>Access is restricted to you and authorized BLA administrators who need it to provide support.</li>
               <li>We retain data indefinitely so you can revisit or update prior analyses. If you request deletion (see Section 9), we will remove your account and associated data within 30 days unless retention is required for legal or accounting reasons.</li>
@@ -113,10 +113,10 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-bold mt-16">9. Your Rights</h2>
             <p>Because we serve U.S. customers only, you have the right to:</p>
             <ul className="list-disc pl-6">
-              <li><b>Access</b> — request a copy of the personal data we hold.</li>
-              <li><b>Correction</b> — edit your data anytime in your account dashboard.</li>
-              <li><b>Deletion</b> — email us to delete your account and data.</li>
-              <li><b>Portability</b> — request your data in a machine-readable format.</li>
+              <li><b>Access</b>: request a copy of the personal data we hold.</li>
+              <li><b>Correction</b>: edit your data anytime in your account dashboard.</li>
+              <li><b>Deletion</b>: email us to delete your account and data.</li>
+              <li><b>Portability</b>: request your data in a machine-readable format.</li>
             </ul>
             <p>How to exercise: email <a href="mailto:jonathan@businesslendingadvocate.com" className="text-blue-600 underline">jonathan@businesslendingadvocate.com</a> from the address on file. We may verify your identity before fulfilling a request.</p>
             <h2 className="text-2xl font-bold mt-16">10. Children’s Privacy</h2>

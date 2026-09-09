@@ -56,7 +56,7 @@ export default function LiabilitiesPageNew({ data, assets, smartGate, onChange, 
           Your Debts & Obligations
         </h2>
         <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
-          Let's go through what you owe. We'll ask simple yes/no questions—no financial jargon, just real talk.
+          Let's go through what you owe. We'll ask simple yes/no questions with no financial jargon, just real talk.
         </p>
       </div>
 

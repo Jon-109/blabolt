@@ -63,7 +63,7 @@ export default function PersonalLoansQuestion({ data, onChange, onAnswerChange }
     <QuestionCard
       icon="🏦"
       title="Do you have any personal loans or money you borrowed that you're repaying over time?"
-      description="These are formal or informal loans with regular payments — usually over more than 90 days."
+      description="These are formal or informal loans with regular payments, usually over more than 90 days."
       examples="Personal loan from a bank, loan from a family member, or a small business loan you personally guaranteed."
       onAnswerChange={onAnswerChange}
     >

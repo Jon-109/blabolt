@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Sora } from 'next/font/google';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   BarChart3,
@@ -25,6 +25,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 import DscrQuickCalculator from '@/app/(components)/cash-flow/DscrQuickCalculator';
+import ContactFormModal from '@/app/(components)/shared/ContactFormModal';
 import GuidedTemplateDemo from '@/app/(components)/GuidedTemplateDemo';
 import LoanPackagingDemo from '@/app/(components)/LoanPackagingDemo';
 import LoanServiceReadinessModal from '@/app/(components)/LoanServiceReadinessModal';
@@ -80,6 +81,7 @@ function SectionHeading({ eyebrow, title, description, light = false, centered =
 }
 
 export default function Home() {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const seenSectionsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function Home() {
               <Landmark className="h-4 w-4" />Loan readiness, built like a lender file
             </div>
             <h1 className={`${headingFont.className} mx-auto mt-4 max-w-[30ch] text-[2.25rem] font-extrabold leading-[1] tracking-[-0.045em] text-white text-balance sm:text-5xl lg:text-[3.35rem]`}>
-              Know what lenders will see—and build a stronger loan request before you apply.
+              Know what lenders will see and build a stronger loan request before you apply.
             </h1>
             <p className="mx-auto mt-4 max-w-5xl text-[15px] leading-6 text-slate-300 sm:text-lg sm:leading-7">Analyze repayment strength, create the financial documents most loan applications require, and build one organized business loan package in a guided workspace.</p>
             <div className="mx-auto mt-5 grid max-w-2xl gap-2.5 sm:grid-cols-2">
@@ -197,7 +199,7 @@ export default function Home() {
         <div className="home-noise pointer-events-none absolute inset-0 opacity-[0.08]" />
         <div className="relative mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
           <div className="px-1 sm:px-0">
-            <SectionHeading light eyebrow="Loan packaging dashboard" title="Build a complete lender-ready package through one guided workflow." description="Loan packaging is the work of turning a funding request into a file a lender can efficiently review. The dashboard guides you through the loan profile, required documents, financial templates, banker-facing cover letter, and secure package delivery—so the final request is organized, consistent, and ready for lender conversations." />
+            <SectionHeading light eyebrow="Loan packaging dashboard" title="Build a complete lender-ready package through one guided workflow." description="Loan packaging is the work of turning a funding request into a file a lender can efficiently review. The dashboard guides you through the loan profile, required documents, financial templates, banker-facing cover letter, and secure package delivery. The final request is organized, consistent, and ready for lender conversations." />
           </div>
           <div className="mt-5"><LoanPackagingDemo compact /></div>
         </div>
@@ -253,12 +255,14 @@ export default function Home() {
           <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">Your next best step</p>
           <h2 className={`${headingFont.className} mx-auto mt-2 text-3xl font-extrabold leading-[1.04] tracking-[-0.04em] sm:text-4xl lg:whitespace-nowrap lg:text-[2.3rem]`}>Make your loan request clear before you send it.</h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">Start with the numbers for free. When the deal makes sense, build the package or bring us in to help move it toward lenders.</p>
-          <div className="mx-auto mt-5 grid max-w-2xl gap-2 sm:grid-cols-2">
+          <div className="mx-auto mt-5 grid max-w-4xl gap-2 sm:grid-cols-3">
             <Link href="/comprehensive-cash-flow-analysis?new=1" onClick={() => trackHomeCta('bottom_cta', 'home_bottom_analysis', 'Run Free Bank-Level Analysis', '/comprehensive-cash-flow-analysis?new=1')} className="group flex min-h-14 items-center justify-between rounded-xl bg-[#f5c86a] px-4 py-3 text-left font-extrabold text-[#071824] transition hover:bg-[#ffda88]"><span><span className="block text-[11px] uppercase tracking-[0.13em] opacity-70">Free account</span>Run Bank-Level Analysis</span><ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></Link>
             <LoanServiceReadinessModal className="group flex min-h-14 w-full items-center justify-between rounded-xl border border-white/20 bg-white/[0.06] px-4 py-3 text-left font-extrabold text-white transition hover:bg-white/[0.1]"><span><span className="block text-[11px] uppercase tracking-[0.13em] text-cyan-200">Packaging or brokering</span>Start My Loan Process</span><ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></LoanServiceReadinessModal>
+            <button type="button" onClick={() => { trackHomeCta('bottom_cta', 'home_bottom_funding_interest', 'Discuss My Funding Request', '#funding-interest-modal'); setIsContactModalOpen(true); }} className="group flex min-h-14 w-full items-center justify-between rounded-xl border border-cyan-200/25 bg-cyan-200/[0.09] px-4 py-3 text-left font-extrabold text-white transition hover:bg-cyan-200/[0.15]"><span><span className="block text-[11px] uppercase tracking-[0.13em] text-cyan-200">Not sure where to start?</span>Discuss My Request</span><Users className="h-4 w-4 transition group-hover:scale-110" /></button>
           </div>
         </div>
       </section>
+      <ContactFormModal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} source="home-funding-interest" />
     </div>
   );
 }

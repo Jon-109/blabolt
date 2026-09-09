@@ -63,7 +63,7 @@ export default function StudentLoansQuestion({ data, onChange, onAnswerChange }:
     <QuestionCard
       icon="🎓"
       title="Do you have any student loans you're still repaying?"
-      description="Include both federal and private student loans — even if they're in deferment or on an income-based plan."
+      description="Include both federal and private student loans, even if they're in deferment or on an income-based plan."
       examples="Federal Direct Loan, Sallie Mae, Navient, or SoFi."
       onAnswerChange={onAnswerChange}
     >

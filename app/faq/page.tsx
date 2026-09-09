@@ -20,7 +20,7 @@ export default function FAQ() {
 How Business Lending Advocate speeds this up:
 • Our software guides you step-by-step through every required document and includes easy forms that produce lender-ready templates, so you’re never guessing what’s needed. It’s like having an expert at your side throughout the process.
 • We eliminate most back-and-forth by ensuring your application is complete and tailored to each lender’s requirements from day one.
-• This typically cuts 25–40% off the review time—meaning you get answers (and funding) much faster than the industry average.
+• This typically cuts 25–40% off the review time, meaning you get answers (and funding) much faster than the industry average.
 
 We work for you, not the bank.`
         },
@@ -32,9 +32,9 @@ We work for you, not the bank.`
         },
         {
           question: "Do I need a cover letter for the lender?",
-          answer: `Yes—think of it as a one-page executive summary that lets an underwriter “get” your business before diving into spreadsheets. It explains your company’s story, the purpose of the loan, how the funds will be repaid (primary source), and what backstops repayment (secondary source such as personal guarantee or collateral).
+          answer: `Yes. Think of it as a one-page executive summary that lets an underwriter “get” your business before diving into spreadsheets. It explains your company’s story, the purpose of the loan, how the funds will be repaid (primary source), and what backstops repayment (secondary source such as personal guarantee or collateral).
 
-          What Business Lending Advocate does: We draft and polish your cover letter so it’s geared to what lenders want to see—highlighting your management experience, industry trends, and risk mitigants—to present your business in the best possible light and set a professional tone for your entire loan package.`
+          What Business Lending Advocate does: We draft and polish your cover letter around what lenders want to see, highlighting your management experience, industry trends, and risk mitigants to present your business in the best possible light and set a professional tone for your entire loan package.`
         },
         {
           question: "What happens after I submit everything?",
@@ -44,7 +44,7 @@ Follow-up questions (2–7 days) – called a “credit memo.” We answer most 
 
 Conditional approval / term sheet (3–10 days) – spells out rate, term, fees, collateral, guarantees, and closing conditions.
 
-Closing & funding (5–15 business days) – collect any final items (e.g., landlord waiver), sign docs, and receive wires—often within 24 hours of signing.`
+Closing & funding (5–15 business days) – collect any final items (e.g., landlord waiver), sign docs, and receive wires, often within 24 hours of signing.`
         }
       ]
     },
@@ -62,11 +62,11 @@ Closing & funding (5–15 business days) – collect any final items (e.g., land
                 <li>Annual Debt Service = principal + interest on all existing loans.</li>
                 <li>Annualized Loan Payment = monthly payment on the new loan × 12.</li>
               </ul>
-              <p className="mb-4">A DSCR ≥ 1.25 tells banks you generate $1.25 for every $1 of debt payments—a safe cushion.</p>
+              <p className="mb-4">A DSCR ≥ 1.25 tells banks you generate $1.25 for every $1 of debt payments, providing a safe cushion.</p>
               <div className="flex flex-col gap-3 my-6">
                 <a href="/cash-flow-analysis" className="bg-primary-blue text-white px-4 py-2 rounded font-semibold shadow hover:bg-primary-blue/90 text-center">Try the Free DSCR Calculator</a>
               </div>
-              <p className="mt-2">For our comprehensive, bank-level analysis, we use Adjusted EBITDA as the numerator. Adjusted EBITDA adds back owner salary, one-time expenses, and non-cash charges—showing lenders your true cash flow and often improving your DSCR. This makes you look stronger in the eyes of the bank and can help you qualify for better terms.</p>
+              <p className="mt-2">For our comprehensive, bank-level analysis, we use Adjusted EBITDA as the numerator. Adjusted EBITDA adds back owner salary, one-time expenses, and non-cash charges, showing lenders your true cash flow and often improving your DSCR. This makes you look stronger in the eyes of the bank and can help you qualify for better terms.</p>
               <div className="flex flex-col gap-3 mt-3">
                 <a href="/cash-flow-analysis" className="bg-gray-900 text-white px-4 py-2 rounded font-semibold shadow hover:bg-gray-800 text-center">See Comprehensive Analysis</a>
               </div>
@@ -83,7 +83,7 @@ Closing & funding (5–15 business days) – collect any final items (e.g., land
         },
         {
           question: "Do I need collateral?",
-          answer: `For most SBA 7(a) loans over $25k, lenders must take available collateral (business assets first, then personal real estate) if it exists—but the SBA will still guarantee the unsecured portion. Working-capital SBA loans may require only a UCC lien on business assets. Real-estate purchases, of course, are collateralized by the property itself. We outline collateral expectations during your readiness assessment so there are no surprises.`
+          answer: `For most SBA 7(a) loans over $25k, lenders must take available collateral (business assets first, then personal real estate) if it exists, but the SBA will still guarantee the unsecured portion. Working-capital SBA loans may require only a UCC lien on business assets. Real-estate purchases, of course, are collateralized by the property itself. We outline collateral expectations during your readiness assessment so there are no surprises.`
         },
         {
           question: "What is a personal guarantee, and how can I protect myself?",
@@ -111,11 +111,11 @@ Closing & funding (5–15 business days) – collect any final items (e.g., land
           answer: `• DSCR Quick Calculator: FREE on our site.
 • Comprehensive Cash-Flow Analysis: $99 flat.
 • Loan Packaging: $499 (includes templates, cover-letter drafting, and full lender file).
-• Loan Brokering: 1% of the funded amount, payable only at closing—no upfront broker fee.`
+• Loan Brokering: 1% of the funded amount, payable only at closing. There is no upfront broker fee.`
         },
         {
           question: "Do you guarantee I’ll get funded?",
-          answer: `We can’t promise approval—no legitimate firm can. What we do guarantee is a bank-quality loan package and guidance that gives you the strongest possible chance under current credit standards.`
+          answer: `We can’t promise approval; no legitimate firm can. What we do guarantee is a bank-quality loan package and guidance that gives you the strongest possible chance under current credit standards.`
         }
       ]
     },
@@ -129,7 +129,7 @@ Closing & funding (5–15 business days) – collect any final items (e.g., land
         },
         {
           question: "Can I keep banking with my current bank?",
-          answer: `Yes. Receiving offers from multiple banks is smart because you can compare rates and covenants. If you ultimately prefer your existing bank, our $499 Loan Packaging service lets you hand them a complete, polished file—often winning you the same terms they reserve for their best customers.`
+          answer: `Yes. Receiving offers from multiple banks is smart because you can compare rates and covenants. If you ultimately prefer your existing bank, our $499 Loan Packaging service lets you hand them a complete, polished file, often helping you secure the same terms they reserve for their best customers.`
         }
       ]
     }

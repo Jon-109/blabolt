@@ -39,7 +39,7 @@ export default function AssetsPage({ data, smartGate, onChange, onNext }: Assets
       <div className="space-y-3">
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">Assets</h2>
         <p className="text-slate-600 text-base sm:text-lg leading-relaxed">
-          Tell us what you own. If you don't have something, skip it—zeros are perfectly fine.
+          Tell us what you own. If you don't have something, skip it; zeros are perfectly fine.
         </p>
       </div>
 
