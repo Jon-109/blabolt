@@ -249,8 +249,13 @@ export function getGoogleAdsId(): string | undefined {
   return process.env.NEXT_PUBLIC_GOOGLE_ADS_ID || DEFAULT_GOOGLE_ADS_ID;
 }
 
+export const DEFAULT_GOOGLE_ADS_LEAD_CONVERSION_LABEL = 'bp5uCJDZ2_IcEN2VzdlE';
+
 export function getGoogleAdsLeadConversionLabel(): string | undefined {
-  return process.env.NEXT_PUBLIC_GOOGLE_ADS_LEAD_CONVERSION_LABEL;
+  return (
+    process.env.NEXT_PUBLIC_GOOGLE_ADS_LEAD_CONVERSION_LABEL ||
+    DEFAULT_GOOGLE_ADS_LEAD_CONVERSION_LABEL
+  );
 }
 
 export function getGoogleAdsCheckoutConversionLabel(): string | undefined {
@@ -654,23 +659,23 @@ export function trackGoogleAdsConversion(
   params: Record<string, unknown> = {},
 ): void {
   const adsId = getGoogleAdsId();
-  if (!adsId || !label || !isAnalyticsEnabled()) return;
+  if (!adsId || !label || !IS_BROWSER || typeof window.gtag !== 'function') return;
 
   const conversionParams = sanitizeParams({
     ...params,
     send_to: `${adsId}/${label}`,
   });
 
-  window.gtag?.('event', 'conversion', conversionParams);
-  window.dataLayer?.push({ event: 'conversion', ...conversionParams });
+  try {
+    window.gtag('event', 'conversion', conversionParams);
+  } catch (error) {
+    console.error('[Analytics] Error tracking Google Ads conversion:', error);
+  }
 }
 
 export function trackLeadConversion(params: GenerateLeadParams): void {
   track('generate_lead', params);
-  trackGoogleAdsConversion(getGoogleAdsLeadConversionLabel(), {
-    value: params.value,
-    currency: params.currency,
-  });
+  trackGoogleAdsConversion(getGoogleAdsLeadConversionLabel());
 }
 
 export function trackBeginCheckout(params: CheckoutParams): void {
