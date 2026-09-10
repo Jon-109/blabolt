@@ -60,8 +60,9 @@ export const viewport: Viewport = {
 };
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
+const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID || 'AW-18441521885';
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || 'GTM-NGD7MTC9';
+const GTAG_PRIMARY_ID = GA_MEASUREMENT_ID || GOOGLE_ADS_ID;
 
 export default function RootLayout({
   children,
@@ -71,6 +72,38 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Google tag (gtag.js): Google Ads + GA4 */}
+        {GTAG_PRIMARY_ID && (
+          <>
+            <Script
+              id="gtag-js"
+              src={`https://www.googletagmanager.com/gtag/js?id=${GTAG_PRIMARY_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script
+              id="gtag-init"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  window.gtag = window.gtag || gtag;
+                  gtag('js', new Date());
+                  gtag('consent', 'default', {
+                    'ad_storage': 'granted',
+                    'analytics_storage': 'granted',
+                    'ad_user_data': 'granted',
+                    'ad_personalization': 'granted'
+                  });
+                  ${GOOGLE_ADS_ID ? `gtag('config', '${GOOGLE_ADS_ID}', { allow_enhanced_conversions: true });` : ''}
+                  ${GA_MEASUREMENT_ID ? `gtag('config', '${GA_MEASUREMENT_ID}', { send_page_view: false });` : ''}
+                `,
+              }}
+            />
+          </>
+        )}
+        {/* End Google tag */}
+
         {/* Google Tag Manager */}
         {GTM_ID && (
           <Script
@@ -88,39 +121,6 @@ export default function RootLayout({
           />
         )}
         {/* End Google Tag Manager */}
-
-        {/* Google Analytics 4 */}
-        {GA_MEASUREMENT_ID && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script
-              id="ga4-init"
-              strategy="afterInteractive"
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('consent', 'default', {
-                    'ad_storage': 'granted',
-                    'analytics_storage': 'granted',
-                    'ad_user_data': 'granted',
-                    'ad_personalization': 'granted'
-                  });
-                  gtag('config', '${GA_MEASUREMENT_ID}', {
-                    page_path: window.location.pathname,
-                    send_page_view: true
-                  });
-                  ${GOOGLE_ADS_ID ? `gtag('config', '${GOOGLE_ADS_ID}');` : ''}
-                `,
-              }}
-            />
-          </>
-        )}
-        {/* End Google Analytics 4 */}
       </head>
       <body className={inter.className}>
         {/* Google Tag Manager (noscript) */}
