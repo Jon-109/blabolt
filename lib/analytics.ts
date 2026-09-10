@@ -12,8 +12,8 @@
 declare global {
   interface Window {
     gtag?: (
-      command: 'config' | 'event' | 'consent',
-      targetId: string,
+      command: 'config' | 'event' | 'consent' | 'js' | 'set',
+      targetId: string | Date | Record<string, unknown>,
       params?: Record<string, unknown>
     ) => void;
     dataLayer?: unknown[];
@@ -243,8 +243,10 @@ export function getMeasurementId(): string | undefined {
   return process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 }
 
+export const DEFAULT_GOOGLE_ADS_ID = 'AW-18441521885';
+
 export function getGoogleAdsId(): string | undefined {
-  return process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
+  return process.env.NEXT_PUBLIC_GOOGLE_ADS_ID || DEFAULT_GOOGLE_ADS_ID;
 }
 
 export function getGoogleAdsLeadConversionLabel(): string | undefined {
@@ -259,7 +261,11 @@ export function getGoogleAdsCheckoutConversionLabel(): string | undefined {
  * Check if analytics is enabled
  */
 export function isAnalyticsEnabled(): boolean {
-  return IS_BROWSER && !!getMeasurementId() && typeof window.gtag === 'function';
+  return (
+    IS_BROWSER &&
+    !!(getMeasurementId() || getGoogleAdsId()) &&
+    typeof window.gtag === 'function'
+  );
 }
 
 /**
@@ -460,7 +466,8 @@ export function getStoredUTMParams(): Record<string, string> {
  */
 export function getLeadSource(): string | undefined {
   const utmParams = getStoredUTMParams();
-  return utmParams.utm_source || utmParams.gclid ? 'google' : undefined;
+  if (utmParams.gclid) return 'google';
+  return utmParams.utm_source || undefined;
 }
 
 // ============================================================================
