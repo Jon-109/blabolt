@@ -68,7 +68,7 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX  # Your GA4 Measurement ID
 # Google Ads (defaults to AW-18441521885 when unset; tag loads on every page via app/layout.tsx)
 NEXT_PUBLIC_GOOGLE_ADS_ID=AW-18441521885
 # Conversion labels from Google Ads → Goals → Conversions → tag setup ("send_to": "AW-.../<LABEL>")
-NEXT_PUBLIC_GOOGLE_ADS_LEAD_CONVERSION_LABEL=
+NEXT_PUBLIC_GOOGLE_ADS_LEAD_CONVERSION_LABEL=bp5uCJDZ2_IcEN2VzdlE  # default; Funding Interest Form success
 NEXT_PUBLIC_GOOGLE_ADS_CHECKOUT_CONVERSION_LABEL=
 ```
 
