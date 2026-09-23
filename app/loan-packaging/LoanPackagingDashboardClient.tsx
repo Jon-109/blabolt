@@ -72,6 +72,7 @@ interface DocumentRequirement {
   template_key: TemplateKey | null;
   sort_order: number;
   max_size_mb: number;
+  allowed_mime_types?: string[];
   checklist_reason?: string;
   secondary_requirement?: boolean;
   slot_context?: {
@@ -228,6 +229,15 @@ interface UseOfFundsLineItem {
   id: string;
   description: string;
   amount: string;
+}
+
+interface BulkUploadItem {
+  id: string;
+  file: File;
+  requirementKey: string;
+  selected: boolean;
+  status: 'queued' | 'uploading' | 'uploaded' | 'error';
+  error: string | null;
 }
 
 interface BusinessResearchSuggestions {
@@ -519,24 +529,6 @@ const FINANCING_IMPACT_OPTIONS = [
   'Support fulfillment of existing demand',
   'Lower monthly debt burden',
   'Stabilize business operations',
-  COVER_LETTER_OTHER_VALUE,
-] as const;
-
-const SUPPORTING_FACTOR_OPTIONS = [
-  'Experienced ownership',
-  'Strong industry knowledge',
-  'Repeat customers',
-  'Recurring revenue',
-  'Long-term contracts',
-  'Stable revenue history',
-  'Strong profit margins',
-  'Low existing debt',
-  'Owner investment in the business',
-  'Good payment history',
-  'Established local reputation',
-  'Growing demand',
-  'Collateral available',
-  'Personal guarantee available',
   COVER_LETTER_OTHER_VALUE,
 ] as const;
 
@@ -1052,6 +1044,27 @@ function asCoverLetterStringArray(value: unknown): string[] {
   );
 }
 
+function guessBulkUploadRequirement(fileName: string, requirements: DocumentRequirement[]): string {
+  const normalizedName = fileName.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  let bestMatch = '';
+  let bestScore = 0;
+
+  requirements.forEach((requirement) => {
+    const terms = `${requirement.requirement_key} ${requirement.display_name}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .split(/\s+/)
+      .filter((term) => term.length >= 3 && !['the', 'and', 'year', 'current'].includes(term));
+    const score = terms.reduce((total, term) => total + (normalizedName.includes(term) ? 1 : 0), 0);
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = requirement.requirement_key;
+    }
+  });
+
+  return bestScore >= 2 ? bestMatch : '';
+}
+
 function asUseOfFundsLineItems(value: unknown): UseOfFundsLineItem[] {
   if (!Array.isArray(value)) {
     return [createUseOfFundsLineItem()];
@@ -1419,6 +1432,9 @@ export default function LoanPackagingDashboardClient({
   const [financingEstimate, setFinancingEstimate] = useState<FinancingEstimateState>(DEFAULT_FINANCING_ESTIMATE);
 
   const [uploadingRequirementKey, setUploadingRequirementKey] = useState<string | null>(null);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [bulkUploadItems, setBulkUploadItems] = useState<BulkUploadItem[]>([]);
+  const [bulkUploading, setBulkUploading] = useState(false);
   const [activeRequirementMenuKey, setActiveRequirementMenuKey] = useState<string | null>(null);
   const [packageExclusionDialog, setPackageExclusionDialog] = useState<{
     requirementKey: string;
@@ -1432,7 +1448,6 @@ export default function LoanPackagingDashboardClient({
   const [coverLetterDraft, setCoverLetterDraft] = useState('');
   const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
   const [approvingCoverLetter, setApprovingCoverLetter] = useState(false);
-  const [updatingLoanAmountFromUseOfFunds, setUpdatingLoanAmountFromUseOfFunds] = useState(false);
   const [showCoverLetterValidation, setShowCoverLetterValidation] = useState(false);
   const [showCurrentBusinessTraitsDetails, setShowCurrentBusinessTraitsDetails] = useState(false);
   const [researchPanelDismissed, setResearchPanelDismissed] = useState(false);
@@ -1465,6 +1480,13 @@ export default function LoanPackagingDashboardClient({
     const items = dashboard?.documents ?? [];
     return new Map(items.map((document) => [document.requirement_key, document]));
   }, [dashboard?.documents]);
+
+  const bulkUploadRequirements = useMemo(
+    () => (dashboard?.requirements ?? []).filter(
+      (requirement) => requirement.requirement_key !== 'cover_letter' && requirement.requirement_key !== 'broker_fee_agreement',
+    ),
+    [dashboard?.requirements],
+  );
 
   const templateSubmissionByKey = useMemo(() => {
     const entries = (dashboard?.templateSubmissions ?? []).map((submission) => [
@@ -1559,13 +1581,6 @@ export default function LoanPackagingDashboardClient({
       }, 0),
     [coverLetterForm.useOfFundsBreakdown],
   );
-  const useOfFundsBreakdownDifference = useMemo(() => {
-    if (loanAmountValue <= 0 || useOfFundsBreakdownTotal <= 0) {
-      return null;
-    }
-
-    return useOfFundsBreakdownTotal - loanAmountValue;
-  }, [loanAmountValue, useOfFundsBreakdownTotal]);
   const useOfFundsPrompt = useMemo<UseOfFundsPromptConfig>(() => {
     return USE_OF_FUNDS_PROMPTS_BY_PURPOSE[loanForm.loanPurpose] ?? DEFAULT_USE_OF_FUNDS_PROMPT;
   }, [loanForm.loanPurpose]);
@@ -1764,7 +1779,7 @@ export default function LoanPackagingDashboardClient({
     }
 
     return errors;
-  }, [coverLetterForm, dashboard?.cashFlowSummary]);
+  }, [businessLocationSummary, coverLetterForm, dashboard?.cashFlowSummary]);
 
   const coverLetterProgressPercentage = useMemo(() => {
     const requiredFields: Array<keyof CoverLetterFormState | 'repaymentNotes'> = [
@@ -1854,37 +1869,25 @@ export default function LoanPackagingDashboardClient({
     ],
     review: [],
   };
-  const coverLetterTabHasErrors = useMemo<Record<CoverLetterTabId, boolean>>(() => {
-    return {
-      'business-overview': coverLetterTabFieldMap['business-overview'].some((field) => Boolean(coverLetterFieldErrors[field])),
-      'use-of-funds': coverLetterTabFieldMap['use-of-funds'].some((field) => Boolean(coverLetterFieldErrors[field])),
-      repayment: coverLetterTabFieldMap.repayment.some((field) => Boolean(coverLetterFieldErrors[field])),
-      review: false,
-    };
-  }, [coverLetterFieldErrors]);
-  const coverLetterTabCompleted = useMemo<Record<CoverLetterTabId, boolean>>(() => {
-    return {
-      'business-overview': !coverLetterTabHasErrors['business-overview'],
-      'use-of-funds': !coverLetterTabHasErrors['use-of-funds'],
-      repayment: !coverLetterTabHasErrors.repayment,
-      review: coverLetterDraft.trim().length >= 50 || coverLetterComplete,
-    };
-  }, [coverLetterComplete, coverLetterDraft, coverLetterTabHasErrors]);
-  const firstIncompleteCoverLetterTab = useMemo<CoverLetterTabId>(() => {
-    if (coverLetterTabHasErrors['business-overview']) {
-      return 'business-overview';
-    }
-
-    if (coverLetterTabHasErrors['use-of-funds']) {
-      return 'use-of-funds';
-    }
-
-    if (coverLetterTabHasErrors.repayment) {
-      return 'repayment';
-    }
-
-    return 'review';
-  }, [coverLetterTabHasErrors]);
+  const coverLetterTabHasErrors: Record<CoverLetterTabId, boolean> = {
+    'business-overview': coverLetterTabFieldMap['business-overview'].some((field) => Boolean(coverLetterFieldErrors[field])),
+    'use-of-funds': coverLetterTabFieldMap['use-of-funds'].some((field) => Boolean(coverLetterFieldErrors[field])),
+    repayment: coverLetterTabFieldMap.repayment.some((field) => Boolean(coverLetterFieldErrors[field])),
+    review: false,
+  };
+  const coverLetterTabCompleted: Record<CoverLetterTabId, boolean> = {
+    'business-overview': !coverLetterTabHasErrors['business-overview'],
+    'use-of-funds': !coverLetterTabHasErrors['use-of-funds'],
+    repayment: !coverLetterTabHasErrors.repayment,
+    review: coverLetterDraft.trim().length >= 50 || coverLetterComplete,
+  };
+  const firstIncompleteCoverLetterTab: CoverLetterTabId = coverLetterTabHasErrors['business-overview']
+    ? 'business-overview'
+    : coverLetterTabHasErrors['use-of-funds']
+      ? 'use-of-funds'
+      : coverLetterTabHasErrors.repayment
+        ? 'repayment'
+        : 'review';
   const activeCoverLetterTabIndex = useMemo(
     () => Math.max(COVER_LETTER_TABS.findIndex((tab) => tab.id === activeCoverLetterTab), 0),
     [activeCoverLetterTab],
@@ -2535,80 +2538,6 @@ export default function LoanPackagingDashboardClient({
     userId,
   ]);
 
-  const handleUpdateLoanAmountFromUseOfFunds = useCallback(async () => {
-    if (!(useOfFundsBreakdownTotal > 0)) {
-      setErrorMessage('Add at least one valid use-of-funds row before updating the loan amount.');
-      return;
-    }
-
-    const nextLoanAmount = formatCurrencyInput(String(useOfFundsBreakdownTotal));
-    const currentCoverLetterForm = coverLetterForm;
-    setLoanForm((previous) => ({
-      ...previous,
-      loanAmount: nextLoanAmount,
-    }));
-
-    if (userId) {
-      void upsertTemplateSharedProfile(userId, { loanAmount: useOfFundsBreakdownTotal });
-      setSharedProfile((previous) => ({
-        ...previous,
-        loanAmount: useOfFundsBreakdownTotal,
-      }));
-    }
-
-    if (!accessToken) {
-      setStatusMessage('Loan amount updated from the use-of-funds total.');
-      return;
-    }
-
-    setUpdatingLoanAmountFromUseOfFunds(true);
-    setErrorMessage(null);
-
-    try {
-      const payload = await apiFetch<DashboardPayload>('/api/loan-packaging/dashboard', {
-        method: 'POST',
-        body: JSON.stringify({
-          loanRequestId: dashboard?.loanRequest?.id,
-          serviceType: 'loan_packaging',
-          status: dashboard?.loanRequest?.status || 'in_progress',
-          businessName: loanForm.businessName,
-          loanPurpose: loanForm.loanPurpose,
-          loanAmount: useOfFundsBreakdownTotal,
-          annualRevenue: parseNullableNumber(loanForm.annualRevenue),
-          yearsInBusiness: parseNullableNumber(loanForm.yearsInBusiness),
-          businessDescription: loanForm.loanPurposeDescription,
-        }),
-      });
-
-      hydrateDashboardState(payload);
-      setCoverLetterForm(currentCoverLetterForm);
-      setStatusMessage(
-        coverLetterDraft.trim().length > 0
-          ? 'Loan amount updated to match the use-of-funds total. Regenerate the draft so the cover letter reflects the new amount.'
-          : 'Loan amount updated to match the use-of-funds total.',
-      );
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to update the loan amount');
-    } finally {
-      setUpdatingLoanAmountFromUseOfFunds(false);
-    }
-  }, [
-    accessToken,
-    apiFetch,
-    coverLetterForm,
-    coverLetterDraft,
-    dashboard?.loanRequest?.id,
-    dashboard?.loanRequest?.status,
-    hydrateDashboardState,
-    loanForm.annualRevenue,
-    loanForm.businessName,
-    loanForm.loanPurpose,
-    loanForm.loanPurposeDescription,
-    loanForm.yearsInBusiness,
-    userId,
-    useOfFundsBreakdownTotal,
-  ]);
-
   const handleInterestRateChange = useCallback((value: string) => {
     const nextRate = clampNumber(
       parseNullableNumber(sanitizeCurrencyInput(value)) ?? 5,
@@ -2781,6 +2710,96 @@ export default function LoanPackagingDashboardClient({
     [accessToken, ensureLoanRequest, loadDashboard],
   );
 
+  const handleBulkFilesSelected = useCallback((files: File[]) => {
+    const acceptedFiles = files.slice(0, 20);
+    if (files.length > acceptedFiles.length) {
+      setErrorMessage('Bulk upload supports up to 20 files at a time. The first 20 files were added.');
+    }
+    setBulkUploadItems(acceptedFiles.map((file, index) => ({
+      id: `${file.name}-${file.lastModified}-${index}`,
+      file,
+      requirementKey: guessBulkUploadRequirement(file.name, bulkUploadRequirements),
+      selected: true,
+      status: 'queued',
+      error: null,
+    })));
+    setBulkUploadOpen(true);
+  }, [bulkUploadRequirements]);
+
+  const handleBulkUpload = useCallback(async () => {
+    const selectedItems = bulkUploadItems.filter((item) => item.selected && item.status !== 'uploaded');
+    if (selectedItems.length === 0) {
+      setErrorMessage('Select at least one file to upload.');
+      return;
+    }
+    if (selectedItems.some((item) => !item.requirementKey)) {
+      setErrorMessage('Match every selected file to a checklist item before uploading.');
+      return;
+    }
+
+    const requirementKeys = selectedItems.map((item) => item.requirementKey);
+    if (new Set(requirementKeys).size !== requirementKeys.length) {
+      setErrorMessage('Each selected file must be matched to a different checklist item.');
+      return;
+    }
+
+    setBulkUploading(true);
+    setErrorMessage(null);
+    setStatusMessage(null);
+
+    try {
+      const loanRequestId = await ensureLoanRequest();
+      if (!loanRequestId || !accessToken) {
+        throw new Error('Unable to initialize loan request.');
+      }
+
+      let uploadedCount = 0;
+      for (const item of selectedItems) {
+        setBulkUploadItems((current) => current.map((entry) =>
+          entry.id === item.id ? { ...entry, status: 'uploading', error: null } : entry,
+        ));
+
+        try {
+          const formData = new FormData();
+          formData.append('loanRequestId', loanRequestId);
+          formData.append('requirementKey', item.requirementKey);
+          formData.append('file', item.file);
+          const response = await fetch('/api/loan-packaging/documents/upload', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: formData,
+          });
+          const payload = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(
+              payload && typeof payload === 'object' && 'error' in payload
+                ? String((payload as { error?: unknown }).error ?? 'Upload failed')
+                : 'Upload failed',
+            );
+          }
+
+          uploadedCount += 1;
+          setBulkUploadItems((current) => current.map((entry) =>
+            entry.id === item.id ? { ...entry, status: 'uploaded', error: null } : entry,
+          ));
+        } catch (error) {
+          setBulkUploadItems((current) => current.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, status: 'error', error: error instanceof Error ? error.message : 'Upload failed' }
+              : entry,
+          ));
+        }
+      }
+
+      await loadDashboard();
+      setStatusMessage(`${uploadedCount} of ${selectedItems.length} documents uploaded and checked off.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Bulk upload failed');
+    } finally {
+      setBulkUploading(false);
+    }
+  }, [accessToken, bulkUploadItems, ensureLoanRequest, loadDashboard]);
+
   const handlePackageExclusionUpdate = useCallback(async () => {
     if (!packageExclusionDialog) {
       return;
@@ -2921,6 +2940,7 @@ export default function LoanPackagingDashboardClient({
       const payload = await apiFetch<{
         coverLetterStatus: string;
         coverLetterContent: string;
+        generationSource: 'ai' | 'fallback';
       }>('/api/loan-packaging/cover-letter', {
         method: 'POST',
         body: JSON.stringify({
@@ -2966,8 +2986,12 @@ export default function LoanPackagingDashboardClient({
             financingImpact: coverLetterForm.financingImpact,
             financingImpactOther: coverLetterForm.financingImpactOther,
             repaymentNotes: coverLetterForm.repaymentNotes,
-            supportingFactors: coverLetterForm.currentBusinessTraits,
-            supportingFactorsOther: coverLetterForm.currentBusinessTraitsOther,
+            supportingFactors:
+              coverLetterForm.supportingFactors.length > 0
+                ? coverLetterForm.supportingFactors
+                : coverLetterForm.currentBusinessTraits,
+            supportingFactorsOther:
+              coverLetterForm.supportingFactorsOther || coverLetterForm.currentBusinessTraitsOther,
             supportingFactorsDetails: coverLetterForm.supportingFactorsDetails,
             collateralDetails: coverLetterForm.collateralDetails,
             personalGuaranteeDetails: coverLetterForm.personalGuaranteeDetails,
@@ -2982,7 +3006,11 @@ export default function LoanPackagingDashboardClient({
       setShowCoverLetterValidation(false);
       setActiveCoverLetterTab('review');
       await loadDashboard();
-      setStatusMessage('Cover letter draft generated. Review it carefully and approve it when it reflects your request clearly.');
+      setStatusMessage(
+        payload.generationSource === 'ai'
+          ? 'AI cover letter draft generated. Review it carefully and approve it when it reflects your request clearly.'
+          : 'A rules-based draft was generated because AI was unavailable. Review it carefully before approval.',
+      );
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : 'Failed to generate cover letter',
@@ -2995,7 +3023,6 @@ export default function LoanPackagingDashboardClient({
     coverLetterForm.additionalLenderNotes,
     coverLetterForm.businessDescription,
     coverLetterForm.noLoanImpact,
-    coverLetterForm.businessLocation,
     coverLetterForm.businessLocationDetails,
     coverLetterForm.businessModelType,
     coverLetterForm.collateralDetails,
@@ -3016,6 +3043,8 @@ export default function LoanPackagingDashboardClient({
     coverLetterForm.personalGuaranteeDetails,
     coverLetterForm.currentFinancialBaseline,
     coverLetterForm.withLoanImpact,
+    coverLetterForm.supportingFactors,
+    coverLetterForm.supportingFactorsOther,
     coverLetterForm.supportingFactorsDetails,
     coverLetterForm.useOfFundsBreakdown,
     coverLetterForm.useOfFundsNarrative,
@@ -3025,8 +3054,6 @@ export default function LoanPackagingDashboardClient({
     coverLetterForm.repaymentSourceOther,
     coverLetterForm.revenueStreams,
     coverLetterForm.revenueStreamsOther,
-    coverLetterForm.supportingFactors,
-    coverLetterForm.supportingFactorsOther,
     coverLetterForm.timingNarrative,
     coverLetterForm.weaknessMitigation,
     businessLocationSummary,
@@ -3639,6 +3666,30 @@ export default function LoanPackagingDashboardClient({
 
               {expandedWorkflowSections.documents ? (
                 <div className="border-t border-slate-100 p-6">
+              <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-slate-950">Have several documents ready?</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    Select them together, match each file to its checklist item, and upload the batch. Successful files are checked off automatically.
+                  </p>
+                </div>
+                <label className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600">
+                  <Upload className="h-4 w-4" />
+                  Bulk Upload
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = Array.from(event.target.files ?? []);
+                      if (files.length > 0) {
+                        handleBulkFilesSelected(files);
+                      }
+                      event.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {(dashboard?.requirements ?? []).map((requirement) => {
                   if (requirement.requirement_key === 'cover_letter') {
@@ -4695,6 +4746,13 @@ export default function LoanPackagingDashboardClient({
                       />
                     </label>
 
+                    <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
+                      <p className="text-sm font-semibold text-slate-900">Standard lender-ready format</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">
+                        Every draft follows the same professional structure: financing request, borrower profile, use of funds and timing, repayment capacity, credit strengths and risk mitigation, then a concise closing. The generator uses the completed answers and available cash-flow analysis without inventing unsupported facts.
+                      </p>
+                    </div>
+
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={handleGenerateCoverLetter}
@@ -5026,6 +5084,87 @@ export default function LoanPackagingDashboardClient({
           </div>
         </div>
       </section>
+
+      <Dialog
+        open={bulkUploadOpen}
+        onOpenChange={(open) => {
+          if (!bulkUploading) {
+            setBulkUploadOpen(open);
+            if (!open) {
+              setBulkUploadItems([]);
+            }
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white text-slate-900">
+          <DialogHeader className="text-left">
+            <DialogTitle className={`${headingClassName} text-xl`}>Bulk document upload</DialogTitle>
+            <DialogDescription className="leading-6 text-slate-600">
+              Confirm which checklist item belongs to each file. Files marked successful are automatically checked off in the dashboard.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {bulkUploadItems.map((item) => (
+              <div key={item.id} className={`rounded-xl border p-3 ${item.status === 'uploaded' ? 'border-emerald-200 bg-emerald-50' : item.status === 'error' ? 'border-rose-200 bg-rose-50' : 'border-slate-200 bg-slate-50'}`}>
+                <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)_minmax(220px,0.8fr)] sm:items-center">
+                  <input
+                    type="checkbox"
+                    checked={item.selected}
+                    disabled={bulkUploading || item.status === 'uploaded'}
+                    onChange={(event) => setBulkUploadItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, selected: event.target.checked } : entry))}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    aria-label={`Select ${item.file.name}`}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">{item.file.name}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{bytesToDisplay(item.file.size)}</p>
+                  </div>
+                  <select
+                    value={item.requirementKey}
+                    disabled={bulkUploading || item.status === 'uploaded' || !item.selected}
+                    onChange={(event) => setBulkUploadItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, requirementKey: event.target.value, status: 'queued', error: null } : entry))}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+                  >
+                    <option value="">Choose checklist item</option>
+                    {bulkUploadRequirements.map((requirement) => (
+                      <option key={requirement.requirement_key} value={requirement.requirement_key}>
+                        {requirement.display_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {item.status === 'uploading' ? <p className="mt-2 text-xs font-medium text-blue-700">Uploading...</p> : null}
+                {item.status === 'uploaded' ? <p className="mt-2 text-xs font-medium text-emerald-700">Uploaded and checked off</p> : null}
+                {item.error ? <p className="mt-2 text-xs font-medium text-rose-700">{item.error}</p> : null}
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="gap-2 sm:space-x-0">
+            <button
+              type="button"
+              onClick={() => {
+                setBulkUploadOpen(false);
+                setBulkUploadItems([]);
+              }}
+              disabled={bulkUploading}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+            >
+              {bulkUploadItems.some((item) => item.status === 'uploaded') ? 'Done' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleBulkUpload()}
+              disabled={bulkUploading || !bulkUploadItems.some((item) => item.selected && item.status !== 'uploaded')}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {bulkUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {bulkUploading ? 'Uploading Batch...' : 'Upload Selected'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(packageExclusionDialog)}

@@ -96,19 +96,21 @@ interface CoverLetterInput {
   additionalLenderNotes: string;
 }
 
+const COVER_LETTER_SPEC_VERSION = 'lender_cover_letter_v2';
+
 const COVER_LETTER_GENERATION_BLUEPRINT = [
-  'Write the cover letter using exactly six body paragraphs after the greeting and before the sign-off.',
-  'Paragraph 1 is The Request and must contain exactly 3 sentences: define the financing request, connect the loan to business purpose, and frame the request strategically.',
-  'Paragraph 2 is Business Overview and must contain exactly 4 sentences: describe the business model, establish operating history and market, show real activity and traction, and reinforce credibility and stability.',
-  'Paragraph 3 is Use of Funds and must contain exactly 4 sentences: summarize the use of funds, explain operational impact, explain timing, and reinforce financial alignment.',
-  'Paragraph 4 is Repayment and must contain exactly 4 sentences: define the primary repayment source, explain how revenue is generated, support repayment capacity, and align the financing with cash flow.',
-  'Paragraph 5 is Business Strengths and must contain exactly 4 sentences: highlight ownership or leadership strength, highlight operational strengths, show commitment and stability, and summarize risk reduction.',
-  'Paragraph 6 is Closing and must contain exactly 3 sentences: express appreciation, reference supporting documentation, and maintain forward momentum.',
-  'Do not use section headings, bullet points, numbered lists, or labels inside the letter body.',
-  'No sentence may introduce new information that is not backed by the provided input.',
-  'Do not rely heavily on projections or speculative future performance.',
-  'Only mention DSCR, underwriting metrics, or financial analysis if those details are explicitly provided in the input.',
-  'Keep the tone factual, lender-aware, professional, and free of hype.',
+  'Produce a polished lender cover letter of approximately 450-650 words using exactly six body paragraphs after the greeting and before the sign-off.',
+  'Use this outer layout in plain text: current date, Credit Committee, Re: Loan Request for the borrower, Dear Credit Committee, the six body paragraphs, Sincerely, and the borrower business name.',
+  'Paragraph 1 — Financing Request: state the borrower, requested amount, inferred or stated facility type, primary loan purpose, and the business objective supported by the request.',
+  'Paragraph 2 — Borrower Profile: summarize the business model, industry, entity type, operating history, location or market, customers, revenue activity, employee count, and relevant ownership or management experience.',
+  'Paragraph 3 — Sources and Uses / Timing: reconcile the itemized use-of-funds amounts to the request when possible, explain how proceeds will be deployed, why funding is needed now, and the operational difference between receiving and not receiving the financing.',
+  'Paragraph 4 — Repayment Capacity: identify the primary repayment source, explain revenue streams, incorporate current annual revenue and available cash-flow or DSCR evidence, and distinguish historical facts from borrower estimates or projections.',
+  'Paragraph 5 — Credit Strengths and Risk Mitigation: present documented strengths, owner commitment, collateral or guarantees when provided, and candidly explain any stated weakness together with its mitigation. Never claim that collateral or a guarantee exists unless explicitly provided.',
+  'Paragraph 6 — Closing: thank the lender, reference the supporting financial and application documents, and invite additional diligence without implying or promising approval.',
+  'Use no section headings, bullets, numbered lists, marketing slogans, unsupported superlatives, or references to AI.',
+  'Keep the tone factual, confident, conservative, and easy for a commercial lender or credit analyst to scan.',
+  'Use all material supplied facts where they fit naturally, but avoid repetition and omit immaterial details rather than forcing them into the letter.',
+  'Never invent facts, loan terms, collateral values, guarantees, financial metrics, customers, contracts, or projections.',
 ].join(' ');
 
 const nullableNumberSchema = z.preprocess(
@@ -515,25 +517,6 @@ function buildNarrativeSelections(input: CoverLetterStructuredInputs) {
   };
 }
 
-function formatOptionalSentence(value: string, prefix = ''): string {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  return prefix ? `${prefix}${trimmed}` : trimmed;
-}
-
-function formatUseOfFundsBreakdown(value: UseOfFundsBreakdownItem[]): string {
-  if (value.length === 0) {
-    return '';
-  }
-
-  return value
-    .map((item) => `${item.description} (${formatCurrency(item.amount)})`)
-    .join(', ');
-}
-
 function formatOperatingHistorySentence(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -589,19 +572,6 @@ function formatSentence(value: string): string {
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
 }
 
-function formatUseOfFundsSummary(value: UseOfFundsBreakdownItem[]): string {
-  if (value.length === 0) {
-    return 'the borrower’s stated business needs';
-  }
-
-  const topItems = [...value]
-    .sort((left, right) => right.amount - left.amount)
-    .slice(0, 3)
-    .map((item) => `${item.description} (${formatCurrency(item.amount)})`);
-
-  return topItems.length > 0 ? topItems.join(', ') : 'the borrower’s stated business needs';
-}
-
 function formatBusinessLocationAndHistory(location: string, operatingHistory: string): string {
   const trimmedLocation = location.trim();
   const historySentence = formatOperatingHistorySentence(operatingHistory).replace(/\.$/, '');
@@ -619,6 +589,40 @@ function formatBusinessLocationAndHistory(location: string, operatingHistory: st
   }
 
   return 'The business operates in its current market with an established operating history.';
+}
+
+function formatCashFlowEvidence(value: unknown): string {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return '';
+  }
+
+  const years = (value as { years?: unknown }).years;
+  if (!Array.isArray(years)) {
+    return '';
+  }
+
+  const summaries = years.slice(-3).flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      return [];
+    }
+
+    const year = entry as Record<string, unknown>;
+    const label = typeof year.label === 'string' ? year.label : '';
+    const revenue = typeof year.revenue === 'number' ? formatCurrency(year.revenue) : '';
+    const netIncome = typeof year.netIncome === 'number' ? formatCurrency(year.netIncome) : '';
+    const debtService = typeof year.debtService === 'number' ? formatCurrency(year.debtService) : '';
+    const dscr = typeof year.dscr === 'number' ? year.dscr.toFixed(2) : '';
+    const metrics = [
+      revenue ? `revenue ${revenue}` : '',
+      netIncome ? `net income ${netIncome}` : '',
+      debtService ? `debt service ${debtService}` : '',
+      dscr ? `DSCR ${dscr}x` : '',
+    ].filter(Boolean);
+
+    return label && metrics.length > 0 ? [`${label}: ${metrics.join(', ')}`] : [];
+  });
+
+  return summaries.length > 0 ? `Available cash-flow analysis reports ${summaries.join('; ')}` : '';
 }
 
 function generateFallbackCoverLetter(input: CoverLetterInput): string {
@@ -642,57 +646,57 @@ function generateFallbackCoverLetter(input: CoverLetterInput): string {
         ? `The company currently operates with ${input.employeeCount} employees and generates revenue through ${formatList(input.revenueStreams)}`
         : `Revenue is generated through ${formatList(input.revenueStreams)}`
     ),
-    formatSentence(
-      input.currentBusinessTraitsDetails || input.topCustomers
-        ? [input.currentBusinessTraitsDetails, input.topCustomers ? `Customer notes: ${input.topCustomers}` : ''].filter(Boolean).join(' ')
-        : input.currentBusinessTraits.length > 0
-        ? `Key indicators of business stability include ${formatList(input.currentBusinessTraits)}`
-        : 'The business presents as an established operating company with ongoing customer activity'
-    ),
-  ].join(' ');
+    formatSentence([input.ownerManagementExperience, input.topCustomers ? `Customer concentration and relationship details include ${input.topCustomers}` : ''].filter(Boolean).join(' ')),
+  ].filter(Boolean).join(' ');
+  const useOfFundsTotal = input.useOfFundsBreakdown.reduce((sum, item) => sum + item.amount, 0);
+  const useOfFundsAllocations = input.useOfFundsBreakdown
+    .map((item) => `${item.description} (${formatCurrency(item.amount)})`)
+    .join(', ');
   const useOfFundsParagraph = [
-    formatSentence(`Loan proceeds are expected to be allocated across ${formatUseOfFundsSummary(input.useOfFundsBreakdown)}`),
+    formatSentence(
+      useOfFundsAllocations
+        ? `The planned allocations total ${formatCurrency(useOfFundsTotal)} and include ${useOfFundsAllocations}`
+        : `Loan proceeds are expected to support ${input.loanPurpose.toLowerCase()}`
+    ),
     formatSentence(input.useOfFundsNarrative),
     formatSentence(input.timingNarrative),
-    formatSentence([input.noLoanImpact, input.withLoanImpact, input.currentFinancialBaseline, input.projectedFinancialImpact].filter(Boolean).join(' ')),
-  ].join(' ');
+    formatSentence(input.noLoanImpact ? `Without the financing, ${input.noLoanImpact}` : ''),
+    formatSentence(input.withLoanImpact ? `With the financing, ${input.withLoanImpact}` : ''),
+    formatSentence([input.currentFinancialBaseline, input.projectedFinancialImpact].filter(Boolean).join(' ')),
+  ].filter(Boolean).join(' ');
+  const cashFlowEvidence = formatCashFlowEvidence(input.cashFlowSummary);
   const repaymentParagraph = [
     formatSentence(`The primary source of repayment is expected to be ${input.repaymentSource.toLowerCase()}`),
     formatSentence(`The business currently generates income through ${formatList(input.revenueStreams)}`),
-    formatSentence(
-      input.repaymentNotes
-        ? input.repaymentNotes
-        : input.annualRevenue != null
-          ? `Current annual revenue of approximately ${formatCurrency(input.annualRevenue)} helps frame the scale of operations supporting this request`
-          : 'Based on the operating profile described, repayment is intended to be supported by ongoing business activity rather than speculative future events'
-    ),
-    formatSentence(`Management expects this financing to ${formatList(input.financingImpact)}, which should help the facility fit within the business’s cash flow cycle`),
-  ].join(' ');
+    formatSentence(input.annualRevenue != null ? `Current annual revenue is approximately ${formatCurrency(input.annualRevenue)}` : ''),
+    formatSentence(cashFlowEvidence),
+    formatSentence(input.repaymentNotes),
+    formatSentence(`Management expects this financing to ${formatList(input.financingImpact)}, aligning the request with the business’s operating and cash-flow needs`),
+  ].filter(Boolean).join(' ');
   const strengthsParagraph = [
-    formatSentence(
-      input.ownerManagementExperience ||
-      (input.supportingFactors.length > 0
-        ? `Management strengths supporting this request include ${input.supportingFactors[0]}`
-        : 'The request is supported by experienced ownership and ongoing management oversight')
-    ),
-    formatSentence(
-      input.supportingFactorsDetails ||
-      (input.supportingFactors.length > 1
-        ? `Additional business strengths include ${formatList(input.supportingFactors.slice(1))}`
-        : 'The business also shows operating characteristics that support lender confidence')
-    ),
-    formatSentence(
-      [input.collateralDetails, input.personalGuaranteeDetails, input.ownerInvestmentDetails, input.weaknessMitigation, input.additionalLenderNotes]
-        .filter(Boolean)
-        .join(' ') || 'The borrower appears meaningfully invested in the business and focused on long-term operating stability'
-    ),
-    'Taken together, these factors help reduce perceived credit risk and support the credibility of the repayment narrative.',
-  ].join(' ');
+    formatSentence(input.currentBusinessTraits.length > 0 ? `Business strengths identified for this request include ${formatList(input.currentBusinessTraits)}` : ''),
+    formatSentence(input.currentBusinessTraitsDetails),
+    formatSentence(input.supportingFactors.length > 0 ? `Additional supporting factors include ${formatList(input.supportingFactors)}` : ''),
+    formatSentence(input.supportingFactorsDetails),
+    formatSentence(input.ownerInvestmentDetails ? `Owner commitment includes ${input.ownerInvestmentDetails}` : ''),
+    formatSentence(input.collateralDetails ? `Collateral information provided for lender review includes ${input.collateralDetails}` : ''),
+    formatSentence(input.personalGuaranteeDetails ? `Guarantee information provided for lender review includes ${input.personalGuaranteeDetails}` : ''),
+    formatSentence(input.weaknessMitigation),
+    formatSentence(input.additionalLenderNotes),
+  ].filter(Boolean).join(' ');
   const closingParagraph = [
     'Thank you for your time and consideration of this request.',
     'Supporting documentation has been provided to substantiate the request and facilitate underwriting review.',
     'We welcome the opportunity to work with your team and respond promptly to any additional diligence questions.',
   ].join(' ');
+  const bodyParagraphs = [
+    requestParagraph,
+    businessOverviewParagraph,
+    useOfFundsParagraph,
+    repaymentParagraph,
+    strengthsParagraph,
+    closingParagraph,
+  ];
 
   return [
     today,
@@ -703,18 +707,7 @@ function generateFallbackCoverLetter(input: CoverLetterInput): string {
     '',
     'Dear Credit Committee,',
     '',
-    requestParagraph,
-    '',
-    businessOverviewParagraph,
-    '',
-    useOfFundsParagraph,
-    '',
-    repaymentParagraph,
-    '',
-    strengthsParagraph,
-    '',
-    closingParagraph,
-    '',
+    ...bodyParagraphs.flatMap((paragraph) => [paragraph, '']),
     'Sincerely,',
     input.businessName,
   ].join('\n');
@@ -745,10 +738,11 @@ async function generateAiCoverLetter(input: CoverLetterInput): Promise<string | 
   ].join(' ');
 
   const userPrompt = [
-    'Generate a formal cover letter for a business loan package using this data:',
+    'Generate the standard lender cover letter using the complete borrower context below.',
+    'Treat historical figures and current operating facts as facts only when supplied. Attribute projected impacts to management or the borrower and do not present them as guaranteed outcomes.',
+    'Consider every non-empty field. Use material facts naturally in the prescribed paragraph, avoid duplication, and do not mention empty fields.',
     JSON.stringify(input, null, 2),
-    'Follow the saved six-paragraph cover letter structure exactly every time.',
-    'Output plain text only.',
+    `Output plain text only using specification ${COVER_LETTER_SPEC_VERSION}.`,
   ].join('\n\n');
 
   const inputMessages = [
@@ -782,7 +776,30 @@ async function generateAiCoverLetter(input: CoverLetterInput): Promise<string | 
         });
 
   const generated = response.output_text?.trim();
-  return generated || null;
+  if (!generated) {
+    return null;
+  }
+
+  const wordCount = generated.split(/\s+/).filter(Boolean).length;
+  const includesBorrower = generated.toLowerCase().includes(input.businessName.toLowerCase());
+  const includesFormattingArtifacts = /(^|\n)\s*(#{1,6}|[-*]\s|\d+\.\s)/m.test(generated);
+  const blocks = generated.split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean);
+  const greetingIndex = blocks.findIndex((block) => /^dear credit committee,?$/i.test(block));
+  const signoffIndex = blocks.findIndex((block, index) => index > greetingIndex && /^sincerely,?/i.test(block));
+  const bodyParagraphCount = greetingIndex >= 0 && signoffIndex > greetingIndex
+    ? blocks.slice(greetingIndex + 1, signoffIndex).length
+    : 0;
+  if (wordCount < 300 || wordCount > 900 || !includesBorrower || includesFormattingArtifacts || bodyParagraphCount !== 6) {
+    console.error('[cover-letter] AI output failed format validation', {
+      wordCount,
+      includesBorrower,
+      includesFormattingArtifacts,
+      bodyParagraphCount,
+    });
+    return null;
+  }
+
+  return generated;
 }
 
 async function ensureLoanRequestAccess(
@@ -873,10 +890,7 @@ export async function POST(req: NextRequest) {
     businessDescription:
       structuredInputs.businessDescription ||
       payload.businessDescription?.trim() ||
-      asString(
-        loanRequest.business_description,
-        'The business has an established operating history and a defined customer base.',
-      ),
+      asString(loanRequest.business_description, ''),
     industry: structuredInputs.industry,
     entityType: structuredInputs.entityType,
     customerType: structuredInputs.customerType,
@@ -887,44 +901,24 @@ export async function POST(req: NextRequest) {
       structuredInputs.operatingHistory ||
       getFirstNonEmptyText(loanRequest.years_in_business),
     businessModelType: structuredInputs.businessModelType,
-    businessLocation:
-      structuredInputs.businessLocation ||
-      'its current market',
+    businessLocation: structuredInputs.businessLocation,
     businessLocationDetails: structuredInputs.businessLocationDetails,
-    currentBusinessTraits:
-      narrativeSelections.currentBusinessTraits.length > 0
-        ? narrativeSelections.currentBusinessTraits
-        : ['an established local presence'],
+    currentBusinessTraits: narrativeSelections.currentBusinessTraits,
     currentBusinessTraitsDetails: structuredInputs.currentBusinessTraitsDetails,
     employeeCount: structuredInputs.employeeCount,
     useOfFundsBreakdown: structuredInputs.useOfFundsBreakdown,
-    useOfFundsNarrative:
-      structuredInputs.useOfFundsNarrative ||
-      'Loan proceeds will be used for clearly defined business needs tied to this request.',
-    timingNarrative:
-      structuredInputs.timingNarrative ||
-      'The timing of this request aligns with an active business need that management is addressing now.',
+    useOfFundsNarrative: structuredInputs.useOfFundsNarrative,
+    timingNarrative: structuredInputs.timingNarrative,
     noLoanImpact: structuredInputs.noLoanImpact,
     withLoanImpact: structuredInputs.withLoanImpact,
     currentFinancialBaseline: structuredInputs.currentFinancialBaseline,
     projectedFinancialImpact: structuredInputs.projectedFinancialImpact,
     cashFlowSummary: structuredInputs.cashFlowSummary,
-    repaymentSource:
-      narrativeSelections.repaymentSource ||
-      'ongoing business cash flow',
-    revenueStreams:
-      narrativeSelections.revenueStreams.length > 0
-        ? narrativeSelections.revenueStreams
-        : ['ongoing customer activity'],
-    financingImpact:
-      narrativeSelections.financingImpact.length > 0
-        ? narrativeSelections.financingImpact
-        : ['support continued operations'],
+    repaymentSource: narrativeSelections.repaymentSource,
+    revenueStreams: narrativeSelections.revenueStreams,
+    financingImpact: narrativeSelections.financingImpact,
     repaymentNotes: structuredInputs.repaymentNotes,
-    supportingFactors:
-      narrativeSelections.supportingFactors.length > 0
-        ? narrativeSelections.supportingFactors
-        : ['experienced ownership'],
+    supportingFactors: narrativeSelections.supportingFactors,
     supportingFactorsDetails: structuredInputs.supportingFactorsDetails,
     collateralDetails: structuredInputs.collateralDetails,
     personalGuaranteeDetails: structuredInputs.personalGuaranteeDetails,
@@ -934,11 +928,18 @@ export async function POST(req: NextRequest) {
   };
 
   let coverLetterContent: string;
+  let generationSource: 'ai' | 'fallback' = 'ai';
   try {
     const aiLetter = await generateAiCoverLetter(coverLetterInput);
-    coverLetterContent = aiLetter ?? generateFallbackCoverLetter(coverLetterInput);
+    if (aiLetter) {
+      coverLetterContent = aiLetter;
+    } else {
+      generationSource = 'fallback';
+      coverLetterContent = generateFallbackCoverLetter(coverLetterInput);
+    }
   } catch (error) {
     console.error('[cover-letter] AI generation failed, using fallback:', error);
+    generationSource = 'fallback';
     coverLetterContent = generateFallbackCoverLetter(coverLetterInput);
   }
 
@@ -955,6 +956,7 @@ export async function POST(req: NextRequest) {
         loanPurpose: coverLetterInput.loanPurpose,
         loanAmount: coverLetterInput.loanAmount,
         annualRevenue: coverLetterInput.annualRevenue,
+        generationSpecVersion: COVER_LETTER_SPEC_VERSION,
       },
       cover_letter_content: coverLetterContent,
       updated_at: nowIso,
@@ -966,7 +968,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  await admin.from('loan_request_documents').upsert(
+  const documentResult = await admin.from('loan_request_documents').upsert(
     {
       loan_request_id: payload.loanRequestId,
       user_id: auth.user.id,
@@ -975,16 +977,23 @@ export async function POST(req: NextRequest) {
       source: 'generated',
       metadata: {
         generated_at: nowIso,
-        source: 'ai',
+        source: generationSource,
+        generation_spec_version: COVER_LETTER_SPEC_VERSION,
       },
     },
     { onConflict: 'loan_request_id,requirement_key' },
   );
 
+  if (documentResult.error) {
+    return NextResponse.json({ error: documentResult.error.message }, { status: 500 });
+  }
+
   return NextResponse.json({
     coverLetterStatus: 'generated',
     coverLetterContent,
     coverLetterInputs: structuredInputs,
+    generationSpecVersion: COVER_LETTER_SPEC_VERSION,
+    generationSource,
   });
 }
 
@@ -1015,18 +1024,18 @@ export async function PATCH(req: NextRequest) {
 
   const nowIso = new Date().toISOString();
 
-  const { error } = await admin
+  const { error: contentUpdateError } = await admin
     .from('loan_requests')
     .update({
-      cover_letter_status: 'approved',
+      cover_letter_status: 'generated',
       cover_letter_content: payload.content,
       updated_at: nowIso,
     })
     .eq('id', payload.loanRequestId)
     .eq('user_id', auth.user.id);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (contentUpdateError) {
+    return NextResponse.json({ error: contentUpdateError.message }, { status: 500 });
   }
 
   const origin = getOrigin(req);
@@ -1045,7 +1054,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: uploadResult.error.message }, { status: 500 });
   }
 
-  await admin.from('loan_request_documents').upsert(
+  const documentResult = await admin.from('loan_request_documents').upsert(
     {
       loan_request_id: payload.loanRequestId,
       user_id: auth.user.id,
@@ -1068,7 +1077,11 @@ export async function PATCH(req: NextRequest) {
     { onConflict: 'loan_request_id,requirement_key' },
   );
 
-  await admin.from('generated_reports').insert({
+  if (documentResult.error) {
+    return NextResponse.json({ error: documentResult.error.message }, { status: 500 });
+  }
+
+  const reportResult = await admin.from('generated_reports').insert({
     user_id: auth.user.id,
     loan_request_id: payload.loanRequestId,
     report_type: 'cover_letter_pdf',
@@ -1079,6 +1092,23 @@ export async function PATCH(req: NextRequest) {
     file_size_bytes: pdfBuffer.length,
     visibility: 'private',
   });
+
+  if (reportResult.error) {
+    console.error('[cover-letter] Failed to record generated report:', reportResult.error);
+  }
+
+  const { error: approvalError } = await admin
+    .from('loan_requests')
+    .update({
+      cover_letter_status: 'approved',
+      updated_at: nowIso,
+    })
+    .eq('id', payload.loanRequestId)
+    .eq('user_id', auth.user.id);
+
+  if (approvalError) {
+    return NextResponse.json({ error: approvalError.message }, { status: 500 });
+  }
 
   return NextResponse.json({
     coverLetterStatus: 'approved',

@@ -22,6 +22,23 @@ function sanitizeFileName(fileName: string): string {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
+function getEffectiveMimeType(file: File): string {
+  if (file.type) {
+    return file.type.toLowerCase();
+  }
+
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  return {
+    pdf: 'application/pdf',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    txt: 'text/plain',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  }[extension ?? ''] ?? 'application/octet-stream';
+}
+
 function buildRequirementSlotMetadata(requirementKey: string) {
   const nowYear = new Date().getFullYear();
 
@@ -133,11 +150,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Loan request not found' }, { status: 404 });
   }
 
+  const serviceTypes = String(loanRequest.service_type) === 'loan_brokering'
+    ? ['loan_packaging', 'loan_brokering']
+    : [String(loanRequest.service_type)];
   const requirementResult = await admin
     .from('document_requirements')
     .select('*')
     .eq('requirement_key', requirementKey)
-    .eq('service_type', String(loanRequest.service_type))
+    .in('service_type', serviceTypes)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -159,11 +179,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const existingDocumentResult = await admin
+    .from('loan_request_documents')
+    .select('file_path')
+    .eq('loan_request_id', loanRequestId)
+    .eq('user_id', auth.user.id)
+    .eq('requirement_key', requirementKey)
+    .maybeSingle();
+
+  if (existingDocumentResult.error) {
+    return NextResponse.json({ error: existingDocumentResult.error.message }, { status: 500 });
+  }
+
+  const previousFilePath = typeof existingDocumentResult.data?.file_path === 'string'
+    ? existingDocumentResult.data.file_path
+    : null;
   const allowedMimeTypes = Array.isArray(requirement.allowed_mime_types)
     ? (requirement.allowed_mime_types as string[])
     : [];
+  const effectiveMimeType = getEffectiveMimeType(file);
 
-  if (allowedMimeTypes.length > 0 && file.type && !allowedMimeTypes.includes(file.type)) {
+  if (allowedMimeTypes.length > 0 && !allowedMimeTypes.includes(effectiveMimeType)) {
     return NextResponse.json(
       {
         error: `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}`,
@@ -191,7 +227,7 @@ export async function POST(req: NextRequest) {
   const uploadResult = await admin.storage
     .from('loan-package-documents')
     .upload(objectPath, fileBuffer, {
-      contentType: file.type || 'application/octet-stream',
+      contentType: effectiveMimeType,
       upsert: false,
     });
 
@@ -211,9 +247,11 @@ export async function POST(req: NextRequest) {
         status: 'uploaded',
         source: 'upload',
         file_path: objectPath,
-        mime_type: file.type || null,
+        mime_type: effectiveMimeType,
         file_size_bytes: file.size,
         uploaded_at: nowIso,
+        excluded_from_package: false,
+        excluded_at: null,
         metadata: {
           bucket: 'loan-package-documents',
           original_file_name: file.name,
@@ -228,16 +266,30 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (documentResult.error || !documentResult.data) {
+    await admin.storage.from('loan-package-documents').remove([objectPath]);
     return NextResponse.json({ error: documentResult.error?.message || 'Failed to persist document metadata' }, { status: 500 });
   }
 
-  await admin
+  if (previousFilePath && previousFilePath !== objectPath) {
+    const cleanupResult = await admin.storage.from('loan-package-documents').remove([previousFilePath]);
+    if (cleanupResult.error) {
+      console.error('[loan-document-upload] Failed to remove replaced file:', cleanupResult.error);
+    }
+  }
+
+  const loanRequestUpdate = await admin
     .from('loan_requests')
     .update({
       updated_at: nowIso,
+      package_zip_path: null,
+      package_zip_generated_at: null,
     })
     .eq('id', loanRequestId)
     .eq('user_id', auth.user.id);
+
+  if (loanRequestUpdate.error) {
+    console.error('[loan-document-upload] Failed to invalidate existing package:', loanRequestUpdate.error);
+  }
 
   const signedUrlResult = await admin.storage
     .from('loan-package-documents')
