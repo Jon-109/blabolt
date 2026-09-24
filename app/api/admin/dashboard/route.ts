@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   const admin = getSupabaseAdmin();
 
-  const [usersPage, loanRequests, tasks, reviews, templates, clientAccounts] = await Promise.all([
+  const [usersPage, loanRequests, tasks, reviews, templates, clientAccounts, financingLeads] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     admin
       .from('loan_requests')
@@ -38,6 +38,9 @@ export async function GET(req: NextRequest) {
       .from('client_accounts')
       .select('user_id,email,service_level,access_templates,access_packaging,access_comprehensive')
       .limit(5000),
+    admin
+      .from('financing_leads')
+      .select('id', { count: 'exact', head: true }),
   ]);
 
   const allUsers = usersPage.data?.users ?? [];
@@ -114,6 +117,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     kpis: {
       totalUsers: allUsers.length,
+      financingLeads: financingLeads.count ?? 0,
       templateUsers: templateUsers.size,
       loanPackagingUsers: packagingUsers.size,
       loanBrokeringUsers: brokeringUsers.size,

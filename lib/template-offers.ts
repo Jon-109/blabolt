@@ -66,9 +66,9 @@ export const TEMPLATE_OFFERS: TemplateOffer[] = [
   },
   {
     slug: 'personal_financial_statement',
-    name: 'Personal Financial Statement',
-    shortDescription: 'Provide guarantor net-worth detail in an SBA-aligned structure.',
-    outcome: 'A complete personal strength profile used during guarantor underwriting review.',
+    name: 'SBA Form 413 Personal Financial Statement',
+    shortDescription: 'Complete the current SBA Form 413 through a guided intake and generate the lender-ready PDF.',
+    outcome: 'A versioned personal financial statement covering guarantor assets, liabilities, income, and contingent obligations.',
     category: 'Personal',
   },
   {

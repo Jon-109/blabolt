@@ -143,6 +143,7 @@ export interface IncomeStatementData {
 }
 
 export interface PersonalFinancialStatementData {
+  formVersion?: '2025-02-13';
   asOfDate: string;
   progressState?: {
     hasAccountsAndNotesReceivable?: 'yes' | 'no';

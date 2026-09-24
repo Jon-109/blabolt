@@ -52,12 +52,6 @@ const STRIPE_CHECKOUT_PRODUCT_CONFIGS: Record<StripeCheckoutProductType, StripeC
     successPath: '/loan-packaging',
     cancelPath: '/loan-services?cancelled=true',
   },
-  cash_flow_analysis: {
-    priceId: process.env.STRIPE_PRICE_ID_CASH_FLOW_ANALYSIS,
-    productId: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_CASH_FLOW_ANALYSIS,
-    successPath: '/comprehensive-cash-flow-analysis',
-    cancelPath: '/cash-flow-analysis?cancelled=true',
-  },
 };
 
 export function getStripeCheckoutProductConfig(productType: StripeCheckoutProductType) {

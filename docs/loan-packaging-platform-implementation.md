@@ -1,5 +1,7 @@
 # Loan Packaging Platform Implementation (v2)
 
+> Historical implementation record. The canonical current product and technical reference is `docs/platform-master-source-of-truth.md`.
+
 ## What Was Implemented
 
 ### 1. Supabase Foundation

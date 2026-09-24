@@ -1,6 +1,8 @@
 import type { StripeCheckoutProductType } from '@/lib/stripe/catalog';
 
-const PUBLIC_STRIPE_PRODUCT_IDS: Record<StripeCheckoutProductType, string | undefined> = {
+type PublicStripeProductType = StripeCheckoutProductType | 'cash_flow_analysis';
+
+const PUBLIC_STRIPE_PRODUCT_IDS: Record<PublicStripeProductType, string | undefined> = {
   balance_sheet: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_BALANCE_SHEET,
   income_statement: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_INCOME_STATEMENT,
   business_debt_summary: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_BUSINESS_DEBT_SUMMARY,
@@ -11,7 +13,7 @@ const PUBLIC_STRIPE_PRODUCT_IDS: Record<StripeCheckoutProductType, string | unde
   cash_flow_analysis: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_ID_CASH_FLOW_ANALYSIS,
 };
 
-export function getPublicStripeProductId(productType: StripeCheckoutProductType): string {
+export function getPublicStripeProductId(productType: PublicStripeProductType): string {
   const productId = PUBLIC_STRIPE_PRODUCT_IDS[productType];
 
   if (!productId) {

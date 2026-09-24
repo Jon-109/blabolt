@@ -22,7 +22,6 @@ const checkoutEventMeta: Record<StripeCheckoutProductType, { itemName: string; v
   personal_debt_summary: { itemName: 'Personal Debt Summary Template', value: 9.99 },
   templates_bundle: { itemName: 'Loan Document Templates Bundle', value: 29.99 },
   loan_packaging: { itemName: 'Loan Packaging', value: 499 },
-  cash_flow_analysis: { itemName: 'Free Bank-Level Cash Flow Analysis', value: 0 },
 };
 
 export default function AuthAwareCheckoutButton({

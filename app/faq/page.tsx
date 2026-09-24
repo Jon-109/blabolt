@@ -109,7 +109,9 @@ Closing & funding (5–15 business days) – collect any final items (e.g., land
         {
           question: "What do your services cost?",
           answer: `• DSCR Quick Calculator: FREE on our site.
-• Comprehensive Cash-Flow Analysis: $99 flat.
+• Comprehensive Bank-Level Cash-Flow Analysis: FREE with an account, including both lender-ready PDF reports.
+• Individual lender-ready templates: $9.99 each.
+• Five-template bundle: $29.99.
 • Loan Packaging: $499 (includes templates, cover-letter drafting, and full lender file).
 • Loan Brokering: 1% of the funded amount, payable only at closing. There is no upfront broker fee.`
         },

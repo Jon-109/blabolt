@@ -48,10 +48,12 @@ export interface PageViewParams {
 }
 
 export interface GenerateLeadParams {
-  form_id: 'loan_interest' | 'contact';
+  form_id: 'loan_interest' | 'contact' | 'dscr_result';
   submission_method: 'resend';
   loan_amount?: number;
   loan_purpose?: string;
+  dscr_band?: string;
+  dscr_value?: number;
   funding_amount_range?: string;
   service_interest?: string;
   lead_source?: string;
@@ -61,7 +63,7 @@ export interface GenerateLeadParams {
 }
 
 export interface LeadSubmissionErrorParams {
-  form_id: 'loan_interest' | 'contact';
+  form_id: 'loan_interest' | 'contact' | 'dscr_result';
   error_stage: 'validation' | 'network' | 'server';
   message?: string;
 }

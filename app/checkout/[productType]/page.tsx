@@ -18,12 +18,12 @@ export default function CheckoutRedirectPage() {
     startedRef.current = true;
 
     const productType = typeof params.productType === 'string' ? params.productType : '';
-    if (!productType || !isStripeCheckoutProductType(productType)) {
-      setMessage('That checkout link is not valid.');
-      return;
-    }
     if (productType === 'cash_flow_analysis') {
       router.replace('/comprehensive-cash-flow-analysis');
+      return;
+    }
+    if (!productType || !isStripeCheckoutProductType(productType)) {
+      setMessage('That checkout link is not valid.');
       return;
     }
 

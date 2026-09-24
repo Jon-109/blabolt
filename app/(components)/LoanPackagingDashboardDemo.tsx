@@ -65,8 +65,8 @@ const templateDefinitions: Record<TemplateKey, TemplateDefinition> = {
     firstStepDescription: 'Start with the borrower details used on the finished debt summary.',
   },
   personal_financial_statement: {
-    title: 'Personal Financial Statement',
-    description: 'Complete a guided SBA Form 413-style personal financial statement.',
+    title: 'SBA Form 413 Personal Financial Statement',
+    description: 'Complete the current SBA Form 413 through a guided personal financial statement workflow.',
     steps: ['Borrower Details', 'Assets', 'Debts', 'Income & Details', 'Review'],
     firstStepTitle: 'Basic borrower details',
     firstStepDescription: 'Enter the legal borrower information that will appear on the lender-ready statement.',
@@ -104,8 +104,8 @@ const baseDocuments: DemoDocument[] = [
   },
   {
     id: 'personal-financial',
-    name: 'Personal Financial Statement',
-    description: 'Statement of personal assets and liabilities used in guarantor strength analysis.',
+    name: 'SBA Form 413 Personal Financial Statement',
+    description: 'Current SBA personal financial statement for guarantor underwriting.',
     status: 'generated',
     fileName: 'Jordan-Lee-Personal-Financial-Statement.pdf',
     templateKey: 'personal_financial_statement',

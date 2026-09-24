@@ -57,6 +57,10 @@ function coerceString(value: unknown): string | null {
 }
 
 function formatTemplateTypeLabel(type: string): string {
+  if (type === 'personal_financial_statement') {
+    return 'SBA Form 413 Personal Financial Statement';
+  }
+
   return type.replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 

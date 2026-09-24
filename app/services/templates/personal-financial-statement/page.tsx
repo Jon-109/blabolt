@@ -11,7 +11,7 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: 'Personal Financial Statement (SBA Form 413) Template Service',
   description:
-    'Generate a complete Personal Financial Statement in SBA Form 413 format. Instant downloadable PDF output in the lender-preferred structure for SBA and conventional underwriting workflows.',
+    'Complete the current SBA Form 413 Personal Financial Statement through a guided intake with secure saves, validation, e-signature, and lender-ready PDF output.',
   alternates: {
     canonical: '/services/templates/personal-financial-statement',
   },

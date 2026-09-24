@@ -220,7 +220,7 @@ function Page({
 }: {
   label: string;
   backgroundHref: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   return (
     <svg
@@ -470,6 +470,10 @@ function SignatureField({
       </text>
     </g>
   );
+}
+
+function pageOne() {
+  return <Page label="SBA Form 413 page 1" backgroundHref="/pdf/sba-form-413/page-1.png" />;
 }
 
 function pageTwo(data: PersonalFinancialStatementData) {
@@ -1050,6 +1054,7 @@ function pageFour(data: PersonalFinancialStatementData) {
 export default function SBAForm413SvgTemplate({ data }: Props) {
   const pageThreeSheets = pageThree(data);
   const sheets = [
+    { key: 'page-1', label: 'Page 1', content: pageOne() },
     { key: 'page-2', label: 'Page 2', content: pageTwo(data) },
     ...pageThreeSheets.map((content, index) => ({
       key: `page-3-${index}`,

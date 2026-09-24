@@ -49,7 +49,7 @@ const personalCards: PreviewTemplateCard[] = [
       'Provides a full guarantor net-worth snapshot of assets, liabilities, and income, which lenders use to evaluate personal strength and support.',
     progress: 67,
     time: '10-15 min',
-    title: 'Personal Financial Statement',
+    title: 'SBA Form 413',
   },
 ];
 

@@ -29,7 +29,7 @@ type DemoDocument = {
 };
 
 const initialDocuments: DemoDocument[] = [
-  { id: 'personal-financial', name: 'Personal Financial Statement', detail: 'SBA Form 413 for the guarantor', status: 'generated', template: true },
+  { id: 'personal-financial', name: 'SBA Form 413 Personal Financial Statement', detail: 'Current SBA personal financial statement for the guarantor', status: 'generated', template: true },
   { id: 'personal-debt', name: 'Personal Debt Summary', detail: 'Personal balances and monthly payments', status: 'not_started', template: true },
   { id: 'business-debt', name: 'Business Debt Summary', detail: 'Current business liabilities and payments', status: 'approved', template: true },
   { id: 'balance-sheet', name: 'Current Balance Sheet', detail: 'Assets, liabilities, and equity', status: 'generated', template: true },

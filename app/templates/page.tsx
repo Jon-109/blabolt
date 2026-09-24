@@ -77,9 +77,9 @@ const templates: TemplateHubItem[] = [
   },
   {
     slug: 'personal_financial_statement',
-    title: 'Personal Financial Statement',
-    description: 'SBA-aligned net-worth statement for guarantor financial strength.',
-    compactDescription: 'SBA net-worth summary.',
+    title: 'SBA Form 413 Personal Financial Statement',
+    description: 'Guided current SBA Form 413 with secure saves, validation, e-signature, and lender-ready PDF output.',
+    compactDescription: 'Current SBA Form 413.',
     time: '10-15 min',
     category: 'Personal',
   },

@@ -438,9 +438,9 @@ const TEMPLATE_DEFINITIONS: Record<TemplateKey, TemplateDefinition> = {
   },
   personal_financial_statement: {
     key: 'personal_financial_statement',
-    name: 'Personal Financial Statement',
+    name: 'SBA Form 413 Personal Financial Statement',
     description:
-      'Provide a personal net-worth snapshot for owners/guarantors in a lender-friendly format.',
+      'Complete the current SBA Form 413 for owner and guarantor assets, liabilities, income, and contingent obligations.',
     sections: [
       {
         id: 'profile',

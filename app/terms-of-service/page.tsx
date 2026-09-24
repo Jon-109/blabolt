@@ -2,8 +2,8 @@ import Header from "../(components)/shared/Header";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Blabolt",
-  description: "Read the Terms of Service for Blabolt, including information on user data and privacy handling.",
+  title: "Terms of Service | Business Lending Advocate",
+  description: "Read the Business Lending Advocate Terms of Service, including service fees, user data, generated reports, and privacy handling.",
 };
 
 export default function TermsOfServicePage() {
@@ -17,7 +17,7 @@ export default function TermsOfServicePage() {
             <div className="text-center">
               <p className="font-semibold text-lg text-gray-900">Business Lending Advocate</p>
               <p className="text-gray-700">Legal entity: Lending Advocate, LLC (“BLA,” “we,” “our,” “us”)</p>
-              <p className="text-gray-500 text-sm mt-1">Last updated June 11, 2025</p>
+              <p className="text-gray-500 text-sm mt-1">Last updated September 23, 2026</p>
             </div>
 
             <section>
@@ -46,9 +46,24 @@ export default function TermsOfServicePage() {
                   </thead>
                   <tbody>
                     <tr className="border-t">
-                      <td className="py-2 px-3">Comprehensive Cash-Flow Analysis</td>
-                      <td className="py-2 px-3">$99</td>
-                      <td className="py-2 px-3">Payable at checkout via Stripe. Generates a lender-style PDF report.</td>
+                      <td className="py-2 px-3">Quick DSCR Calculator</td>
+                      <td className="py-2 px-3">Free</td>
+                      <td className="py-2 px-3">High-level estimate available without a credit pull.</td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="py-2 px-3">Comprehensive Bank-Level Cash-Flow Analysis</td>
+                      <td className="py-2 px-3">Free</td>
+                      <td className="py-2 px-3">Account required to save progress and generate lender-ready PDF reports.</td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="py-2 px-3">Individual Lender-Ready Template</td>
+                      <td className="py-2 px-3">$9.99</td>
+                      <td className="py-2 px-3">One-time Stripe payment for access to the selected guided template.</td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="py-2 px-3">Five-Template Bundle</td>
+                      <td className="py-2 px-3">$29.99</td>
+                      <td className="py-2 px-3">One-time Stripe payment for access to all five current guided templates, subject to displayed submission limits.</td>
                     </tr>
                     <tr className="border-t">
                       <td className="py-2 px-3">Loan Packaging</td>

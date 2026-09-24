@@ -101,6 +101,7 @@ export const IncomeStatementSchema = z.object({
 });
 
 export const PersonalFinancialStatementSchema = z.object({
+  formVersion: z.literal('2025-02-13').optional(),
   asOfDate: z.string().min(1, "As of date is required"),
   progressState: z.object({
     hasAccountsAndNotesReceivable: z.enum(['yes', 'no']).optional(),

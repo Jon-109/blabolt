@@ -223,6 +223,7 @@ function YesNoToggle({
 }
 
 const DEFAULT_FORM: PersonalFinancialStatementData = {
+  formVersion: '2025-02-13',
   asOfDate: new Date().toISOString().split('T')[0] as string,
   progressState: {
     hasAccountsAndNotesReceivable: undefined,
@@ -1203,6 +1204,13 @@ export default function PersonalFinancialStatementFormPage() {
   };
 
   const onGenerate = async () => {
+    if (!previewConfirmed || signatureName.trim().length < 2) {
+      setReviewLockedMessage('Confirm the attestation and type your full legal name before generating SBA Form 413.');
+      setStepIndex(STEPS.length - 1);
+      return;
+    }
+
+    setReviewLockedMessage(null);
     const currentAsOfDate = new Date().toISOString().split('T')[0] as string;
     const generationForm = buildNormalizedForm({
       ...form,
@@ -1923,9 +1931,9 @@ export default function PersonalFinancialStatementFormPage() {
   }
   return (
     <TemplatePageShell
-      title="Personal Financial Statement (SBA 413)"
-      subtitle="Guided version for first-time users."
-      description="Answer one section at a time in plain English. We turn this into the lender-ready SBA 413 style output for you."
+      title="SBA Form 413 Personal Financial Statement"
+      subtitle="Guided current form • SBA version effective February 13, 2025"
+      description="Answer one section at a time in plain English, save your progress securely, and generate the current lender-ready SBA Form 413 PDF."
       metricLabel={netWorth >= 0 ? 'Estimated Net Worth' : 'Estimated Net Deficit'}
       metricValue={`$${Math.abs(netWorth).toLocaleString()}`}
       metricSubvalue={`${totalAssets.toLocaleString()} assets vs ${totalLiabilities.toLocaleString()} liabilities`}

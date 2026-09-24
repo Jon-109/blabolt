@@ -1,4 +1,7 @@
 # 📄 Product Requirements Document (PRD)
+
+> Historical planning document. The canonical current product and technical reference is `docs/platform-master-source-of-truth.md`.
+
 ## Feature: Loan Packaging & Brokering Dashboard  
 **Product**: Business Lending Advocate (BLA)  
 **Owner**: Jonathan Aranda  

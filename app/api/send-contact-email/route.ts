@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import { getEmailConfig, getResendClient } from '@/lib/email';
 
 function escapeHtml(input: string) {
   return input
@@ -12,15 +12,8 @@ function escapeHtml(input: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) {
-      return NextResponse.json(
-        { error: 'Email service is not configured' },
-        { status: 500 }
-      );
-    }
-
-    const resend = new Resend(resendApiKey);
+    const resend = getResendClient();
+    const emailConfig = getEmailConfig();
     const body = await request.json();
     const {
       businessName,
@@ -88,8 +81,8 @@ export async function POST(request: NextRequest) {
     const concernsList = safeConcerns.map((concern: string) => `• ${concern}`).join('\n');
 
     const { data, error } = await resend.emails.send({
-      from: 'Business Lending Advocate <onboarding@resend.dev>',
-      to: ['jonathan@businesslendingadvocate.com'],
+      from: emailConfig.from,
+      to: [emailConfig.internalTo],
       replyTo: safeEmail,
       subject: `New Funding Interest Lead - ${safeFirstName} ${safeLastName}`,
       html: `

@@ -40,6 +40,7 @@ import {
   trackCalculatorResult,
   trackCtaClick,
 } from '@/lib/analytics';
+import DscrEmailCapture from '@/app/(components)/cash-flow/DscrEmailCapture';
 import { Button } from '@/app/(components)/ui/button';
 import {
   Select,
@@ -1577,6 +1578,25 @@ const DscrQuickCalculator: React.FC<DscrQuickCalculatorProps> = ({
                     </div>
                   </div>
                 </section>
+
+                <DscrEmailCapture
+                  result={{
+                    dscr,
+                    dscrBand: dscrBand?.id ?? getDscrBand(dscr).id,
+                    loanPurpose: loanPurpose || selectedPurposeTitle,
+                    requestedAmount: principal,
+                    monthlyNetIncome: values.monthlyNetIncome,
+                    currentMonthlyDebtService: totalMonthlyDebtPayments,
+                    proposedMonthlyPayment: estimatedPayment,
+                    totalMonthlyDebtService: totalProjectedDebtService,
+                    interestRatePct: Number(customRatePercent.toFixed(4)),
+                    termMonths: selectedTerm,
+                    downPaymentPct: Number(customDownPaymentPercent.toFixed(4)),
+                    recommendedAction: nextStepConfig?.primaryCtaKind,
+                  }}
+                  pageTemplate={analyticsPageTemplate}
+                  placement={analyticsPlacement}
+                />
 
                 {dscr >= DSCR_BENCHMARK && maxLoanAmountAtBenchmark > 0 && (
                   <section className="rounded-[1.5rem] border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.96)_0%,rgba(255,255,255,1)_52%,rgba(240,253,250,0.98)_100%)] p-3 shadow-[0_24px_60px_-42px_rgba(16,185,129,0.35)] sm:rounded-[2rem] sm:p-5">

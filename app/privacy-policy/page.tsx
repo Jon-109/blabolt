@@ -13,7 +13,7 @@ export default function PrivacyPolicyPage() {
         <header className="mb-8">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-center text-gray-900 dark:text-white mb-2">Privacy Policy</h1>
           <p className="text-center text-lg text-gray-600 dark:text-gray-300 font-medium">Business Lending Advocate</p>
-          <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-1">Last updated June 11, 2025</p>
+          <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-1">Last updated September 24, 2026</p>
         </header>
         <section className="space-y-24">
           <article className="prose dark:prose-invert max-w-none mx-auto prose-h2:mt-16 prose-h2:mb-8 prose-h3:mt-10 prose-h3:mb-4 prose-table:my-8 prose-p:my-6 prose-ul:my-6 prose-li:my-2 prose-h2:scroll-mt-24">
@@ -41,6 +41,11 @@ export default function PrivacyPolicyPage() {
                     <td className="p-2 align-top">• Generate interactive analyses and lender-style PDF reports you request</td>
                   </tr>
                   <tr className="even:bg-gray-50 dark:even:bg-gray-900">
+                    <td className="p-2 align-top">Contact & Lead Data</td>
+                    <td className="p-2 align-top">• Email address and optional name, business name, or phone number<br/>• Requested financing amount, purpose, DSCR result and calculator assumptions<br/>• Marketing consent, attribution, and email delivery status</td>
+                    <td className="p-2 align-top">• Send results you request<br/>• Respond to funding inquiries<br/>• Send financing-readiness guidance only when you opt in<br/>• Measure lead and service conversion</td>
+                  </tr>
+                  <tr className="even:bg-gray-50 dark:even:bg-gray-900">
                     <td className="p-2 align-top">Payment Data</td>
                     <td className="p-2 align-top">• Card details & billing ZIP (processed by Stripe)</td>
                     <td className="p-2 align-top">• Process payments for premium services</td>
@@ -53,10 +58,10 @@ export default function PrivacyPolicyPage() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">We do not collect Social Security numbers, phone numbers, or tax IDs.</p>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">We do not request Social Security numbers or tax IDs through the DSCR calculator or funding-interest form. Do not enter those identifiers into free-text fields.</p>
             <h2 className="text-2xl font-bold mt-16">3. How We Use Your Information</h2>
             <ul className="list-disc pl-6">
-              <li><b>Service Delivery</b>: create your account, authenticate, generate reports, and email PDFs you request.</li>
+              <li><b>Service Delivery</b>: create your account, authenticate, generate reports, and email calculator results or documents you request.</li>
               <li><b>Transactional Communications</b>: send receipts, account alerts, or service-related updates.</li>
               <li><b>Marketing (Opt-In Only)</b>: if you subscribe to our newsletter, email product updates or educational content. Unsubscribe any time.</li>
               <li><b>Analytics & Improvements</b>: analyze aggregated, de-identified usage data to enhance the Services.</li>
@@ -102,6 +107,11 @@ export default function PrivacyPolicyPage() {
                     <td className="p-2 align-top">Name, email, payment details</td>
                   </tr>
                   <tr className="even:bg-gray-50 dark:even:bg-gray-900">
+                    <td className="p-2 align-top">Resend</td>
+                    <td className="p-2 align-top">Transactional and opt-in email delivery</td>
+                    <td className="p-2 align-top">Email address, message contents, delivery status</td>
+                  </tr>
+                  <tr className="even:bg-gray-50 dark:even:bg-gray-900">
                     <td className="p-2 align-top">Google Analytics</td>
                     <td className="p-2 align-top">Site analytics</td>
                     <td className="p-2 align-top">Pseudonymized usage data</td>
@@ -109,7 +119,7 @@ export default function PrivacyPolicyPage() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">We deploy via Universal (hosting provider). Universal may have incidental access to encrypted data but does not process personal information for its own purposes.</p>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">We deploy through our hosting provider, which may process limited request and operational data needed to deliver the Services.</p>
             <h2 className="text-2xl font-bold mt-16">9. Your Rights</h2>
             <p>Because we serve U.S. customers only, you have the right to:</p>
             <ul className="list-disc pl-6">

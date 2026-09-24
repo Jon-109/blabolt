@@ -1,5 +1,7 @@
 # Business Lending Advocate Platform: As-Is Investor Breakdown
 
+> Historical snapshot from February 2026. The canonical current reference is `docs/platform-master-source-of-truth.md`.
+
 ## Scope and Method
 This document describes the **current implemented system** in this repository as of February 11, 2026. It is based on:
 - Next.js application code in `app/`

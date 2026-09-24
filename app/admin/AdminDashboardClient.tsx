@@ -19,6 +19,7 @@ const bodyFont = Manrope({ subsets: ['latin'], weight: ['400', '500', '600', '70
 type DashboardPayload = {
   kpis: {
     totalUsers: number;
+    financingLeads: number;
     templateUsers: number;
     loanPackagingUsers: number;
     loanBrokeringUsers: number;
@@ -387,6 +388,10 @@ function formatDscr(value: number | null | undefined): string {
 }
 
 function formatTemplateTypeLabel(value: TemplateType): string {
+  if (value === 'personal_financial_statement') {
+    return 'SBA Form 413 Personal Financial Statement';
+  }
+
   return value.replaceAll('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
@@ -855,6 +860,10 @@ export default function AdminDashboardClient() {
               <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">Total Clients</p>
                 <p className="text-xl font-bold text-white">{loading ? '...' : clients.length}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">DSCR Leads</p>
+                <p className="text-xl font-bold text-white">{dashboard ? dashboard.kpis.financingLeads : loading ? '...' : '0'}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300">Pipeline Value</p>

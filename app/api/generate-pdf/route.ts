@@ -294,7 +294,7 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: Record<strin
 
   const { data: submission, error: fetchError } = await serviceSupabase
     .from('template_submissions')
-    .select('id,user_id,template_type')
+    .select('id,user_id,template_type,form_data')
     .eq('id', submissionId)
     .is('archived_at', null)
     .single();
@@ -307,6 +307,22 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: Record<strin
     return NextResponse.json({ error: 'Template type mismatch' }, { status: 400 });
   }
 
+  if (templateType === 'personal_financial_statement') {
+    const formData = submission.form_data && typeof submission.form_data === 'object' && !Array.isArray(submission.form_data)
+      ? submission.form_data as Record<string, unknown>
+      : {};
+    const signature = formData.eSignature && typeof formData.eSignature === 'object' && !Array.isArray(formData.eSignature)
+      ? formData.eSignature as Record<string, unknown>
+      : {};
+    const signedName = typeof signature.fullName === 'string' ? signature.fullName.trim() : '';
+    if (formData.formVersion !== '2025-02-13' || signature.attested !== true || signedName.length < 2) {
+      return NextResponse.json(
+        { error: 'Review and sign the current SBA Form 413 before generating the PDF' },
+        { status: 400 },
+      );
+    }
+  }
+
   try {
     const result = await generateAndStoreTemplatePdf({
       req,
@@ -315,7 +331,9 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: Record<strin
       userId: authContext.user.id,
       submissionId,
       templateType: templateType as TemplateType,
-      fileNamePrefix: `legacy-template-${templateType}`,
+      fileNamePrefix: templateType === 'personal_financial_statement'
+        ? 'sba-form-413'
+        : `legacy-template-${templateType}`,
       bucket: 'pdfs',
     });
 
@@ -357,7 +375,12 @@ async function handleTemplatesPdfGeneration(req: NextRequest, body: Record<strin
               template_requirement_key: resolvedRequirementKey,
               template_key: templateType,
               generated_at: nowIso,
-              original_file_name: `${templateType}.pdf`,
+              original_file_name: templateType === 'personal_financial_statement'
+                ? 'sba-form-413.pdf'
+                : `${templateType}.pdf`,
+              ...(templateType === 'personal_financial_statement'
+                ? { form_version: '2025-02-13' }
+                : {}),
             },
           },
           {
